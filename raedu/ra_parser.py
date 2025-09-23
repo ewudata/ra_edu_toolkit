@@ -6,13 +6,14 @@ from . import ra_ast as AST
 
 _GRAMMAR_PATH = Path(__file__).parent / "grammar" / "ra_grammar.lark"
 
+
 class _ToAST(Transformer):
     def relation(self, items):
         return AST.Relation(str(items[0]))
 
     def projection(self, items):
-        # items = [attr_list, sub]
-        attrs, sub = items
+        # items = [PI, attr_list, sub]
+        pi_token, attrs, sub = items
         if not isinstance(attrs, list):
             attrs = [str(attrs)]
         else:
@@ -20,13 +21,13 @@ class _ToAST(Transformer):
         return AST.Projection(attrs, sub)
 
     def selection(self, items):
-        cond = str(items[0]).strip()
-        sub = items[1]
-        return AST.Selection(cond, sub)
+        # items = [SIGMA, cond, sub]
+        sigma_token, cond, sub = items
+        return AST.Selection(str(cond).strip(), sub)
 
     def rename(self, items):
-        pairs = items[0]
-        sub = items[1]
+        # items = [RHO, pairs, sub]
+        rho_token, pairs, sub = items
         return AST.Rename(pairs, sub)
 
     def attr_list(self, items):
@@ -42,16 +43,19 @@ class _ToAST(Transformer):
         # Pass through for now; left-assoc binary ops will be handled by reducer
         return Tree(data, children)
 
+
 def _build_parser():
-    grammar = _GRAmMAR_PATH.read_text(encoding="utf-8")
+    grammar = _GRAMMAR_PATH.read_text(encoding="utf-8")
     return Lark(grammar, parser="lalr", maybe_placeholders=False)
 
-# Fix: correct variable name
+
 def _build_parser_fixed():
     grammar = _GRAMMAR_PATH.read_text(encoding="utf-8")
     return Lark(grammar, parser="lalr", maybe_placeholders=False)
 
+
 _PARSER = _build_parser_fixed()
+
 
 def parse(text: str):
     return _ToAST().transform(_PARSER.parse(text))

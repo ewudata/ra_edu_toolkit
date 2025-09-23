@@ -1,0 +1,62 @@
+{
+  "expression": "pi{name}(sigma{major = 'CS'}(Students))",
+  "steps": [
+    {
+      "op": "rel",
+      "detail": "Students",
+      "output_schema": [
+        "sid",
+        "name",
+        "major"
+      ],
+      "rows": 6
+    },
+    {
+      "op": "σ",
+      "detail": {
+        "cond": "major = 'CS'"
+      },
+      "input_schema": [
+        "sid",
+        "name",
+        "major"
+      ],
+      "output_schema": [
+        "sid",
+        "name",
+        "major"
+      ],
+      "delta": {
+        "rows_before": 6,
+        "rows_after": 0,
+        "note": "Selection keeps rows satisfying the predicate; schema unchanged."
+      }
+    },
+    {
+      "op": "π",
+      "detail": {
+        "attrs": [
+          "name"
+        ]
+      },
+      "input_schema": [
+        "sid",
+        "name",
+        "major"
+      ],
+      "output_schema": [
+        "name"
+      ],
+      "delta": {
+        "rows_before": 0,
+        "rows_after": 0,
+        "note": "Projection drops non-listed attributes and removes duplicates."
+      }
+    }
+  ],
+  "final_schema": [
+    "name"
+  ],
+  "final_rows": 0,
+  "preview": []
+}
