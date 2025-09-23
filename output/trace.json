@@ -28,7 +28,7 @@
       ],
       "delta": {
         "rows_before": 6,
-        "rows_after": 0,
+        "rows_after": 4,
         "note": "Selection keeps rows satisfying the predicate; schema unchanged."
       }
     },
@@ -48,8 +48,8 @@
         "name"
       ],
       "delta": {
-        "rows_before": 0,
-        "rows_after": 0,
+        "rows_before": 4,
+        "rows_after": 3,
         "note": "Projection drops non-listed attributes and removes duplicates."
       }
     }
@@ -57,6 +57,16 @@
   "final_schema": [
     "name"
   ],
-  "final_rows": 0,
-  "preview": []
+  "final_rows": 3,
+  "preview": [
+    {
+      "name": "Ada"
+    },
+    {
+      "name": "Chen"
+    },
+    {
+      "name": "Evan"
+    }
+  ]
 }
