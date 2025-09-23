@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List, Dict, Any
 import pandas as pd
 import re
+import builtins
 from . import ra_ast as AST
 
 
@@ -24,10 +25,15 @@ def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
         key = name.split(".")[-1]
         return f"env.get({key!r})"
 
-    py = re.sub(r"\b[A-Za-z_][A-Za-z0-9_\.]*\b", repl, py)
+    py = re.sub(r"(?<!')\b[A-Za-z_][A-Za-z0-9_\.]*\b(?!')", repl, py)
+    # py = re.sub(r"\b[A-Za-z_][A-Za-z0-9_\.]*\b", repl, py)
     try:
-        return bool(eval(py, {"__builtins__": {}}, {"env": env}))
-    except Exception:
+        return bool(builtins.eval(py, {"__builtins__": {}}, {"env": env}))
+    except Exception as e:
+        print(f"Error evaluating condition: {e}")
+        print(f"Condition: {cond}")
+        print(f"Environment: {env}")
+        print(f"Python code: {py}")
         return False
 
 
