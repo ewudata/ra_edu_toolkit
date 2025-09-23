@@ -1,0 +1,37 @@
+{
+  "sigma": {
+    "what": "Filters rows by predicate.",
+    "how": "Keeps rows satisfying the condition.",
+    "why": "Reduce working set early."
+  },
+  "pi": {
+    "what": "Keeps only listed attributes and removes duplicates.",
+    "how": "Drops columns then dedups.",
+    "why": "Focus on relevant attributes."
+  },
+  "rho": {
+    "what": "Renames attributes.",
+    "how": "Updates schema, preserves values.",
+    "why": "Avoid name collisions / clarify intent."
+  },
+  "join": {
+    "what": "Combines rows from two relations.",
+    "how": "Natural join on common names or theta condition.",
+    "why": "Relate entities across tables."
+  },
+  "product": {
+    "what": "Cartesian product.",
+    "how": "All pairwise combinations.",
+    "why": "Used conceptually with selection to form theta-joins."
+  },
+  "union": {
+    "what": "Set union; removes duplicates.",
+    "how": "Requires union-compatibility.",
+    "why": "Combine identically-typed data sources."
+  },
+  "diff": {
+    "what": "Set difference.",
+    "how": "Left minus right; requires union-compatibility.",
+    "why": "Exclude a subset."
+  }
+}

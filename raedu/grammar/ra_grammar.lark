@@ -1,0 +1,37 @@
+start: expr
+
+?expr: term ( (JOIN ("{" COND "}")? term)
+            | (PRODUCT term)
+            | (UNION term)
+            | (DIFF term)
+            )*
+
+?term: projection
+     | selection
+     | rename
+     | relation
+     | "(" expr ")"
+
+projection: (PI) "{" attr_list "}" "(" expr ")"   -> projection
+selection:  (SIGMA) "{" COND "}" "(" expr ")"     -> selection
+rename:     (RHO) "{" rename_list "}" "(" expr ")"-> rename
+
+relation: NAME                                     -> relation
+
+attr_list: NAME ("," NAME)*
+rename_list: NAME "->" NAME ("," NAME "->" NAME)*
+
+PI: "π" | "pi"
+SIGMA: "σ" | "sigma"
+RHO: "ρ" | "rho"
+JOIN: "⋈" | "JOIN"
+PRODUCT: "×" | "X" | "CROSS"
+UNION: "∪" | "UNION"
+DIFF: "−" | "-" | "DIFF"
+
+COND: /[^}]*/
+
+NAME: /[A-Za-z_][A-Za-z0-9_\.]*/
+
+%import common.WS
+%ignore WS
