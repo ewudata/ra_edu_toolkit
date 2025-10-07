@@ -11,11 +11,14 @@ DATASETS_DIR = Path(__file__).resolve().parent.parent / "datasets"
 
 def _load_env() -> Dict[str, pd.DataFrame]:
     env: Dict[str, pd.DataFrame] = {}
-    for name in ["Students","Courses","Enroll"]:
-        df = pd.read_csv(DATASETS_DIR / f"{name}.csv")
+    csv_files = sorted(DATASETS_DIR.glob("*.csv"))
+    for path in csv_files:
+        name = path.stem
+        df = pd.read_csv(path)
         df = df.copy()
+        df.columns = [c.lower() for c in df.columns]
         df["_prov"] = [[(name, int(i))] for i in range(len(df))]
-        env[name] = df
+        env[name.lower()] = df
     return env
 
 def _flatten(obj):

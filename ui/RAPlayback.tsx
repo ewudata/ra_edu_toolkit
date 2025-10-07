@@ -8,6 +8,7 @@ type Step = {
   delta?: any;
   note?: string;
   rows?: number;
+  preview?: Record<string, any>[];
 };
 
 type Trace = {
@@ -53,6 +54,12 @@ const RAPlayback: React.FC<Props> = ({ trace }) => {
               <div className="mt-2 text-xs">
                 <div className="font-medium">Delta</div>
                 <pre className="bg-gray-50 p-2 rounded">{JSON.stringify(s.delta, null, 2)}</pre>
+              </div>
+            )}
+            {Array.isArray(s.preview) && s.preview.length > 0 && (
+              <div className="mt-2 text-xs">
+                <div className="font-medium">Preview (up to 10 rows)</div>
+                <pre className="bg-gray-50 p-2 rounded">{JSON.stringify(s.preview, null, 2)}</pre>
               </div>
             )}
             {s.note && <div className="mt-2 text-xs italic">{s.note}</div>}

@@ -27,10 +27,10 @@ python run.py "pi{name}(sigma{major = 'CS'}(Students))"
 - Calls `raedu.stepper.run()` function to process the expression
 
 ### 2. **Data Loading (stepper.py)**
-- `_load_env()` function loads datasets:
-  - Reads CSV files from `datasets/` directory (Students.csv, Courses.csv, Enroll.csv)
-  - Adds `_prov` column to each DataFrame for data provenance
-  - Creates environment dictionary `env` storing all relation tables
+- `_load_env()` automatically discovers every `.csv` file under `datasets/`
+  - Each file is read into a DataFrame, columns are lower-cased, and provenance metadata is attached
+  - The loader registers each relation by the file stem (e.g., `students.csv` → relation `students`)
+  - Find additional tables by dropping more CSVs into the folder and rerunning the CLI—no code changes needed
 
 ### 3. **Syntax Parsing (ra_parser.py)**
 - `parse()` function uses Lark parser:
@@ -48,12 +48,14 @@ python run.py "pi{name}(sigma{major = 'CS'}(Students))"
   - `Product`: Cartesian product (×)
   - `Union`: Union operation (∪)
   - `Difference`: Difference operation (−)
+  - `Intersection`: Intersection operation (∩)
+  - `Division`: Division operation (÷)
 
 ### 5. **Expression Evaluation (evaluator.py)**
 - `eval()` function recursively executes AST:
   - Performs corresponding relational algebra operations based on node type
   - Uses pandas DataFrame for data processing
-  - Records execution steps and metadata for each operation
+  - Records execution steps, metadata, and up to 10 output tuples for each operation
   - Supports condition expression evaluation (`_cond_eval`)
 
 ### 6. **Result Preview and Output**
@@ -64,6 +66,7 @@ python run.py "pi{name}(sigma{major = 'CS'}(Students))"
 - Output files:
   - `output/trace.json`: Complete execution trace
   - `output/result.csv`: Final result data
+  - `ra_trace_viewer.html`: Standalone HTML snapshot of the latest trace
 
 ### 7. **Supported Syntax**
 Grammar file defines standard relational algebra operators:
@@ -74,4 +77,7 @@ Grammar file defines standard relational algebra operators:
 - `R × S`: Cartesian product
 - `R ∪ S`: Union
 - `R − S`: Difference
+- `R ∩ S`: Intersection
+- `R ÷ S`: Division
 
+All operator keywords (π, σ, ρ, join/product/union/etc.), relation names, and attribute names are matched case-insensitively; inputs are canonicalized internally so you can write expressions such as `Pi{Name}(students)` or `JOIN`/`join` interchangeably.

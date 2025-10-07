@@ -36,3 +36,11 @@ class Union(Node):
 class Difference(Node):
     left: Node
     right: Node
+@dataclass
+class Intersection(Node):
+    left: Node
+    right: Node
+@dataclass
+class Division(Node):
+    left: Node
+    right: Node

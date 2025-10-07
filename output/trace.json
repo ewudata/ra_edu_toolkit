@@ -1,72 +1,481 @@
 {
-  "expression": "pi{name}(sigma{major = 'CS'}(Students))",
+  "expression": "pi{course_id}(sigma{semester='Fall' and year = 2017}(section)) intersect pi{course_id}(sigma{semester='Spring' and year = 2018}(section))",
   "steps": [
     {
       "op": "rel",
-      "detail": "Students",
+      "detail": "section",
       "output_schema": [
-        "sid",
-        "name",
-        "major"
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
       ],
-      "rows": 6
+      "rows": 15,
+      "preview": [
+        {
+          "course_id": "BIO-101",
+          "sec_id": 1,
+          "semester": "Summer",
+          "year": 2017,
+          "building": "Painter",
+          "room_number": 514,
+          "time_slot_id": "B"
+        },
+        {
+          "course_id": "BIO-301",
+          "sec_id": 1,
+          "semester": "Summer",
+          "year": 2018,
+          "building": "Painter",
+          "room_number": 514,
+          "time_slot_id": "A"
+        },
+        {
+          "course_id": "CS-101",
+          "sec_id": 1,
+          "semester": "Fall",
+          "year": 2017,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "H"
+        },
+        {
+          "course_id": "CS-101",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "F"
+        },
+        {
+          "course_id": "CS-190",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2017,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "E"
+        },
+        {
+          "course_id": "CS-190",
+          "sec_id": 2,
+          "semester": "Spring",
+          "year": 2017,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "A"
+        },
+        {
+          "course_id": "CS-315",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Watson",
+          "room_number": 120,
+          "time_slot_id": "D"
+        },
+        {
+          "course_id": "CS-319",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Watson",
+          "room_number": 100,
+          "time_slot_id": "B"
+        },
+        {
+          "course_id": "CS-319",
+          "sec_id": 2,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "C"
+        },
+        {
+          "course_id": "CS-347",
+          "sec_id": 1,
+          "semester": "Fall",
+          "year": 2017,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "A"
+        }
+      ]
     },
     {
       "op": "σ",
       "detail": {
-        "cond": "major = 'CS'"
+        "cond": "semester='Fall' and year = 2017"
       },
       "input_schema": [
-        "sid",
-        "name",
-        "major"
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
       ],
       "output_schema": [
-        "sid",
-        "name",
-        "major"
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
       ],
       "delta": {
-        "rows_before": 6,
-        "rows_after": 4,
+        "rows_before": 15,
+        "rows_after": 3,
         "note": "Selection keeps rows satisfying the predicate; schema unchanged."
-      }
+      },
+      "preview": [
+        {
+          "course_id": "CS-101",
+          "sec_id": 1,
+          "semester": "Fall",
+          "year": 2017,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "H"
+        },
+        {
+          "course_id": "CS-347",
+          "sec_id": 1,
+          "semester": "Fall",
+          "year": 2017,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "A"
+        },
+        {
+          "course_id": "PHY-101",
+          "sec_id": 1,
+          "semester": "Fall",
+          "year": 2017,
+          "building": "Watson",
+          "room_number": 100,
+          "time_slot_id": "A"
+        }
+      ]
     },
     {
       "op": "π",
       "detail": {
         "attrs": [
-          "name"
+          "course_id"
         ]
       },
       "input_schema": [
-        "sid",
-        "name",
-        "major"
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
       ],
       "output_schema": [
-        "name"
+        "course_id"
       ],
       "delta": {
-        "rows_before": 4,
+        "rows_before": 3,
         "rows_after": 3,
         "note": "Projection drops non-listed attributes and removes duplicates."
-      }
+      },
+      "preview": [
+        {
+          "course_id": "CS-101"
+        },
+        {
+          "course_id": "CS-347"
+        },
+        {
+          "course_id": "PHY-101"
+        }
+      ]
+    },
+    {
+      "op": "rel",
+      "detail": "section",
+      "output_schema": [
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
+      ],
+      "rows": 15,
+      "preview": [
+        {
+          "course_id": "BIO-101",
+          "sec_id": 1,
+          "semester": "Summer",
+          "year": 2017,
+          "building": "Painter",
+          "room_number": 514,
+          "time_slot_id": "B"
+        },
+        {
+          "course_id": "BIO-301",
+          "sec_id": 1,
+          "semester": "Summer",
+          "year": 2018,
+          "building": "Painter",
+          "room_number": 514,
+          "time_slot_id": "A"
+        },
+        {
+          "course_id": "CS-101",
+          "sec_id": 1,
+          "semester": "Fall",
+          "year": 2017,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "H"
+        },
+        {
+          "course_id": "CS-101",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "F"
+        },
+        {
+          "course_id": "CS-190",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2017,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "E"
+        },
+        {
+          "course_id": "CS-190",
+          "sec_id": 2,
+          "semester": "Spring",
+          "year": 2017,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "A"
+        },
+        {
+          "course_id": "CS-315",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Watson",
+          "room_number": 120,
+          "time_slot_id": "D"
+        },
+        {
+          "course_id": "CS-319",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Watson",
+          "room_number": 100,
+          "time_slot_id": "B"
+        },
+        {
+          "course_id": "CS-319",
+          "sec_id": 2,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "C"
+        },
+        {
+          "course_id": "CS-347",
+          "sec_id": 1,
+          "semester": "Fall",
+          "year": 2017,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "A"
+        }
+      ]
+    },
+    {
+      "op": "σ",
+      "detail": {
+        "cond": "semester='Spring' and year = 2018"
+      },
+      "input_schema": [
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
+      ],
+      "output_schema": [
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
+      ],
+      "delta": {
+        "rows_before": 15,
+        "rows_after": 7,
+        "note": "Selection keeps rows satisfying the predicate; schema unchanged."
+      },
+      "preview": [
+        {
+          "course_id": "CS-101",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "F"
+        },
+        {
+          "course_id": "CS-315",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Watson",
+          "room_number": 120,
+          "time_slot_id": "D"
+        },
+        {
+          "course_id": "CS-319",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Watson",
+          "room_number": 100,
+          "time_slot_id": "B"
+        },
+        {
+          "course_id": "CS-319",
+          "sec_id": 2,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Taylor",
+          "room_number": 3128,
+          "time_slot_id": "C"
+        },
+        {
+          "course_id": "FIN-201",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "B"
+        },
+        {
+          "course_id": "HIS-351",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Painter",
+          "room_number": 514,
+          "time_slot_id": "C"
+        },
+        {
+          "course_id": "MU-199",
+          "sec_id": 1,
+          "semester": "Spring",
+          "year": 2018,
+          "building": "Packard",
+          "room_number": 101,
+          "time_slot_id": "D"
+        }
+      ]
+    },
+    {
+      "op": "π",
+      "detail": {
+        "attrs": [
+          "course_id"
+        ]
+      },
+      "input_schema": [
+        "course_id",
+        "sec_id",
+        "semester",
+        "year",
+        "building",
+        "room_number",
+        "time_slot_id"
+      ],
+      "output_schema": [
+        "course_id"
+      ],
+      "delta": {
+        "rows_before": 7,
+        "rows_after": 6,
+        "note": "Projection drops non-listed attributes and removes duplicates."
+      },
+      "preview": [
+        {
+          "course_id": "CS-101"
+        },
+        {
+          "course_id": "CS-315"
+        },
+        {
+          "course_id": "CS-319"
+        },
+        {
+          "course_id": "FIN-201"
+        },
+        {
+          "course_id": "HIS-351"
+        },
+        {
+          "course_id": "MU-199"
+        }
+      ]
+    },
+    {
+      "op": "∩",
+      "input_schema": {
+        "left": [
+          "course_id"
+        ],
+        "right": [
+          "course_id"
+        ]
+      },
+      "output_schema": [
+        "course_id"
+      ],
+      "delta": {
+        "rows_after": 1
+      },
+      "preview": [
+        {
+          "course_id": "CS-101"
+        }
+      ]
     }
   ],
   "final_schema": [
-    "name"
+    "course_id"
   ],
-  "final_rows": 3,
+  "final_rows": 1,
   "preview": [
     {
-      "name": "Ada"
-    },
-    {
-      "name": "Chen"
-    },
-    {
-      "name": "Evan"
+      "course_id": "CS-101"
     }
   ]
 }

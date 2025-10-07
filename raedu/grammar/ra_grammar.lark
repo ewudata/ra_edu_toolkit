@@ -1,6 +1,6 @@
 start: expr
 
-?expr: term ( (JOIN ("{" COND "}")? term) | (PRODUCT term) | (UNION term) | (DIFF term) )*
+?expr: term ( (JOIN ("{" COND "}")? term) | (PRODUCT term) | (UNION term) | (DIFF term) | (INTERSECT term) | (DIV term) )*
 
 ?term: projection | selection | rename | relation | "(" expr ")"
 
@@ -11,16 +11,19 @@ rename:     (RHO) "{" rename_list "}" "(" expr ")"-> rename
 relation: NAME                                     -> relation
 
 attr_list: NAME ("," NAME)*
-rename_list: NAME "->" NAME ("," NAME "->" NAME)*
+rename_list: rename_pair ("," rename_pair)*
+rename_pair: NAME "->" NAME
 
 // Define tokens with explicit priority
-PI.2: "π" | "pi"
-SIGMA.2: "σ" | "sigma"
-RHO.2: "ρ" | "rho"
-JOIN.2: "⋈" | "JOIN"
-PRODUCT.2: "×" | "X" | "CROSS"
-UNION.2: "∪" | "UNION"
-DIFF.2: "−" | "-" | "DIFF"
+PI.2: "π" | /(?i)pi/
+SIGMA.2: "σ" | /(?i)sigma/
+RHO.2: "ρ" | /(?i)rho/
+JOIN.2: "⋈" | /(?i)join/
+PRODUCT.2: "×" | /(?i)x/ | /(?i)cross/
+UNION.2: "∪" | /(?i)union/
+DIFF.2: "−" | "-" | /(?i)diff/
+INTERSECT.2: "∩" | /(?i)intersect/
+DIV.2: "÷" | "/" | /(?i)div/
 NAME: /[A-Za-z_][A-Za-z0-9_\.]*/
 
 COND: /[^}]+/

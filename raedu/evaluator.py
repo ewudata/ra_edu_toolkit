@@ -10,25 +10,38 @@ def _schema(df: pd.DataFrame) -> List[str]:
     return [c for c in df.columns if c != "_prov"]
 
 
+def _preview(df: pd.DataFrame, limit: int = 10) -> List[Dict[str, Any]]:
+    cols = [c for c in df.columns if c != "_prov"]
+    if not cols:
+        return []
+    return df[cols].head(limit).to_dict(orient="records")
+
+
 def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
-    py = (
-        cond.replace("AND", "and")
-        .replace("OR", "or")
-        .replace("NOT", "not")
-        .replace("=", "==")
-    )
+    py = cond
+    py = re.sub(r"\bAND\b", "and", py, flags=re.IGNORECASE)
+    py = re.sub(r"\bOR\b", "or", py, flags=re.IGNORECASE)
+    py = re.sub(r"\bNOT\b", "not", py, flags=re.IGNORECASE)
+    py = py.replace("=", "==")
+
+    env_ci = {str(k).lower(): v for k, v in env.items()}
 
     def repl(m):
         name = m.group(0)
-        if name in ("and", "or", "not", "True", "False"):
-            return name
-        key = name.split(".")[-1]
+        lowered = name.lower()
+        if lowered in ("and", "or", "not"):
+            return lowered
+        if lowered == "true":
+            return "True"
+        if lowered == "false":
+            return "False"
+        key = lowered.split(".")[-1]
         return f"env.get({key!r})"
 
     py = re.sub(r"(?<!')\b[A-Za-z_][A-Za-z0-9_\.]*\b(?!')", repl, py)
     # py = re.sub(r"\b[A-Za-z_][A-Za-z0-9_\.]*\b", repl, py)
     try:
-        return bool(builtins.eval(py, {"__builtins__": {}}, {"env": env}))
+        return bool(builtins.eval(py, {"__builtins__": {}}, {"env": env_ci}))
     except Exception as e:
         print(f"Error evaluating condition: {e}")
         print(f"Condition: {cond}")
@@ -43,6 +56,8 @@ def _product(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
     L["_k"] = 1
     R["_k"] = 1
     M = L.merge(R, on="_k", how="outer", suffixes=("", "_r"))
+    if "_k" in M.columns:
+        M = M.drop(columns=["_k"])
     L.drop(columns=["_k"], inplace=True)
     R.drop(columns=["_k"], inplace=True)
     if "_prov_x" in M.columns:
@@ -83,17 +98,91 @@ def _theta_join(L: pd.DataFrame, R: pd.DataFrame, cond: str) -> pd.DataFrame:
     return P.loc[keeps].reset_index(drop=True)
 
 
+def _intersection(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
+    schema = _schema(L)
+    left = L[schema + ["_prov"]].drop_duplicates(subset=schema)
+    right = R[schema + ["_prov"]].drop_duplicates(subset=schema)
+    merged = left.merge(right, on=schema, how="inner", suffixes=("_l", "_r"))
+    if merged.empty:
+        return pd.DataFrame(columns=schema + ["_prov"])
+    prov_left = "_prov_l"
+    prov_right = "_prov_r"
+    if prov_left in merged.columns and prov_right in merged.columns:
+        merged["_prov"] = merged[prov_left] + merged[prov_right]
+        merged = merged.drop(columns=[prov_left, prov_right])
+    merged = merged.drop_duplicates(subset=schema).reset_index(drop=True)
+    return merged
+
+
+def _division(
+    dividend: pd.DataFrame,
+    divisor: pd.DataFrame,
+    quotient_attrs: List[str],
+    divisor_attrs: List[str],
+) -> pd.DataFrame:
+    if not quotient_attrs:
+        raise ValueError("Division requires the divisor to exclude at least one dividend attribute")
+
+    candidates = dividend[quotient_attrs].drop_duplicates().reset_index(drop=True)
+    if candidates.empty:
+        return pd.DataFrame(columns=quotient_attrs + ["_prov"])
+
+    required = divisor[divisor_attrs].drop_duplicates().reset_index(drop=True)
+    if required.empty:
+        prov = (
+            dividend.groupby(quotient_attrs)["_prov"]
+            .agg(lambda series: sum(series, []))
+            .reset_index()
+        )
+        result = candidates.merge(prov, on=quotient_attrs, how="left")
+        if "_prov" not in result.columns:
+            result["_prov"] = [[] for _ in range(len(result))]
+        result["_prov"] = result["_prov"].apply(lambda v: v if isinstance(v, list) else [])
+        return result.reset_index(drop=True)
+
+    expected = candidates.merge(required, how="cross")
+    actual = dividend[quotient_attrs + divisor_attrs].drop_duplicates()
+    coverage = expected.merge(
+        actual, on=quotient_attrs + divisor_attrs, how="left", indicator=True
+    )
+    missing = coverage[coverage["_merge"] == "left_only"]
+    if not missing.empty:
+        disqualified = missing[quotient_attrs].drop_duplicates()
+        valid = candidates.merge(disqualified, on=quotient_attrs, how="left", indicator=True)
+        valid = valid[valid["_merge"] == "left_only"].drop(columns=["_merge"])
+    else:
+        valid = candidates.copy()
+
+    valid = valid.reset_index(drop=True)
+    if valid.empty:
+        return pd.DataFrame(columns=quotient_attrs + ["_prov"])
+
+    prov = (
+        dividend.groupby(quotient_attrs)["_prov"].agg(lambda series: sum(series, []))
+        .reset_index()
+    )
+    result = valid.merge(prov, on=quotient_attrs, how="left")
+    if "_prov" not in result.columns:
+        result["_prov"] = [[] for _ in range(len(result))]
+    result["_prov"] = result["_prov"].apply(lambda v: v if isinstance(v, list) else [])
+    return result.reset_index(drop=True)
+
+
 def eval(
     node: AST.Node, env: Dict[str, pd.DataFrame], steps: List[Dict[str, Any]]
 ) -> pd.DataFrame:
     if isinstance(node, AST.Relation):
-        df = env[node.name].copy()
+        key = node.name.lower()
+        if key not in env:
+            raise KeyError(f"Relation '{node.name}' not found")
+        df = env[key].copy()
         steps.append(
             {
                 "op": "rel",
                 "detail": node.name,
                 "output_schema": _schema(df),
                 "rows": len(df),
+                "preview": _preview(df),
             }
         )
         return df
@@ -116,6 +205,7 @@ def eval(
                     "rows_after": len(out),
                     "note": "Projection drops non-listed attributes and removes duplicates.",
                 },
+                "preview": _preview(out),
             }
         )
         return out
@@ -138,6 +228,7 @@ def eval(
                     "rows_after": len(out),
                     "note": "Selection keeps rows satisfying the predicate; schema unchanged.",
                 },
+                "preview": _preview(out),
             }
         )
         return out
@@ -156,6 +247,7 @@ def eval(
                 "detail": {"renames": node.pairs},
                 "input_schema": _schema(inp),
                 "output_schema": _schema(out),
+                "preview": _preview(out),
             }
         )
         return out
@@ -177,6 +269,7 @@ def eval(
                 "input_schema": {"left": _schema(L), "right": _schema(R)},
                 "output_schema": _schema(out),
                 "delta": {"rows_after": len(out)},
+                "preview": _preview(out),
             }
         )
         return out
@@ -189,6 +282,7 @@ def eval(
                 "op": "×",
                 "input_schema": {"left": _schema(L), "right": _schema(R)},
                 "output_schema": _schema(out),
+                "preview": _preview(out),
             }
         )
         return out
@@ -206,6 +300,7 @@ def eval(
                 "input_schema": {"left": al, "right": ar},
                 "output_schema": al,
                 "delta": {"rows_after": len(tmp)},
+                "preview": _preview(tmp),
             }
         )
         return tmp
@@ -228,6 +323,52 @@ def eval(
                 "input_schema": {"left": al, "right": ar},
                 "output_schema": al,
                 "delta": {"rows_after": len(out)},
+                "preview": _preview(out),
+            }
+        )
+        return out
+    if isinstance(node, AST.Intersection):
+        L = eval(node.left, env, steps)
+        R = eval(node.right, env, steps)
+        al, ar = _schema(L), _schema(R)
+        if al != ar:
+            raise ValueError(f"Intersection requires identical schemas: {al} vs {ar}")
+        out = _intersection(L, R)
+        steps.append(
+            {
+                "op": "∩",
+                "input_schema": {"left": al, "right": ar},
+                "output_schema": _schema(out),
+                "delta": {"rows_after": len(out)},
+                "preview": _preview(out),
+            }
+        )
+        return out
+    if isinstance(node, AST.Division):
+        dividend = eval(node.left, env, steps)
+        divisor = eval(node.right, env, steps)
+        dividend_schema = _schema(dividend)
+        divisor_schema = _schema(divisor)
+        if not set(divisor_schema).issubset(dividend_schema):
+            raise ValueError(
+                "Division requires divisor attributes to be a subset of dividend attributes"
+            )
+        quotient_attrs = [c for c in dividend_schema if c not in divisor_schema]
+        out = _division(dividend, divisor, quotient_attrs, divisor_schema)
+        steps.append(
+            {
+                "op": "÷",
+                "detail": {
+                    "quotient_attrs": quotient_attrs,
+                    "divisor_attrs": divisor_schema,
+                },
+                "input_schema": {
+                    "left": dividend_schema,
+                    "right": divisor_schema,
+                },
+                "output_schema": _schema(out),
+                "delta": {"rows_after": len(out)},
+                "preview": _preview(out),
             }
         )
         return out
