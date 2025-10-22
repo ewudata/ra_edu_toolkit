@@ -1,2 +1,4 @@
-lark==1.1.7
-pandas==2.2.2
+fastapi[standard]
+lark
+pandas
+uvicorn[standard]

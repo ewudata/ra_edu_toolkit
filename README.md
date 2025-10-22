@@ -5,6 +5,7 @@ Includes:
 - `api/evaluate_ra/ra_parser.py` (Lark-based parser using `api/evaluate_ra/grammar/ra_grammar.lark`)
 - `api/evaluate_ra/evaluator.py` (operator-by-operator evaluator with provenance)
 - `api/evaluate_ra/stepper.py` (glue to produce step traces)
+- `api/app.py` (FastAPI application exposing selected APIs)
 - `datasets/*.csv` (tiny demo relations)
 - `run.py` (CLI)
 
@@ -81,3 +82,29 @@ Grammar file defines standard relational algebra operators:
 - `R ÷ S`: Division
 
 All operator keywords (π, σ, ρ, join/product/union/etc.), relation names, and attribute names are matched case-insensitively; inputs are canonicalized internally so you can write expressions such as `Pi{Name}(students)` or `JOIN`/`join` interchangeably.
+
+## FastAPI Backend
+
+Launch the HTTP API alongside the CLI workflow with:
+```
+uvicorn api.app:app --reload
+```
+
+The server currently exposes `GET /databases`, which lists the bundled sample databases and their relations:
+
+```
+[
+  {
+    "name": "TestDB",
+    "tables": ["courses", "enroll", "students"],
+    "table_count": 3
+  },
+  {
+    "name": "University",
+    "tables": ["advisor", "classroom", "course", ...],
+    "table_count": 11
+  }
+]
+```
+
+Use the endpoint to drive a frontend selector or any other integration that needs to know which demo datasets are available. Each entry mirrors the structure returned by `api.services.datasets.list_databases()`.
