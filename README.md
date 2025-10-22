@@ -1,10 +1,10 @@
 # RA Education Toolkit (Modular)
 
 Includes:
-- `raedu/ra_ast.py`  (AST node classes)
-- `raedu/ra_parser.py` (Lark-based parser using `raedu/grammar/ra_grammar.lark`)
-- `raedu/evaluator.py` (operator-by-operator evaluator with provenance)
-- `raedu/stepper.py` (glue to produce step traces)
+- `api/evaluate_ra/ra_ast.py`  (AST node classes)
+- `api/evaluate_ra/ra_parser.py` (Lark-based parser using `api/evaluate_ra/grammar/ra_grammar.lark`)
+- `api/evaluate_ra/evaluator.py` (operator-by-operator evaluator with provenance)
+- `api/evaluate_ra/stepper.py` (glue to produce step traces)
 - `datasets/*.csv` (tiny demo relations)
 - `run.py` (CLI)
 
@@ -14,9 +14,9 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run:
+Run (optionally specify a database subfolder from `datasets/`):
 ```
-python run.py "pi{name}(sigma{major = 'CS'}(Students))"
+python run.py "pi{name}(sigma{major = 'CS'}(Students))" University
 ```
 
 ## Program Execution Flow
@@ -24,13 +24,13 @@ python run.py "pi{name}(sigma{major = 'CS'}(Students))"
 ### 1. **Entry Point (run.py)**
 - Program starts from `run.py`
 - Takes a relational algebra expression as command line argument
-- Calls `raedu.stepper.run()` function to process the expression
+- Calls `api.evaluate_ra.stepper.run()` function to process the expression
 
 ### 2. **Data Loading (stepper.py)**
-- `_load_env()` automatically discovers every `.csv` file under `datasets/`
-  - Each file is read into a DataFrame, columns are lower-cased, and provenance metadata is attached
-  - The loader registers each relation by the file stem (e.g., `students.csv` → relation `students`)
-  - Find additional tables by dropping more CSVs into the folder and rerunning the CLI—no code changes needed
+- `run(expr, database=...)` selects a database subfolder under `datasets/`
+  - Each CSV in that subfolder is read into pandas, columns are lower-cased, and provenance metadata attached
+  - Relations are registered by filename stem (e.g., `student.csv` → relation `student`)
+  - If you omit the database and only one subfolder exists, it is used automatically; otherwise you’ll be prompted to choose
 
 ### 3. **Syntax Parsing (ra_parser.py)**
 - `parse()` function uses Lark parser:

@@ -17,6 +17,50 @@ def _preview(df: pd.DataFrame, limit: int = 10) -> List[Dict[str, Any]]:
     return df[cols].head(limit).to_dict(orient="records")
 
 
+_IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.]*")
+
+
+def _replace_identifiers(expr: str) -> str:
+    result: List[str] = []
+    i = 0
+    n = len(expr)
+    while i < n:
+        ch = expr[i]
+        if ch in "'\"":
+            quote = ch
+            j = i + 1
+            while j < n:
+                if expr[j] == "\\" and j + 1 < n:
+                    j += 2
+                    continue
+                if expr[j] == quote:
+                    j += 1
+                    break
+                j += 1
+            result.append(expr[i:j])
+            i = j
+            continue
+
+        match = _IDENT_RE.match(expr, i)
+        if match:
+            token = match.group(0)
+            lowered = token.lower()
+            if lowered in ("and", "or", "not"):
+                result.append(lowered)
+            elif lowered == "true":
+                result.append("True")
+            elif lowered == "false":
+                result.append("False")
+            else:
+                key = lowered.split(".")[-1]
+                result.append(f"env.get({key!r})")
+            i = match.end()
+        else:
+            result.append(ch)
+            i += 1
+    return "".join(result)
+
+
 def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
     py = cond
     py = re.sub(r"\bAND\b", "and", py, flags=re.IGNORECASE)
@@ -25,21 +69,7 @@ def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
     py = py.replace("=", "==")
 
     env_ci = {str(k).lower(): v for k, v in env.items()}
-
-    def repl(m):
-        name = m.group(0)
-        lowered = name.lower()
-        if lowered in ("and", "or", "not"):
-            return lowered
-        if lowered == "true":
-            return "True"
-        if lowered == "false":
-            return "False"
-        key = lowered.split(".")[-1]
-        return f"env.get({key!r})"
-
-    py = re.sub(r"(?<!')\b[A-Za-z_][A-Za-z0-9_\.]*\b(?!')", repl, py)
-    # py = re.sub(r"\b[A-Za-z_][A-Za-z0-9_\.]*\b", repl, py)
+    py = _replace_identifiers(py)
     try:
         return bool(builtins.eval(py, {"__builtins__": {}}, {"env": env_ci}))
     except Exception as e:
@@ -174,7 +204,10 @@ def eval(
     if isinstance(node, AST.Relation):
         key = node.name.lower()
         if key not in env:
-            raise KeyError(f"Relation '{node.name}' not found")
+            available = ", ".join(sorted(env.keys())) or "<none>"
+            raise KeyError(
+                f"Relation '{node.name}' not found. Available relations: {available}"
+            )
         df = env[key].copy()
         steps.append(
             {

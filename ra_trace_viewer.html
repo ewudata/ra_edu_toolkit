@@ -27,11 +27,11 @@
 
     <div class="card">
       <div class="step-title">Step 1: rel</div>
-      <div class="muted">Rows: 15</div>
+      <div class="muted">Rows: 13</div>
 
       <div style="margin-top:8px;">
         <strong>Detail</strong>
-        <pre>&quot;section&quot;</pre>
+        <pre>&quot;student&quot;</pre>
       </div>
       <div class="grid">
 
@@ -39,13 +39,10 @@
         <div>
           <strong>Output schema</strong>
           <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
 ]</pre>
         </div>
       </div>
@@ -55,94 +52,64 @@
         <strong>Preview (up to 10 rows)</strong>
         <pre>[
   {
-    &quot;course_id&quot;: &quot;BIO-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Summer&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Painter&quot;,
-    &quot;room_number&quot;: 514,
-    &quot;time_slot_id&quot;: &quot;B&quot;
+    &quot;id&quot;: 128,
+    &quot;name&quot;: &quot;Zhang&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 102
   },
   {
-    &quot;course_id&quot;: &quot;BIO-301&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Summer&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Painter&quot;,
-    &quot;room_number&quot;: 514,
-    &quot;time_slot_id&quot;: &quot;A&quot;
+    &quot;id&quot;: 12345,
+    &quot;name&quot;: &quot;Shankar&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 32
   },
   {
-    &quot;course_id&quot;: &quot;CS-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Fall&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;H&quot;
+    &quot;id&quot;: 19991,
+    &quot;name&quot;: &quot;Brandt&quot;,
+    &quot;dept_name&quot;: &quot;History&quot;,
+    &quot;tot_cred&quot;: 80
   },
   {
-    &quot;course_id&quot;: &quot;CS-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;F&quot;
+    &quot;id&quot;: 23121,
+    &quot;name&quot;: &quot;Chavez&quot;,
+    &quot;dept_name&quot;: &quot;Finance&quot;,
+    &quot;tot_cred&quot;: 110
   },
   {
-    &quot;course_id&quot;: &quot;CS-190&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;E&quot;
+    &quot;id&quot;: 44553,
+    &quot;name&quot;: &quot;Peltier&quot;,
+    &quot;dept_name&quot;: &quot;Physics&quot;,
+    &quot;tot_cred&quot;: 56
   },
   {
-    &quot;course_id&quot;: &quot;CS-190&quot;,
-    &quot;sec_id&quot;: 2,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;A&quot;
+    &quot;id&quot;: 45678,
+    &quot;name&quot;: &quot;Levy&quot;,
+    &quot;dept_name&quot;: &quot;Physics&quot;,
+    &quot;tot_cred&quot;: 46
   },
   {
-    &quot;course_id&quot;: &quot;CS-315&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Watson&quot;,
-    &quot;room_number&quot;: 120,
-    &quot;time_slot_id&quot;: &quot;D&quot;
+    &quot;id&quot;: 54321,
+    &quot;name&quot;: &quot;Williams&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 54
   },
   {
-    &quot;course_id&quot;: &quot;CS-319&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Watson&quot;,
-    &quot;room_number&quot;: 100,
-    &quot;time_slot_id&quot;: &quot;B&quot;
+    &quot;id&quot;: 55739,
+    &quot;name&quot;: &quot;Sanchez&quot;,
+    &quot;dept_name&quot;: &quot;Music&quot;,
+    &quot;tot_cred&quot;: 38
   },
   {
-    &quot;course_id&quot;: &quot;CS-319&quot;,
-    &quot;sec_id&quot;: 2,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;C&quot;
+    &quot;id&quot;: 70557,
+    &quot;name&quot;: &quot;Snow&quot;,
+    &quot;dept_name&quot;: &quot;Physics&quot;,
+    &quot;tot_cred&quot;: 0
   },
   {
-    &quot;course_id&quot;: &quot;CS-347&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Fall&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;A&quot;
+    &quot;id&quot;: 76543,
+    &quot;name&quot;: &quot;Brown&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 58
   }
 ]</pre>
       </div>
@@ -156,7 +123,7 @@
       <div style="margin-top:8px;">
         <strong>Detail</strong>
         <pre>{
-  &quot;cond&quot;: &quot;semester=&#x27;Fall&#x27; and year = 2017&quot;
+  &quot;cond&quot;: &quot;dept_name = &#x27;Comp. Sci.&#x27;&quot;
 }</pre>
       </div>
       <div class="grid">
@@ -164,26 +131,20 @@
         <div>
           <strong>Input schema</strong>
           <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
 ]</pre>
         </div>
 
         <div>
           <strong>Output schema</strong>
           <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
 ]</pre>
         </div>
       </div>
@@ -191,8 +152,8 @@
       <div style="margin-top:8px;">
         <strong>Delta</strong>
         <pre>{
-  &quot;rows_before&quot;: 15,
-  &quot;rows_after&quot;: 3,
+  &quot;rows_before&quot;: 13,
+  &quot;rows_after&quot;: 4,
   &quot;note&quot;: &quot;Selection keeps rows satisfying the predicate; schema unchanged.&quot;
 }</pre>
       </div>
@@ -201,31 +162,28 @@
         <strong>Preview (up to 10 rows)</strong>
         <pre>[
   {
-    &quot;course_id&quot;: &quot;CS-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Fall&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;H&quot;
+    &quot;id&quot;: 128,
+    &quot;name&quot;: &quot;Zhang&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 102
   },
   {
-    &quot;course_id&quot;: &quot;CS-347&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Fall&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;A&quot;
+    &quot;id&quot;: 12345,
+    &quot;name&quot;: &quot;Shankar&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 32
   },
   {
-    &quot;course_id&quot;: &quot;PHY-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Fall&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Watson&quot;,
-    &quot;room_number&quot;: 100,
-    &quot;time_slot_id&quot;: &quot;A&quot;
+    &quot;id&quot;: 54321,
+    &quot;name&quot;: &quot;Williams&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 54
+  },
+  {
+    &quot;id&quot;: 76543,
+    &quot;name&quot;: &quot;Brown&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 58
   }
 ]</pre>
       </div>
@@ -240,7 +198,7 @@
         <strong>Detail</strong>
         <pre>{
   &quot;attrs&quot;: [
-    &quot;course_id&quot;
+    &quot;name&quot;
   ]
 }</pre>
       </div>
@@ -249,20 +207,17 @@
         <div>
           <strong>Input schema</strong>
           <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
 ]</pre>
         </div>
 
         <div>
           <strong>Output schema</strong>
           <pre>[
-  &quot;course_id&quot;
+  &quot;name&quot;
 ]</pre>
         </div>
       </div>
@@ -270,8 +225,8 @@
       <div style="margin-top:8px;">
         <strong>Delta</strong>
         <pre>{
-  &quot;rows_before&quot;: 3,
-  &quot;rows_after&quot;: 3,
+  &quot;rows_before&quot;: 4,
+  &quot;rows_after&quot;: 4,
   &quot;note&quot;: &quot;Projection drops non-listed attributes and removes duplicates.&quot;
 }</pre>
       </div>
@@ -280,384 +235,30 @@
         <strong>Preview (up to 10 rows)</strong>
         <pre>[
   {
-    &quot;course_id&quot;: &quot;CS-101&quot;
+    &quot;name&quot;: &quot;Zhang&quot;
   },
   {
-    &quot;course_id&quot;: &quot;CS-347&quot;
+    &quot;name&quot;: &quot;Shankar&quot;
   },
   {
-    &quot;course_id&quot;: &quot;PHY-101&quot;
+    &quot;name&quot;: &quot;Williams&quot;
+  },
+  {
+    &quot;name&quot;: &quot;Brown&quot;
   }
 ]</pre>
       </div>
       <div class="muted"></div>
     </div>
 
-    <div class="card">
-      <div class="step-title">Step 4: rel</div>
-      <div class="muted">Rows: 15</div>
-
-      <div style="margin-top:8px;">
-        <strong>Detail</strong>
-        <pre>&quot;section&quot;</pre>
-      </div>
-      <div class="grid">
-
-
-        <div>
-          <strong>Output schema</strong>
-          <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
-]</pre>
-        </div>
-      </div>
-
-
-      <div style="margin-top:8px;">
-        <strong>Preview (up to 10 rows)</strong>
-        <pre>[
-  {
-    &quot;course_id&quot;: &quot;BIO-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Summer&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Painter&quot;,
-    &quot;room_number&quot;: 514,
-    &quot;time_slot_id&quot;: &quot;B&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;BIO-301&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Summer&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Painter&quot;,
-    &quot;room_number&quot;: 514,
-    &quot;time_slot_id&quot;: &quot;A&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Fall&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;H&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;F&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-190&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;E&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-190&quot;,
-    &quot;sec_id&quot;: 2,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;A&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-315&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Watson&quot;,
-    &quot;room_number&quot;: 120,
-    &quot;time_slot_id&quot;: &quot;D&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-319&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Watson&quot;,
-    &quot;room_number&quot;: 100,
-    &quot;time_slot_id&quot;: &quot;B&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-319&quot;,
-    &quot;sec_id&quot;: 2,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;C&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-347&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Fall&quot;,
-    &quot;year&quot;: 2017,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;A&quot;
-  }
-]</pre>
-      </div>
-      <div class="muted"></div>
-    </div>
-
-    <div class="card">
-      <div class="step-title">Step 5: σ</div>
-      <div class="muted"></div>
-
-      <div style="margin-top:8px;">
-        <strong>Detail</strong>
-        <pre>{
-  &quot;cond&quot;: &quot;semester=&#x27;Spring&#x27; and year = 2018&quot;
-}</pre>
-      </div>
-      <div class="grid">
-
-        <div>
-          <strong>Input schema</strong>
-          <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
-]</pre>
-        </div>
-
-        <div>
-          <strong>Output schema</strong>
-          <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
-]</pre>
-        </div>
-      </div>
-
-      <div style="margin-top:8px;">
-        <strong>Delta</strong>
-        <pre>{
-  &quot;rows_before&quot;: 15,
-  &quot;rows_after&quot;: 7,
-  &quot;note&quot;: &quot;Selection keeps rows satisfying the predicate; schema unchanged.&quot;
-}</pre>
-      </div>
-
-      <div style="margin-top:8px;">
-        <strong>Preview (up to 10 rows)</strong>
-        <pre>[
-  {
-    &quot;course_id&quot;: &quot;CS-101&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;F&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-315&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Watson&quot;,
-    &quot;room_number&quot;: 120,
-    &quot;time_slot_id&quot;: &quot;D&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-319&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Watson&quot;,
-    &quot;room_number&quot;: 100,
-    &quot;time_slot_id&quot;: &quot;B&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-319&quot;,
-    &quot;sec_id&quot;: 2,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Taylor&quot;,
-    &quot;room_number&quot;: 3128,
-    &quot;time_slot_id&quot;: &quot;C&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;FIN-201&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;B&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;HIS-351&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Painter&quot;,
-    &quot;room_number&quot;: 514,
-    &quot;time_slot_id&quot;: &quot;C&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;MU-199&quot;,
-    &quot;sec_id&quot;: 1,
-    &quot;semester&quot;: &quot;Spring&quot;,
-    &quot;year&quot;: 2018,
-    &quot;building&quot;: &quot;Packard&quot;,
-    &quot;room_number&quot;: 101,
-    &quot;time_slot_id&quot;: &quot;D&quot;
-  }
-]</pre>
-      </div>
-      <div class="muted"></div>
-    </div>
-
-    <div class="card">
-      <div class="step-title">Step 6: π</div>
-      <div class="muted"></div>
-
-      <div style="margin-top:8px;">
-        <strong>Detail</strong>
-        <pre>{
-  &quot;attrs&quot;: [
-    &quot;course_id&quot;
-  ]
-}</pre>
-      </div>
-      <div class="grid">
-
-        <div>
-          <strong>Input schema</strong>
-          <pre>[
-  &quot;course_id&quot;,
-  &quot;sec_id&quot;,
-  &quot;semester&quot;,
-  &quot;year&quot;,
-  &quot;building&quot;,
-  &quot;room_number&quot;,
-  &quot;time_slot_id&quot;
-]</pre>
-        </div>
-
-        <div>
-          <strong>Output schema</strong>
-          <pre>[
-  &quot;course_id&quot;
-]</pre>
-        </div>
-      </div>
-
-      <div style="margin-top:8px;">
-        <strong>Delta</strong>
-        <pre>{
-  &quot;rows_before&quot;: 7,
-  &quot;rows_after&quot;: 6,
-  &quot;note&quot;: &quot;Projection drops non-listed attributes and removes duplicates.&quot;
-}</pre>
-      </div>
-
-      <div style="margin-top:8px;">
-        <strong>Preview (up to 10 rows)</strong>
-        <pre>[
-  {
-    &quot;course_id&quot;: &quot;CS-101&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-315&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;CS-319&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;FIN-201&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;HIS-351&quot;
-  },
-  {
-    &quot;course_id&quot;: &quot;MU-199&quot;
-  }
-]</pre>
-      </div>
-      <div class="muted"></div>
-    </div>
-
-    <div class="card">
-      <div class="step-title">Step 7: ∩</div>
-      <div class="muted"></div>
-
-      <div class="grid">
-
-        <div>
-          <strong>Input schema</strong>
-          <pre>{
-  &quot;left&quot;: [
-    &quot;course_id&quot;
-  ],
-  &quot;right&quot;: [
-    &quot;course_id&quot;
-  ]
-}</pre>
-        </div>
-
-        <div>
-          <strong>Output schema</strong>
-          <pre>[
-  &quot;course_id&quot;
-]</pre>
-        </div>
-      </div>
-
-      <div style="margin-top:8px;">
-        <strong>Delta</strong>
-        <pre>{
-  &quot;rows_after&quot;: 1
-}</pre>
-      </div>
-
-      <div style="margin-top:8px;">
-        <strong>Preview (up to 10 rows)</strong>
-        <pre>[
-  {
-    &quot;course_id&quot;: &quot;CS-101&quot;
-  }
-]</pre>
-      </div>
-      <div class="muted"></div>
-    </div>
-
-  <h2>Final Preview <span class="pill">1 rows</span></h2>
+  <h2>Final Preview <span class="pill">4 rows</span></h2>
   <div class="card">
     <table>
       <thead>
-        <tr><th>course_id</th></tr>
+        <tr><th>name</th></tr>
       </thead>
       <tbody>
-        <tr><td>CS-101</td></tr>
+        <tr><td>Zhang</td></tr>        <tr><td>Shankar</td></tr>        <tr><td>Williams</td></tr>        <tr><td>Brown</td></tr>
       </tbody>
     </table>
   </div>

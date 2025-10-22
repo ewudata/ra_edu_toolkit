@@ -5,7 +5,7 @@ from html import escape
 from pathlib import Path
 import pandas as pd
 
-from raedu.stepper import run
+from api.evaluate_ra.stepper import run
 
 
 def _json_pretty(value):
@@ -161,10 +161,11 @@ def _write_trace_html(trace, path: Path) -> None:
 
 def main():
     if len(sys.argv) < 2:
-        print('Usage: python run.py "<RA expression>"')
+        print('Usage: python run.py "<RA expression>" [database]')
         sys.exit(1)
     expr = sys.argv[1]
-    df, trace = run(expr)
+    database = sys.argv[2] if len(sys.argv) > 2 else None
+    df, trace = run(expr, database=database)
     print("Expression:", expr)
     print("Final schema:", trace["final_schema"])
     print("Final rows:", trace["final_rows"])
