@@ -5,7 +5,10 @@ from html import escape
 from pathlib import Path
 import pandas as pd
 
-from api.evaluate_ra.stepper import run
+# Add project root to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from backend.core.stepper import run
 
 
 def _json_pretty(value):
@@ -78,7 +81,7 @@ def _write_trace_html(trace, path: Path) -> None:
         rows_html.append(
             f"""
     <div class=\"card\">
-      <div class=\"step-title\">Step {idx}: {escape(str(step.get('op', '')))}</div>
+      <div class=\"step-title\">Step {idx}: {escape(str(step.get("op", "")))}</div>
       <div class=\"muted\">{rows_str}</div>
 {detail_html}
       <div class=\"grid\">
@@ -87,12 +90,14 @@ def _write_trace_html(trace, path: Path) -> None:
       </div>
 {delta_html}
 {preview_html}
-      <div class=\"muted\">{escape(str(step.get('note', '')))}</div>
+      <div class=\"muted\">{escape(str(step.get("note", "")))}</div>
     </div>"""
         )
 
     if not rows_html:
-        rows_html.append("<div class=\"card\"><div class=\"muted\">No steps recorded.</div></div>")
+        rows_html.append(
+            '<div class="card"><div class="muted">No steps recorded.</div></div>'
+        )
 
     header = """\
 <!DOCTYPE html>
@@ -133,7 +138,11 @@ def _write_trace_html(trace, path: Path) -> None:
                 cells = f"<td>{escape(str(row))}</td>"
             table_rows.append(f"        <tr>{cells}</tr>")
     else:
-        table_rows.append("        <tr><td colspan=\"{0}\">No preview rows.</td></tr>".format(len(final_schema) or 1))
+        table_rows.append(
+            '        <tr><td colspan="{0}">No preview rows.</td></tr>'.format(
+                len(final_schema) or 1
+            )
+        )
 
     table_head = "".join(f"<th>{escape(str(col))}</th>" for col in final_schema)
     if not table_head:
@@ -147,7 +156,7 @@ def _write_trace_html(trace, path: Path) -> None:
         <tr>{table_head}</tr>
       </thead>
       <tbody>
-{''.join(table_rows)}
+{"".join(table_rows)}
       </tbody>
     </table>
   </div>

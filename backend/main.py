@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from .api.routes import databases, evaluation, queries
+from .routes import databases, evaluation, queries
 
 app = FastAPI(title="RA Education Toolkit API")
 

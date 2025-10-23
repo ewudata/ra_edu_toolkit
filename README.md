@@ -234,33 +234,9 @@ Main endpoints:
 - `GET /databases/{database}/queries` - Get query list
 - `POST /databases/{database}/queries/{query_id}/evaluate` - Evaluate query
 
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the project
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern, fast web framework
-- [Streamlit](https://streamlit.io/) - Data application development framework
-- [Lark](https://github.com/lark-parser/lark) - Parser generator
-- [Pandas](https://pandas.pydata.org/) - Data analysis library
-
-## 📞 Support
-
-For questions or suggestions, please:
-- Submit an [Issue](https://github.com/your-org/ra-edu-toolkit/issues)
-- Send an email to team@ra-edu-toolkit.com
-- Check the [documentation](https://ra-edu-toolkit.readthedocs.io)
 
 ---
 
