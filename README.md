@@ -90,7 +90,13 @@ Launch the HTTP API alongside the CLI workflow with:
 uvicorn api.app:app --reload
 ```
 
-The server currently exposes `GET /databases`, which lists the bundled sample databases and their relations:
+The server currently exposes:
+
+- `GET /databases` — list the sample databases and their relations.
+- `POST /databases/import/zip` — upload a `.zip` that contains one or more CSV files (one file per relation) and register it as a new database folder.
+- `POST /databases/import/sql` — upload a `.sql` script; the server executes it in an in-memory SQLite database and exports every table to CSV.
+
+`GET /databases` responds with a payload like:
 
 ```
 [
@@ -107,4 +113,15 @@ The server currently exposes `GET /databases`, which lists the bundled sample da
 ]
 ```
 
-Use the endpoint to drive a frontend selector or any other integration that needs to know which demo datasets are available. Each entry mirrors the structure returned by `api.services.datasets.list_databases()`.
+Use the catalog endpoint to drive a frontend selector or any other integration that needs to know which demo datasets are available. Each entry mirrors the structure returned by `api.services.datasets.list_databases()`.
+
+To import, send a multipart form request with the new database name and the file upload. Example:
+
+```
+curl -X POST \
+  -F "name=NewDemo" \
+  -F "file=@/path/to/demo.zip" \
+  http://localhost:8000/databases/import/zip
+```
+
+The server validates archive contents (only `.csv` files, no nested directories) and persists them under `datasets/NewDemo/`. SQL uploads follow the same pattern but expect a UTF-8 encoded script file.

@@ -25,11 +25,11 @@ class QuerySummary:
     title: str
     difficulty: Optional[str]
     tags: List[str]
+    prompt: str
 
 
 @dataclass
 class QueryDetail(QuerySummary):
-    prompt: str
     hints: List[str]
     solution: SolutionSpec
     expected_schema: Optional[List[str]]
@@ -64,6 +64,7 @@ def list_queries(database: str) -> List[QuerySummary]:
                 title=question.get("title", question["id"]),
                 difficulty=question.get("difficulty"),
                 tags=question.get("tags", []),
+                prompt=question.get("prompt", ""),
             )
         )
     return summaries
