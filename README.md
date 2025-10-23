@@ -88,7 +88,7 @@ streamlit run frontend/app.py
 #### Method 3: Using CLI Tool
 
 ```bash
-python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Students))" University
+python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Student))" University
 ```
 
 ## 📚 Features

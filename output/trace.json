@@ -1,5 +1,5 @@
 {
-  "expression": "pi{name}(sigma{dept_name = 'Comp. Sci.'}(student))",
+  "expression": "π{name}(σ{major = 'CS'}(Student))",
   "database": "University",
   "steps": [
     {
@@ -78,7 +78,7 @@
     {
       "op": "σ",
       "detail": {
-        "cond": "dept_name = 'Comp. Sci.'"
+        "cond": "major = 'CS'"
       },
       "input_schema": [
         "id",
@@ -94,35 +94,10 @@
       ],
       "delta": {
         "rows_before": 13,
-        "rows_after": 4,
+        "rows_after": 0,
         "note": "Selection keeps rows satisfying the predicate; schema unchanged."
       },
-      "preview": [
-        {
-          "id": 128,
-          "name": "Zhang",
-          "dept_name": "Comp. Sci.",
-          "tot_cred": 102
-        },
-        {
-          "id": 12345,
-          "name": "Shankar",
-          "dept_name": "Comp. Sci.",
-          "tot_cred": 32
-        },
-        {
-          "id": 54321,
-          "name": "Williams",
-          "dept_name": "Comp. Sci.",
-          "tot_cred": 54
-        },
-        {
-          "id": 76543,
-          "name": "Brown",
-          "dept_name": "Comp. Sci.",
-          "tot_cred": 58
-        }
-      ]
+      "preview": []
     },
     {
       "op": "π",
@@ -141,42 +116,16 @@
         "name"
       ],
       "delta": {
-        "rows_before": 4,
-        "rows_after": 4,
+        "rows_before": 0,
+        "rows_after": 0,
         "note": "Projection drops non-listed attributes and removes duplicates."
       },
-      "preview": [
-        {
-          "name": "Zhang"
-        },
-        {
-          "name": "Shankar"
-        },
-        {
-          "name": "Williams"
-        },
-        {
-          "name": "Brown"
-        }
-      ]
+      "preview": []
     }
   ],
   "final_schema": [
     "name"
   ],
-  "final_rows": 4,
-  "preview": [
-    {
-      "name": "Zhang"
-    },
-    {
-      "name": "Shankar"
-    },
-    {
-      "name": "Williams"
-    },
-    {
-      "name": "Brown"
-    }
-  ]
+  "final_rows": 0,
+  "preview": []
 }

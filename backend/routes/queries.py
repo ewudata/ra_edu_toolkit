@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from ...services import queries as queries_service
-from ...services.exceptions import DatabaseNotFound, QueryNotFound
-from ...services.queries import QueryDetail, QuerySummary
+from ..services import queries as queries_service
+from ..services.exceptions import DatabaseNotFound, QueryNotFound
+from ..services.queries import QueryDetail, QuerySummary
 
 router = APIRouter(prefix="/databases/{database}/queries", tags=["queries"])
 

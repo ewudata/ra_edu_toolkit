@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RA Stepper — Trace Viewer</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
+    .muted { color: #666; font-size: 0.9rem; }
+    code, pre { background: #f7f7f7; border-radius: 8px; padding: 4px 6px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #eee; padding: 6px 8px; text-align: left; }
+    th { background: #fafafa; }
+    h1 { margin-top: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pill { display: inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 999px; font-size: 0.8rem; margin-left: 8px; }
+    .step-title { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Relational Algebra Stepper</h1>
+  <div class="muted">Expression: <code>{expression}</code></div>
+
+  <h2>Steps</h2>
+
+
+    <div class="card">
+      <div class="step-title">Step 1: rel</div>
+      <div class="muted">Rows: 13</div>
+
+      <div style="margin-top:8px;">
+        <strong>Detail</strong>
+        <pre>&quot;student&quot;</pre>
+      </div>
+      <div class="grid">
+
+
+        <div>
+          <strong>Output schema</strong>
+          <pre>[
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
+]</pre>
+        </div>
+      </div>
+
+
+      <div style="margin-top:8px;">
+        <strong>Preview (up to 10 rows)</strong>
+        <pre>[
+  {
+    &quot;id&quot;: 128,
+    &quot;name&quot;: &quot;Zhang&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 102
+  },
+  {
+    &quot;id&quot;: 12345,
+    &quot;name&quot;: &quot;Shankar&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 32
+  },
+  {
+    &quot;id&quot;: 19991,
+    &quot;name&quot;: &quot;Brandt&quot;,
+    &quot;dept_name&quot;: &quot;History&quot;,
+    &quot;tot_cred&quot;: 80
+  },
+  {
+    &quot;id&quot;: 23121,
+    &quot;name&quot;: &quot;Chavez&quot;,
+    &quot;dept_name&quot;: &quot;Finance&quot;,
+    &quot;tot_cred&quot;: 110
+  },
+  {
+    &quot;id&quot;: 44553,
+    &quot;name&quot;: &quot;Peltier&quot;,
+    &quot;dept_name&quot;: &quot;Physics&quot;,
+    &quot;tot_cred&quot;: 56
+  },
+  {
+    &quot;id&quot;: 45678,
+    &quot;name&quot;: &quot;Levy&quot;,
+    &quot;dept_name&quot;: &quot;Physics&quot;,
+    &quot;tot_cred&quot;: 46
+  },
+  {
+    &quot;id&quot;: 54321,
+    &quot;name&quot;: &quot;Williams&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 54
+  },
+  {
+    &quot;id&quot;: 55739,
+    &quot;name&quot;: &quot;Sanchez&quot;,
+    &quot;dept_name&quot;: &quot;Music&quot;,
+    &quot;tot_cred&quot;: 38
+  },
+  {
+    &quot;id&quot;: 70557,
+    &quot;name&quot;: &quot;Snow&quot;,
+    &quot;dept_name&quot;: &quot;Physics&quot;,
+    &quot;tot_cred&quot;: 0
+  },
+  {
+    &quot;id&quot;: 76543,
+    &quot;name&quot;: &quot;Brown&quot;,
+    &quot;dept_name&quot;: &quot;Comp. Sci.&quot;,
+    &quot;tot_cred&quot;: 58
+  }
+]</pre>
+      </div>
+      <div class="muted"></div>
+    </div>
+
+    <div class="card">
+      <div class="step-title">Step 2: σ</div>
+      <div class="muted"></div>
+
+      <div style="margin-top:8px;">
+        <strong>Detail</strong>
+        <pre>{
+  &quot;cond&quot;: &quot;major = &#x27;CS&#x27;&quot;
+}</pre>
+      </div>
+      <div class="grid">
+
+        <div>
+          <strong>Input schema</strong>
+          <pre>[
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
+]</pre>
+        </div>
+
+        <div>
+          <strong>Output schema</strong>
+          <pre>[
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
+]</pre>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
+        <strong>Delta</strong>
+        <pre>{
+  &quot;rows_before&quot;: 13,
+  &quot;rows_after&quot;: 0,
+  &quot;note&quot;: &quot;Selection keeps rows satisfying the predicate; schema unchanged.&quot;
+}</pre>
+      </div>
+
+      <div class="muted"></div>
+    </div>
+
+    <div class="card">
+      <div class="step-title">Step 3: π</div>
+      <div class="muted"></div>
+
+      <div style="margin-top:8px;">
+        <strong>Detail</strong>
+        <pre>{
+  &quot;attrs&quot;: [
+    &quot;name&quot;
+  ]
+}</pre>
+      </div>
+      <div class="grid">
+
+        <div>
+          <strong>Input schema</strong>
+          <pre>[
+  &quot;id&quot;,
+  &quot;name&quot;,
+  &quot;dept_name&quot;,
+  &quot;tot_cred&quot;
+]</pre>
+        </div>
+
+        <div>
+          <strong>Output schema</strong>
+          <pre>[
+  &quot;name&quot;
+]</pre>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
+        <strong>Delta</strong>
+        <pre>{
+  &quot;rows_before&quot;: 0,
+  &quot;rows_after&quot;: 0,
+  &quot;note&quot;: &quot;Projection drops non-listed attributes and removes duplicates.&quot;
+}</pre>
+      </div>
+
+      <div class="muted"></div>
+    </div>
+
+  <h2>Final Preview <span class="pill">0 rows</span></h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>name</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="1">No preview rows.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

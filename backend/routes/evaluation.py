@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ...services import queries as queries_service, relalg as relalg_service
-from ...services.exceptions import (
+from ..services import queries as queries_service, relalg as relalg_service
+from ..services.exceptions import (
     DatabaseNotFound,
     EvaluationError,
     ParseError,
