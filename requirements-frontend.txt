@@ -1,0 +1,4 @@
+# Frontend dependencies
+streamlit
+requests
+pandas

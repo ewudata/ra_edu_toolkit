@@ -1,4 +1,6 @@
+# Backend dependencies
 fastapi[standard]
 lark
 pandas
 uvicorn[standard]
+requests

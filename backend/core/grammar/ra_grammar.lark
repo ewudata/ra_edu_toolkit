@@ -15,15 +15,15 @@ rename_list: rename_pair ("," rename_pair)*
 rename_pair: NAME "->" NAME
 
 // Define tokens with explicit priority
-PI.2: "π" | /(?i)pi/
-SIGMA.2: "σ" | /(?i)sigma/
-RHO.2: "ρ" | /(?i)rho/
-JOIN.2: "⋈" | /(?i)join/
-PRODUCT.2: "×" | /(?i)x/ | /(?i)cross/
-UNION.2: "∪" | /(?i)union/
-DIFF.2: "−" | "-" | /(?i)diff/
-INTERSECT.2: "∩" | /(?i)intersect/
-DIV.2: "÷" | "/" | /(?i)div/
+PI.2: "π" | "pi" | "PI"
+SIGMA.2: "σ" | "sigma" | "SIGMA"
+RHO.2: "ρ" | "rho" | "RHO"
+JOIN.2: "⋈" | "join" | "JOIN"
+PRODUCT.2: "×" | "x" | "X" | "cross" | "CROSS"
+UNION.2: "∪" | "union" | "UNION"
+DIFF.2: "−" | "-" | "diff" | "DIFF"
+INTERSECT.2: "∩" | "intersect" | "INTERSECT"
+DIV.2: "÷" | "/" | "div" | "DIV"
 NAME: /[A-Za-z_][A-Za-z0-9_\.]*/
 
 COND: /[^}]+/

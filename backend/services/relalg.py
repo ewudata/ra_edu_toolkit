@@ -6,8 +6,8 @@ from typing import Dict, List, Optional
 import pandas as pd
 from lark import LarkError, UnexpectedInput
 
-from ..evaluate_ra import evaluator as evaluator_mod
-from ..evaluate_ra import stepper as stepper_mod
+from ..core import evaluator as evaluator_mod
+from ..core import stepper as stepper_mod
 from . import datasets
 from .exceptions import EvaluationError, ParseError
 

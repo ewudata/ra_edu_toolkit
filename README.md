@@ -1,127 +1,267 @@
-# RA Education Toolkit (Modular)
+# RA Education Toolkit
 
-Includes:
-- `api/evaluate_ra/ra_ast.py`  (AST node classes)
-- `api/evaluate_ra/ra_parser.py` (Lark-based parser using `api/evaluate_ra/grammar/ra_grammar.lark`)
-- `api/evaluate_ra/evaluator.py` (operator-by-operator evaluator with provenance)
-- `api/evaluate_ra/stepper.py` (glue to produce step traces)
-- `api/app.py` (FastAPI application exposing selected APIs)
-- `datasets/*.csv` (tiny demo relations)
-- `run.py` (CLI)
+An interactive educational platform designed for learning relational algebra, combining modern AI-driven interactivity with traditional database education to make learning more accessible, engaging, and conceptually clear.
 
-Install:
+## 🎯 Project Goals
+
+This project provides a suite of LLM-powered learning tools that bridge the conceptual and practical gap between relational algebra and SQL through three major components:
+
+- **Dual Query Translation**: A model that maps between relational algebra expressions and SQL queries using a dual-encoder architecture
+- **Interactive Query Visualization**: A dynamic visualization engine that executes relational algebra expressions step by step and visually displays intermediate results
+- **Personalized Learning and Feedback**: An adaptive tutor system that uses LLMs to generate tailored exercises, guided hints, and detailed explanations
+
+## 🏗️ Project Architecture
+
 ```
-python -m venv .venv && source .venv/bin/activate
+ra_edu_toolkit/
+├── backend/                    # FastAPI backend service
+│   ├── main.py                # Application entry point
+│   ├── api/routes/            # API routes
+│   ├── core/                  # Core RA engine
+│   └── services/              # Business logic services
+├── frontend/                  # Streamlit frontend application
+│   ├── app.py                # Main application
+│   ├── pages/                # Multi-page application
+│   ├── components/            # UI components
+│   └── utils/                # Utility functions
+├── datasets/                  # Sample datasets
+├── assets/                    # Static resources
+├── scripts/                   # Utility scripts
+├── tests/                     # Test files
+└── .github/workflows/        # CI/CD configuration
+```
+
+## 🚀 Quick Start
+
+### Requirements
+
+- Python 3.11+
+- pip or conda
+
+### Installation
+
+```bash
+# Clone the project
+git clone <repository-url>
+cd ra_edu_toolkit
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate     # Windows
+
+# Install backend dependencies
 pip install -r requirements.txt
+
+# Install frontend dependencies
+pip install -r requirements-frontend.txt
 ```
 
-Run (optionally specify a database subfolder from `datasets/`):
-```
-python run.py "pi{name}(sigma{major = 'CS'}(Students))" University
-```
+### Starting Services
 
-## Program Execution Flow
+#### Method 1: Development Mode (Recommended)
 
-### 1. **Entry Point (run.py)**
-- Program starts from `run.py`
-- Takes a relational algebra expression as command line argument
-- Calls `api.evaluate_ra.stepper.run()` function to process the expression
+Use the development server script to start both frontend and backend simultaneously:
 
-### 2. **Data Loading (stepper.py)**
-- `run(expr, database=...)` selects a database subfolder under `datasets/`
-  - Each CSV in that subfolder is read into pandas, columns are lower-cased, and provenance metadata attached
-  - Relations are registered by filename stem (e.g., `student.csv` → relation `student`)
-  - If you omit the database and only one subfolder exists, it is used automatically; otherwise you’ll be prompted to choose
-
-### 3. **Syntax Parsing (ra_parser.py)**
-- `parse()` function uses Lark parser:
-  - Reads `ra_grammar.lark` grammar file
-  - Parses relational algebra expression into parse tree
-  - `_ToAST` transformer converts parse tree to AST nodes
-
-### 4. **AST Construction (ra_ast.py)**
-- Defines various relational algebra operation AST node types:
-  - `Relation`: Relation table
-  - `Projection`: Projection operation (π)
-  - `Selection`: Selection operation (σ)
-  - `Rename`: Rename operation (ρ)
-  - `Join`: Join operation (⋈)
-  - `Product`: Cartesian product (×)
-  - `Union`: Union operation (∪)
-  - `Difference`: Difference operation (−)
-  - `Intersection`: Intersection operation (∩)
-  - `Division`: Division operation (÷)
-
-### 5. **Expression Evaluation (evaluator.py)**
-- `eval()` function recursively executes AST:
-  - Performs corresponding relational algebra operations based on node type
-  - Uses pandas DataFrame for data processing
-  - Records execution steps, metadata, and up to 10 output tuples for each operation
-  - Supports condition expression evaluation (`_cond_eval`)
-
-### 6. **Result Preview and Output**
-- Generates execution trace information:
-  - Final schema (`final_schema`)
-  - Final row count (`final_rows`)
-  - Preview of first 10 rows (`preview`)
-- Output files:
-  - `output/trace.json`: Complete execution trace
-  - `output/result.csv`: Final result data
-  - `ra_trace_viewer.html`: Standalone HTML snapshot of the latest trace
-
-### 7. **Supported Syntax**
-Grammar file defines standard relational algebra operators:
-- `π{attr1,attr2}(R)`: Projection
-- `σ{condition}(R)`: Selection
-- `ρ{old->new}(R)`: Rename
-- `R ⋈ S`: Natural join
-- `R × S`: Cartesian product
-- `R ∪ S`: Union
-- `R − S`: Difference
-- `R ∩ S`: Intersection
-- `R ÷ S`: Division
-
-All operator keywords (π, σ, ρ, join/product/union/etc.), relation names, and attribute names are matched case-insensitively; inputs are canonicalized internally so you can write expressions such as `Pi{Name}(students)` or `JOIN`/`join` interchangeably.
-
-## FastAPI Backend
-
-Launch the HTTP API alongside the CLI workflow with:
-```
-uvicorn api.app:app --reload
+```bash
+python scripts/dev_server.py
 ```
 
-The server currently exposes:
+This will start:
+- Backend API: http://localhost:8000
+- Frontend Application: http://localhost:8501
+- API Documentation: http://localhost:8000/docs
 
-- `GET /databases` — list the sample databases and their relations.
-- `POST /databases/import/zip` — upload a `.zip` that contains one or more CSV files (one file per relation) and register it as a new database folder.
-- `POST /databases/import/sql` — upload a `.sql` script; the server executes it in an in-memory SQLite database and exports every table to CSV.
+#### Method 2: Start Separately
 
-`GET /databases` responds with a payload like:
-
-```
-[
-  {
-    "name": "TestDB",
-    "tables": ["courses", "enroll", "students"],
-    "table_count": 3
-  },
-  {
-    "name": "University",
-    "tables": ["advisor", "classroom", "course", ...],
-    "table_count": 11
-  }
-]
+**Start Backend Service**:
+```bash
+uvicorn backend.main:app --reload
 ```
 
-Use the catalog endpoint to drive a frontend selector or any other integration that needs to know which demo datasets are available. Each entry mirrors the structure returned by `api.services.datasets.list_databases()`.
-
-To import, send a multipart form request with the new database name and the file upload. Example:
-
-```
-curl -X POST \
-  -F "name=NewDemo" \
-  -F "file=@/path/to/demo.zip" \
-  http://localhost:8000/databases/import/zip
+**Start Frontend Application**:
+```bash
+streamlit run frontend/app.py
 ```
 
-The server validates archive contents (only `.csv` files, no nested directories) and persists them under `datasets/NewDemo/`. SQL uploads follow the same pattern but expect a UTF-8 encoded script file.
+#### Method 3: Using CLI Tool
+
+```bash
+python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Students))" University
+```
+
+## 📚 Features
+
+### 🔍 Query Editor
+- Interactive relational algebra query writing
+- Real-time syntax checking and error hints
+- Query result preview and download
+- Step-by-step execution process visualization
+
+### 📊 Database Manager
+- Support for CSV/ZIP file import
+- Support for SQL script import
+- Database and table structure browsing
+- Data preview and statistics
+
+### 📚 Query Exercises
+- Graded practice problem system
+- Instant feedback and scoring
+- Standard answer comparison
+- Learning progress tracking
+
+### 🎯 Execution Process Visualization
+- Step-by-step execution tracking
+- Intermediate result display
+- Operation type statistics
+- Performance analysis
+
+## 🔧 Supported Relational Algebra Operations
+
+- **Projection (π)**: `π{attr1,attr2}(R)` - Select specific attributes
+- **Selection (σ)**: `σ{condition}(R)` - Filter rows based on conditions
+- **Rename (ρ)**: `ρ{old->new}(R)` - Rename attributes
+- **Join (⋈)**: `R ⋈ S` - Natural join
+- **Cartesian Product (×)**: `R × S` - Cartesian product
+- **Union (∪)**: `R ∪ S` - Union
+- **Difference (−)**: `R − S` - Difference
+- **Intersection (∩)**: `R ∩ S` - Intersection
+
+## 📖 Usage Examples
+
+### Basic Query Examples
+
+```sql
+-- Find names of computer science students
+π{name}(σ{major = 'CS'}(Students))
+
+-- Find students enrolled in specific courses
+π{name}(Students ⋈ Takes ⋈ σ{course_id = 'CS101'}(Courses))
+
+-- Find students with excellent grades
+π{name}(σ{grade >= 'A'}(Students ⋈ Takes))
+```
+
+### API Usage Examples
+
+```python
+from frontend.utils.api_client import APIClient
+
+# Initialize client
+client = APIClient("http://localhost:8000")
+
+# Get database list
+databases = client.get_databases()
+
+# Execute query
+result = client.evaluate_query(
+    database="University",
+    query_id="custom",
+    expression="π{name}(σ{major = 'CS'}(Students))"
+)
+```
+
+## 🐳 Docker Deployment
+
+### Build Images
+
+```bash
+# Build backend image
+docker build -f Dockerfile.backend -t ra-toolkit-backend .
+
+# Build frontend image
+docker build -f Dockerfile.frontend -t ra-toolkit-frontend .
+```
+
+### Run Containers
+
+```bash
+# Start backend service
+docker run -d -p 8000:8000 --name backend ra-toolkit-backend
+
+# Start frontend application
+docker run -d -p 8501:8501 --name frontend ra-toolkit-frontend
+```
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run backend tests
+pytest tests/test_backend/
+
+# Run frontend tests
+pytest tests/test_frontend/
+
+# Generate test coverage report
+pytest --cov=backend --cov=frontend
+```
+
+## 🔧 Development
+
+### Code Formatting
+
+```bash
+# Format code
+black backend/ frontend/ scripts/
+
+# Sort imports
+isort backend/ frontend/ scripts/
+
+# Code linting
+flake8 backend/ frontend/ scripts/
+```
+
+### Adding New Features
+
+1. Add core logic in `backend/core/`
+2. Add API endpoints in `backend/api/routes/`
+3. Add UI components in `frontend/components/`
+4. Add new pages in `frontend/pages/`
+5. Update tests and documentation
+
+## 📄 API Documentation
+
+After starting the backend service, visit http://localhost:8000/docs to view the complete API documentation.
+
+Main endpoints:
+- `GET /databases` - Get database list
+- `POST /databases/import/zip` - Import database from ZIP
+- `POST /databases/import/sql` - Import database from SQL
+- `GET /databases/{database}/queries` - Get query list
+- `POST /databases/{database}/queries/{query_id}/evaluate` - Evaluate query
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern, fast web framework
+- [Streamlit](https://streamlit.io/) - Data application development framework
+- [Lark](https://github.com/lark-parser/lark) - Parser generator
+- [Pandas](https://pandas.pydata.org/) - Data analysis library
+
+## 📞 Support
+
+For questions or suggestions, please:
+- Submit an [Issue](https://github.com/your-org/ra-edu-toolkit/issues)
+- Send an email to team@ra-edu-toolkit.com
+- Check the [documentation](https://ra-edu-toolkit.readthedocs.io)
+
+---
+
+**Making relational algebra learning simple and fun!** 🎓✨
