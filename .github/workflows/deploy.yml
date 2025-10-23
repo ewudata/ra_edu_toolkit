@@ -8,8 +8,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}/relational-backend
-  FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}/relational-frontend
+  BACKEND_IMAGE: ghcr.io/${{ github.repository }}/relational-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/relational-frontend
   DEPLOY_HOST: wkf2000.tplinkdns.com
   DEPLOY_PORT: 2222
   DEPLOY_PATH: /home/deploy/relational
@@ -27,7 +27,7 @@ jobs:
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
-        registry: ${{ env.REGISTRY }}
+        registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -35,7 +35,7 @@ jobs:
       id: meta-backend
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.BACKEND_IMAGE }}
+        images: ghcr.io/${{ github.repository }}/relational-backend
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -46,7 +46,7 @@ jobs:
       id: meta-frontend
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.FRONTEND_IMAGE }}
+        images: ghcr.io/${{ github.repository }}/relational-frontend
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -83,13 +83,13 @@ jobs:
     - name: Deploy to server
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ env.DEPLOY_HOST }}
-        port: ${{ env.DEPLOY_PORT }}
+        host: wkf2000.tplinkdns.com
+        port: 2222
         username: ${{ secrets.DEPLOY_USERNAME }}
         key: ${{ secrets.DEPLOY_SSH_KEY }}
         script: |
           # Navigate to deployment directory
-          cd ${{ env.DEPLOY_PATH }}
+          cd /home/deploy/relational
           
           # Pull latest images
           echo "Pulling latest backend image..."
@@ -123,12 +123,12 @@ jobs:
     - name: Verify deployment
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ env.DEPLOY_HOST }}
-        port: ${{ env.DEPLOY_PORT }}
+        host: wkf2000.tplinkdns.com
+        port: 2222
         username: ${{ secrets.DEPLOY_USERNAME }}
         key: ${{ secrets.DEPLOY_SSH_KEY }}
         script: |
-          cd ${{ env.DEPLOY_PATH }}
+          cd /home/deploy/relational
           
           # Check if containers are running
           echo "Checking container status..."
