@@ -1,0 +1,65 @@
+---
+description: Relational algebra syntax and examples
+---
+
+# Relational Algebra Syntax Guide
+
+## Basic Syntax
+- Use Greek letters for operations: π (pi), σ (sigma), ρ (rho)
+- Use mathematical symbols: ⋈ (bowtie), × (times), ∪ (union), − (minus), ∩ (intersection)
+- Attribute lists in curly braces: `{attr1, attr2}`
+- Conditions in curly braces: `{condition}`
+- Relations in parentheses: `(RelationName)`
+
+## Common Patterns
+
+### Projection (π)
+```sql
+π{name, age}(Students)           -- Select name and age columns
+π{*}(Students)                   -- Select all columns
+```
+
+### Selection (σ)  
+```sql
+σ{age > 20}(Students)            -- Students older than 20
+σ{major = 'CS'}(Students)        -- Computer science students
+σ{age >= 18 AND major = 'CS'}(Students)  -- Complex conditions
+```
+
+### Join Operations
+```sql
+Students ⋈ Takes                 -- Natural join
+Students ⋈{Students.id = Takes.student_id}Takes  -- Theta join
+Students × Courses               -- Cartesian product
+```
+
+### Set Operations
+```sql
+Students ∪ GraduateStudents     -- Union
+Students − GraduateStudents     -- Difference  
+Students ∩ GraduateStudents     -- Intersection
+```
+
+### Rename (ρ)
+```sql
+ρ{old_name -> new_name}(Students)  -- Rename attribute
+ρ{Students -> S}(Students)         -- Rename relation
+```
+
+## Complex Examples
+```sql
+-- Find CS students' names
+π{name}(σ{major = 'CS'}(Students))
+
+-- Find students enrolled in CS101
+π{name}(Students ⋈ Takes ⋈ σ{course_id = 'CS101'}(Courses))
+
+-- Find students with A grades
+π{name}(σ{grade = 'A'}(Students ⋈ Takes))
+```
+
+## Best Practices
+- Use descriptive relation names
+- Break complex queries into steps
+- Use parentheses for clarity
+- Test with sample data first

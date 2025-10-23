@@ -1,0 +1,40 @@
+---
+globs: backend/core/*.py
+---
+
+# Relational Algebra Core Engine
+
+## Core Components
+- **Parser**: [backend/core/ra_parser.py](mdc:backend/core/ra_parser.py) - Lark-based RA expression parser
+- **AST**: [backend/core/ra_ast.py](mdc:backend/core/ra_ast.py) - Abstract syntax tree definitions
+- **Evaluator**: [backend/core/evaluator.py](mdc:backend/core/evaluator.py) - Expression evaluation engine
+- **Stepper**: [backend/core/stepper.py](mdc:backend/core/stepper.py) - Step-by-step execution with tracing
+- **Grammar**: [backend/core/grammar/ra_grammar.lark](mdc:backend/core/grammar/ra_grammar.lark) - Lark grammar definition
+
+## Supported Operations
+- **Projection (π)**: `π{attr1,attr2}(R)` - Select specific attributes
+- **Selection (σ)**: `σ{condition}(R)` - Filter rows based on conditions  
+- **Rename (ρ)**: `ρ{old->new}(R)` - Rename attributes
+- **Join (⋈)**: `R ⋈ S` - Natural join
+- **Cartesian Product (×)**: `R × S` - Cartesian product
+- **Union (∪)**: `R ∪ S` - Union
+- **Difference (−)**: `R − S` - Difference
+- **Intersection (∩)**: `R ∩ S` - Intersection
+
+## Usage Patterns
+- Use `run()` function from stepper for complete evaluation with tracing
+- Use `parse()` from ra_parser for syntax parsing only
+- Use `eval_node()` from evaluator for direct AST evaluation
+- All functions return pandas DataFrames for data manipulation
+
+## Data Flow
+1. Parse RA expression using Lark grammar
+2. Build AST representation
+3. Evaluate AST nodes recursively
+4. Return pandas DataFrame with results
+5. Generate execution trace for visualization
+
+## Error Handling
+- Parse errors: Invalid syntax in RA expression
+- Evaluation errors: Runtime errors during execution
+- Data errors: Missing tables or invalid column references

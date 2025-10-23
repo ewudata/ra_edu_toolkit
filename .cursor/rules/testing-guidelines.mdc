@@ -1,0 +1,68 @@
+---
+globs: tests/**/*.py
+---
+
+# Testing Guidelines
+
+## Test Organization
+- **Backend Tests**: [tests/test_backend/](mdc:tests/test_backend/) - API and core logic tests
+- **Frontend Tests**: [tests/test_frontend/](mdc:tests/test_frontend/) - UI component tests
+- Use pytest framework with proper naming conventions
+
+## Test Structure
+- Test files: `test_*.py`
+- Test classes: `Test*`
+- Test functions: `test_*`
+- Use descriptive test names that explain the scenario
+
+## Backend Testing
+- Test API endpoints with FastAPI TestClient
+- Test core RA engine with sample expressions
+- Test service layer with mocked dependencies
+- Use fixtures for common test data
+
+## Frontend Testing
+- Test Streamlit components with proper mocking
+- Test API client integration
+- Test user interaction flows
+- Use Streamlit testing utilities
+
+## Test Data
+- Use sample datasets from [datasets/](mdc:datasets/) for integration tests
+- Create minimal test fixtures for unit tests
+- Test with various RA expression complexities
+
+## Coverage Goals
+- Aim for >80% code coverage
+- Focus on critical paths and error handling
+- Test both success and failure scenarios
+
+## Running Tests
+```bash
+# All tests
+pytest
+
+# Backend only
+pytest tests/test_backend/
+
+# Frontend only  
+pytest tests/test_frontend/
+
+# With coverage
+pytest --cov=backend --cov=frontend
+```
+
+## Example Test Pattern
+```python
+import pytest
+from backend.core.stepper import run
+
+def test_projection_operation():
+    """Test basic projection operation."""
+    expr = "π{name}(Students)"
+    df, trace = run(expr, database="University")
+    
+    assert "name" in df.columns
+    assert len(trace["steps"]) > 0
+    assert trace["final_rows"] > 0
+```

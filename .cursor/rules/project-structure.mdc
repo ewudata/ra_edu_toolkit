@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+---
+
+# RA Education Toolkit - Project Structure Guide
+
+This is a relational algebra education platform with a FastAPI backend and Streamlit frontend.
+
+## Core Architecture
+
+- **Backend**: FastAPI service in [backend/](mdc:backend/) with routes in [backend/routes/](mdc:backend/routes/)
+- **Frontend**: Streamlit app in [frontend/](mdc:frontend/) with pages in [frontend/pages/](mdc:frontend/pages/)
+- **Core Engine**: Relational algebra parser and evaluator in [backend/core/](mdc:backend/core/)
+- **Services**: Business logic in [backend/services/](mdc:backend/services/)
+- **Datasets**: Sample databases in [datasets/](mdc:datasets/)
+- **Scripts**: Utility scripts in [scripts/](mdc:scripts/)
+
+## Key Entry Points
+
+- **Backend API**: [backend/main.py](mdc:backend/main.py) - FastAPI application
+- **Frontend App**: [frontend/app.py](mdc:frontend/app.py) - Streamlit application  
+- **CLI Tool**: [scripts/run_cli.py](mdc:scripts/run_cli.py) - Command-line interface
+- **Dev Server**: [scripts/dev_server.py](mdc:scripts/dev_server.py) - Development server
+
+## Import Patterns
+
+- Backend imports: `from backend.core.stepper import run`
+- Frontend imports: `from frontend.utils.api_client import APIClient`
+- Scripts add project root to path: `sys.path.insert(0, str(Path(__file__).parent.parent))`
+
+## File Organization
+
+- **Routes**: API endpoints in [backend/routes/](mdc:backend/routes/) (moved from backend/api/routes/)
+- **Components**: Reusable UI components in [frontend/components/](mdc:frontend/components/)
+- **Pages**: Multi-page Streamlit app in [frontend/pages/](mdc:frontend/pages/)
+- **Core Logic**: RA parser, AST, evaluator in [backend/core/](mdc:backend/core/)

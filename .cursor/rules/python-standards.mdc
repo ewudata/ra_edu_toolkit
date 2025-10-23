@@ -1,0 +1,40 @@
+---
+globs: *.py
+---
+
+# Python Code Standards
+
+## Import Organization
+- Use `from __future__ import annotations` for forward references
+- Group imports: standard library, third-party, local imports
+- Use absolute imports for local modules
+- Add project root to sys.path in scripts: `sys.path.insert(0, str(Path(__file__).parent.parent))`
+
+## Type Hints
+- Always use type hints for function parameters and return values
+- Use `from __future__ import annotations` to enable forward references
+- Use `Optional[T]` for nullable types, `List[T]` for lists
+- Use Pydantic models for API request/response validation
+
+## Error Handling
+- Use FastAPI HTTPException for API errors with proper status codes
+- Use try-catch blocks for external service calls
+- Provide meaningful error messages to users
+
+## Code Style
+- Follow Black formatting (88 character line length)
+- Use descriptive variable and function names
+- Add docstrings for public functions and classes
+- Use f-strings for string formatting
+
+## Backend Patterns
+- Use FastAPI APIRouter with proper prefixes and tags
+- Create Pydantic models for request/response validation
+- Use dependency injection for services
+- Follow RESTful API conventions
+
+## Frontend Patterns
+- Use Streamlit components with proper keys for state management
+- Organize UI components in separate files
+- Use type hints for component functions
+- Handle API client errors gracefully

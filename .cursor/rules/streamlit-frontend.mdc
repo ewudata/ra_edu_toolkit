@@ -1,0 +1,46 @@
+---
+globs: frontend/**/*.py
+---
+
+# Streamlit Frontend Guidelines
+
+## Component Organization
+- Create reusable components in [frontend/components/](mdc:frontend/components/)
+- Use descriptive function names ending with `_component`
+- Include proper type hints and docstrings
+- Use Streamlit keys for state management
+
+## Page Structure
+- Organize pages in [frontend/pages/](mdc:frontend/pages/)
+- Use descriptive page names with numbers for ordering
+- Import components and utilities as needed
+
+## API Client Usage
+- Use [frontend/utils/api_client.py](mdc:frontend/utils/api_client.py) for backend communication
+- Handle API errors gracefully with try-catch blocks
+- Show appropriate user feedback (success/error messages)
+
+## UI Patterns
+- Use `st.columns()` for layout organization
+- Use `st.expander()` for collapsible content
+- Use `st.success()`, `st.error()`, `st.warning()` for user feedback
+- Use `st.markdown()` for rich text formatting
+
+## State Management
+- Use Streamlit session state for persistent data
+- Use unique keys for all interactive components
+- Handle state initialization properly
+
+## Example Component Pattern
+```python
+import streamlit as st
+from typing import Optional
+
+def query_input_component(
+    label: str = "输入关系代数表达式",
+    key: str = "query_input",
+) -> Optional[str]:
+    """Query input component with proper typing and documentation."""
+    query = st.text_area(label, key=key, height=100)
+    return query if query.strip() else None
+```

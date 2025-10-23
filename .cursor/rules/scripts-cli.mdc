@@ -1,0 +1,53 @@
+---
+globs: scripts/*.py
+---
+
+# Scripts and CLI Tools
+
+## Script Organization
+- **CLI Tool**: [scripts/run_cli.py](mdc:scripts/run_cli.py) - Command-line interface for RA evaluation
+- **Dev Server**: [scripts/dev_server.py](mdc:scripts/dev_server.py) - Development server launcher
+
+## Path Management
+- Always add project root to Python path: `sys.path.insert(0, str(Path(__file__).parent.parent))`
+- Use absolute imports for backend modules: `from backend.core.stepper import run`
+- Use pathlib.Path for file operations
+
+## CLI Patterns
+- Use argparse or sys.argv for command-line arguments
+- Provide helpful usage messages
+- Handle errors gracefully with proper exit codes
+- Output results in multiple formats (JSON, CSV, HTML)
+
+## Development Server
+- Use subprocess to manage multiple services
+- Provide proper logging and error handling
+- Support both frontend and backend startup
+- Handle graceful shutdown
+
+## Example CLI Pattern
+```python
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from backend.core.stepper import run
+
+def main():
+    if len(sys.argv) < 2:
+        print('Usage: python script.py "<RA expression>" [database]')
+        sys.exit(1)
+    
+    expr = sys.argv[1]
+    database = sys.argv[2] if len(sys.argv) > 2 else None
+    
+    try:
+        df, trace = run(expr, database=database)
+        # Process results...
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+```

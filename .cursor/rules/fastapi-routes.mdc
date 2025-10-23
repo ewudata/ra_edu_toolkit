@@ -1,0 +1,45 @@
+---
+globs: backend/routes/*.py
+---
+
+# FastAPI Routes Guidelines
+
+## Router Setup
+- Use `APIRouter` with descriptive prefix and tags
+- Import router in [backend/main.py](mdc:backend/main.py) and register with `app.include_router()`
+- Follow RESTful conventions for endpoint paths
+
+## Request/Response Models
+- Create Pydantic models for request validation and response serialization
+- Use descriptive model names ending with `Request` or `Response`
+- Include proper type hints and validation rules
+
+## Error Handling
+- Use `HTTPException` with appropriate status codes
+- Provide meaningful error messages
+- Handle validation errors gracefully
+
+## Example Pattern
+```python
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+router = APIRouter(prefix="/example", tags=["example"])
+
+class ExampleResponse(BaseModel):
+    result: str
+    status: str
+
+@router.get("/", response_model=ExampleResponse)
+def get_example():
+    try:
+        # Business logic here
+        return ExampleResponse(result="success", status="ok")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+## Service Integration
+- Import services from [backend/services/](mdc:backend/services/)
+- Keep routes thin - delegate business logic to services
+- Use dependency injection for service dependencies
