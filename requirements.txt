@@ -4,3 +4,4 @@ lark
 pandas
 uvicorn[standard]
 requests
+python-dotenv

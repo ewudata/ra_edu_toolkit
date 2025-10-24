@@ -13,15 +13,16 @@
                 "backend.main:app",
                 "--reload",
                 "--host",
-                "0.0.0.0",
+                "${env:BACKEND_HOST}",
                 "--port",
-                "8000"
+                "${env:BACKEND_PORT}"
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
-            }
+            },
+            "envFile": "${workspaceFolder}/.env"
         },
         {
             "name": "Start Frontend App",
@@ -32,15 +33,16 @@
                 "run",
                 "frontend/app.py",
                 "--server.port",
-                "8501",
+                "${env:FRONTEND_PORT}",
                 "--server.address",
-                "0.0.0.0"
+                "${env:FRONTEND_HOST}"
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
-            }
+            },
+            "envFile": "${workspaceFolder}/.env"
         },
         {
             "name": "Start Dev Server",
@@ -51,7 +53,8 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
-            }
+            },
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }
