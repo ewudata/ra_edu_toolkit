@@ -1,44 +1,59 @@
 #!/usr/bin/env python3
 """
-开发服务器启动脚本
-同时启动后端 FastAPI 服务和前端 Streamlit 应用
+Development server startup script
+Starts both backend FastAPI service and frontend Streamlit application
 """
 
 import subprocess
 import sys
 import time
 import threading
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
 def start_backend():
-    """启动后端 FastAPI 服务"""
-    print("🚀 启动后端服务...")
+    """Start backend FastAPI service"""
+    print("🚀 Starting backend service...")
     try:
-        subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "uvicorn",
-                "backend.main:app",
-                "--reload",
-                "--host",
-                "0.0.0.0",
-                "--port",
-                "8000",
-            ],
-            check=True,
-        )
+        # Get configuration from environment
+        host = os.getenv("BACKEND_HOST", "0.0.0.0")
+        port = os.getenv("BACKEND_PORT", "8000")
+        reload = os.getenv("RELOAD", "True").lower() == "true"
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "backend.main:app",
+            "--host",
+            host,
+            "--port",
+            port,
+        ]
+
+        if reload:
+            cmd.append("--reload")
+
+        subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"❌ 后端服务启动失败: {e}")
+        print(f"❌ Backend service failed to start: {e}")
     except KeyboardInterrupt:
-        print("🛑 后端服务已停止")
+        print("🛑 Backend service stopped")
 
 
 def start_frontend():
-    """启动前端 Streamlit 应用"""
-    print("🚀 启动前端应用...")
+    """Start frontend Streamlit application"""
+    print("🚀 Starting frontend application...")
     try:
+        # Get configuration from environment
+        host = os.getenv("FRONTEND_HOST", "0.0.0.0")
+        port = os.getenv("FRONTEND_PORT", "8501")
+
         subprocess.run(
             [
                 sys.executable,
@@ -47,49 +62,55 @@ def start_frontend():
                 "run",
                 "frontend/app.py",
                 "--server.port",
-                "8501",
+                port,
                 "--server.address",
-                "0.0.0.0",
+                host,
             ],
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        print(f"❌ 前端应用启动失败: {e}")
+        print(f"❌ Frontend application failed to start: {e}")
     except KeyboardInterrupt:
-        print("🛑 前端应用已停止")
+        print("🛑 Frontend application stopped")
 
 
 def main():
-    """主函数"""
-    print("🎓 RA 教育工具包 - 开发服务器")
+    """Main function"""
+    print("🎓 RA Education Toolkit - Development Server")
     print("=" * 50)
 
-    # 检查当前目录
+    # Check current directory
     if not Path("backend").exists() or not Path("frontend").exists():
-        print("❌ 错误: 请在项目根目录运行此脚本")
-        print("   确保 backend/ 和 frontend/ 目录存在")
+        print("❌ Error: Please run this script from the project root directory")
+        print("   Ensure backend/ and frontend/ directories exist")
         sys.exit(1)
 
-    print("📋 服务信息:")
-    print("   • 后端 API: http://localhost:8000")
-    print("   • 前端应用: http://localhost:8501")
-    print("   • API 文档: http://localhost:8000/docs")
+    # Get configuration from environment
+    backend_host = os.getenv("BACKEND_HOST", "0.0.0.0")
+    backend_port = os.getenv("BACKEND_PORT", "8000")
+    frontend_host = os.getenv("FRONTEND_HOST", "0.0.0.0")
+    frontend_port = os.getenv("FRONTEND_PORT", "8501")
+
+    print("📋 Service Information:")
+    print(f"   • Backend API: http://{backend_host}:{backend_port}")
+    print(f"   • Frontend App: http://{frontend_host}:{frontend_port}")
+    print(f"   • API Docs: http://{backend_host}:{backend_port}/docs")
     print("=" * 50)
 
-    # 启动后端服务（在后台线程中）
+    # Start backend service (in background thread)
     backend_thread = threading.Thread(target=start_backend, daemon=True)
     backend_thread.start()
 
-    # 等待后端服务启动
-    print("⏳ 等待后端服务启动...")
+    # Wait for backend service to start
+    print("⏳ Waiting for backend service to start...")
     time.sleep(3)
 
-    # 启动前端应用（主线程）
+    # Start frontend application (main thread)
     try:
         start_frontend()
     except KeyboardInterrupt:
-        print("\n🛑 正在停止所有服务...")
-        print("✅ 所有服务已停止")
+        print("\n🛑 Stopping all services...")
+        print("✅ All services stopped")
 
 
 if __name__ == "__main__":
