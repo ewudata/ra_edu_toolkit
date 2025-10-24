@@ -31,7 +31,7 @@
             "module": "streamlit",
             "args": [
                 "run",
-                "frontend/app.py",
+                "frontend/0_🏠_Home.py",
                 "--server.port",
                 "8501",
                 "--server.address",

@@ -60,7 +60,7 @@ def start_frontend():
                 "-m",
                 "streamlit",
                 "run",
-                "frontend/app.py",
+                "frontend/0_🏠_Home.py",
                 "--server.port",
                 port,
                 "--server.address",
