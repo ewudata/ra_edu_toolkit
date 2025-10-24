@@ -18,7 +18,6 @@ def _json_pretty(value):
 
 
 def _write_trace_html(trace, path: Path) -> None:
-    expression = escape(trace.get("expression", ""))
     steps = trace.get("steps", [])
     final_schema = trace.get("final_schema", [])
     final_rows = trace.get("final_rows", 0)

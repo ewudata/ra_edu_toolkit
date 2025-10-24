@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import pandas as pd
 
@@ -44,7 +44,9 @@ def _rows_set(df: pd.DataFrame, schema: List[str]) -> set[tuple]:
     return set(tuples)
 
 
-def compare_results(student: relalg.EvaluationResult, solution: relalg.EvaluationResult) -> ComparisonDiff:
+def compare_results(
+    student: relalg.EvaluationResult, solution: relalg.EvaluationResult
+) -> ComparisonDiff:
     student_df = _normalize(student.dataframe)
     solution_df = _normalize(solution.dataframe)
 
@@ -94,7 +96,9 @@ def grade_submission(database: str, query_id: str, expression: str) -> GradingRe
             f"Query '{query_id}' for database '{database}' does not have a canonical relational algebra solution."
         )
 
-    solution_result = relalg.evaluate_expression(query.solution.relational_algebra, database)
+    solution_result = relalg.evaluate_expression(
+        query.solution.relational_algebra, database
+    )
     student_result = relalg.evaluate_expression(expression, database)
 
     diff = compare_results(student_result, solution_result)

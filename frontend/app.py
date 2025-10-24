@@ -6,7 +6,6 @@ import streamlit as st
 import sys
 import os
 
-# 添加前端路径到 Python 路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils.api_client import APIClient

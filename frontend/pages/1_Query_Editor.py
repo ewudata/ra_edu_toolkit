@@ -13,11 +13,9 @@ from utils.api_client import APIClient
 from components.query_input import (
     query_input_component,
     database_selector_component,
-    query_execute_button,
 )
 from components.result_viewer import (
     result_viewer_component,
-    trace_viewer_component,
     error_display_component,
 )
 from components.trace_visualizer import (
