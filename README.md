@@ -56,7 +56,30 @@ pip install -r requirements.txt
 
 # Install frontend dependencies
 pip install -r requirements-frontend.txt
+
+# Set up environment configuration
+cp .env.example .env
+# Edit .env with your preferred settings
 ```
+
+### Environment Configuration
+
+The project uses environment variables for configuration. Copy `.env.example` to `.env` and customize as needed:
+
+```bash
+cp .env.example .env
+```
+
+**Environment Variables**:
+- `BACKEND_BASE_URL` - Backend API base URL (default: `http://localhost:8000`)
+- `BACKEND_HOST` - Backend host address (default: `0.0.0.0`)
+- `BACKEND_PORT` - Backend port (default: `8000`)
+- `FRONTEND_HOST` - Frontend host address (default: `0.0.0.0`)
+- `FRONTEND_PORT` - Frontend port (default: `8501`)
+- `DEBUG` - Enable debug mode (default: `True`)
+- `RELOAD` - Enable auto-reload (default: `True`)
+
+For production, use `.env.production` as a template and set `DEBUG=False` and `RELOAD=False`.
 
 ### Starting Services
 
@@ -69,23 +92,31 @@ python scripts/dev_server.py
 ```
 
 This will start:
-- Backend API: http://localhost:8000
-- Frontend Application: http://localhost:8501
+- Backend API: http://localhost:8000 (or your configured BACKEND_PORT)
+- Frontend Application: http://localhost:8501 (or your configured FRONTEND_PORT)
 - API Documentation: http://localhost:8000/docs
 
 #### Method 2: Start Separately
 
 **Start Backend Service**:
 ```bash
-uvicorn backend.main:app --reload
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Start Frontend Application**:
 ```bash
-streamlit run frontend/app.py
+streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0
 ```
 
-#### Method 3: Using CLI Tool
+#### Method 3: Using VS Code Launch Configurations
+
+Use the pre-configured VS Code launch configurations:
+1. Open VS Code
+2. Go to Run and Debug panel (F5)
+3. Select "Start Backend Server" or "Start Frontend App"
+4. Both configurations automatically load environment variables from `.env`
+
+#### Method 4: Using CLI Tool
 
 ```bash
 python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Student))" University
@@ -177,12 +208,67 @@ docker build -f Dockerfile.frontend -t ra-toolkit-frontend .
 ### Run Containers
 
 ```bash
-# Start backend service
-docker run -d -p 8000:8000 --name backend ra-toolkit-backend
+# Start backend service with environment variables
+docker run -d -p 8000:8000 \
+  -e BACKEND_HOST=0.0.0.0 \
+  -e BACKEND_PORT=8000 \
+  -e DEBUG=false \
+  --name backend ra-toolkit-backend
 
-# Start frontend application
-docker run -d -p 8501:8501 --name frontend ra-toolkit-frontend
+# Start frontend application with environment variables
+docker run -d -p 8501:8501 \
+  -e BACKEND_BASE_URL=http://backend:8000 \
+  -e FRONTEND_HOST=0.0.0.0 \
+  -e FRONTEND_PORT=8501 \
+  --name frontend ra-toolkit-frontend
 ```
+
+### Docker Compose (Alternative)
+
+You can also use Docker Compose to manage multiple containers:
+
+```bash
+docker-compose up -d
+```
+
+## 🌐 Production Deployment
+
+### Server Configuration
+
+1. **Set up environment variables** on your server:
+```bash
+export BACKEND_BASE_URL=https://your-api-domain.com
+export BACKEND_HOST=0.0.0.0
+export BACKEND_PORT=8000
+export FRONTEND_PORT=8501
+export DEBUG=false
+export RELOAD=false
+```
+
+2. **Or use a production .env file**:
+```bash
+cp .env.production .env
+# Edit .env with production values
+```
+
+3. **Start services** with production settings:
+```bash
+# Backend with production settings
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# Frontend with production settings
+streamlit run frontend/app.py --server.port 8501
+```
+
+### GitHub Actions Deployment
+
+The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that can be configured with secrets:
+- `BACKEND_BASE_URL`
+- `BACKEND_HOST`
+- `BACKEND_PORT`
+- `FRONTEND_PORT`
+- `DEBUG`
+- `RELOAD`
 
 ## 🧪 Testing
 
@@ -218,10 +304,19 @@ flake8 backend/ frontend/ scripts/
 ### Adding New Features
 
 1. Add core logic in `backend/core/`
-2. Add API endpoints in `backend/api/routes/`
+2. Add API endpoints in `backend/routes/`
 3. Add UI components in `frontend/components/`
 4. Add new pages in `frontend/pages/`
 5. Update tests and documentation
+
+### Environment Configuration in Development
+
+The project supports multiple environment configurations:
+- **`.env`** - Local development (automatically loaded)
+- **`.env.example`** - Template for other developers
+- **`.env.production`** - Production configuration template
+
+All configurations load environment variables using `python-dotenv` and respect the `.env` file when present.
 
 ## 📄 API Documentation
 
