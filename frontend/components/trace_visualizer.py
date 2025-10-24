@@ -1,5 +1,5 @@
 """
-执行过程可视化组件
+Execution Trace Visualizer Component
 """
 
 import streamlit as st
@@ -11,32 +11,32 @@ def trace_visualizer_component(
     trace_data: List[Dict[str, Any]], key: str = "trace_visualizer"
 ) -> None:
     """
-    执行过程可视化组件
+    Execution Trace Visualizer Component
 
     Args:
-        trace_data: 执行跟踪数据
-        key: Streamlit 组件键
+        trace_data: Execution trace data
+        key: Streamlit component key
     """
     if not trace_data:
-        st.info("暂无执行跟踪信息")
+        st.info("No execution trace information")
         return
 
-    st.subheader("🔍 执行过程可视化")
+    st.subheader("🔍 Execution Trace Visualization")
 
-    # 创建步骤导航
+    # Create step navigation
     step_names = [
-        f"步骤 {i + 1}: {step.get('op', '未知')}" for i, step in enumerate(trace_data)
+        f"Step {i + 1}: {step.get('op', 'Unknown')}" for i, step in enumerate(trace_data)
     ]
 
     if len(step_names) > 1:
         selected_step = st.selectbox(
-            "选择要查看的步骤", step_names, key=f"{key}_step_selector"
+            "Select step to view", step_names, key=f"{key}_step_selector"
         )
         selected_index = step_names.index(selected_step)
     else:
         selected_index = 0
 
-    # 显示选中步骤的详细信息
+    # Display selected step details
     if selected_index < len(trace_data):
         step = trace_data[selected_index]
         display_step_details(step, selected_index + 1)
@@ -44,62 +44,62 @@ def trace_visualizer_component(
 
 def display_step_details(step: Dict[str, Any], step_number: int) -> None:
     """
-    显示单个步骤的详细信息
+    Display detailed information for a single step
 
     Args:
-        step: 步骤数据
-        step_number: 步骤编号
+        step: Step data
+        step_number: Step number
     """
-    st.markdown(f"### 步骤 {step_number}: {step.get('op', '未知操作')}")
+    st.markdown(f"### Step {step_number}: {step.get('op', 'Unknown operation')}")
 
-    # 基本信息
+    # Basic information
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("输入行数", step.get("input_rows", 0))
+        st.metric("Input Rows", step.get("input_rows", 0))
 
     with col2:
-        st.metric("输出行数", step.get("rows", 0))
+        st.metric("Output Rows", step.get("rows", 0))
 
     with col3:
         delta = step.get("rows", 0) - step.get("input_rows", 0)
-        st.metric("行数变化", delta)
+        st.metric("Row Change", delta)
 
-    # 模式信息
+    # Schema information
     col1, col2 = st.columns(2)
 
     with col1:
-        st.write("**输入模式:**")
+        st.write("**Input Schema:**")
         input_schema = step.get("input_schema", [])
         if input_schema:
             for attr in input_schema:
                 st.write(f"• {attr}")
         else:
-            st.write("无输入")
+            st.write("No input")
 
     with col2:
-        st.write("**输出模式:**")
+        st.write("**Output Schema:**")
         output_schema = step.get("output_schema", [])
         if output_schema:
             for attr in output_schema:
                 st.write(f"• {attr}")
         else:
-            st.write("无输出")
+            st.write("No output")
 
-    # 预览数据
+    # Preview data
     preview = step.get("preview", [])
     if preview:
-        st.write("**预览数据:**")
+        st.write("**Preview Data:**")
         preview_df = pd.DataFrame(preview)
         st.dataframe(preview_df, use_container_width=True)
 
-    # 详细信息
+    # Detailed information
     detail = step.get("detail")
     if detail:
-        with st.expander("查看详细信息"):
+        with st.expander("View Details"):
             st.json(detail)
 
-    # 备注
+    # Note
     note = step.get("note")
     if note:
         st.info(f"💡 {note}")
@@ -109,41 +109,41 @@ def execution_summary_component(
     trace_data: List[Dict[str, Any]], key: str = "execution_summary"
 ) -> None:
     """
-    执行摘要组件
+    Execution Summary Component
 
     Args:
-        trace_data: 执行跟踪数据
-        key: Streamlit 组件键
+        trace_data: Execution trace data
+        key: Streamlit component key
     """
     if not trace_data:
         return
 
-    st.subheader("📊 执行摘要")
+    st.subheader("📊 Execution Summary")
 
-    # 统计信息
+    # Statistics
     total_steps = len(trace_data)
     total_operations = len(set(step.get("op", "") for step in trace_data))
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("总步骤数", total_steps)
+        st.metric("Total Steps", total_steps)
 
     with col2:
-        st.metric("操作类型数", total_operations)
+        st.metric("Operation Types", total_operations)
 
     with col3:
         if trace_data:
             final_rows = trace_data[-1].get("rows", 0)
-            st.metric("最终结果行数", final_rows)
+            st.metric("Final Result Rows", final_rows)
 
-    # 操作类型分布
+    # Operation type distribution
     operation_counts = {}
     for step in trace_data:
-        op = step.get("op", "未知")
+        op = step.get("op", "Unknown")
         operation_counts[op] = operation_counts.get(op, 0) + 1
 
     if operation_counts:
-        st.write("**操作类型分布:**")
+        st.write("**Operation Type Distribution:**")
         for op, count in operation_counts.items():
-            st.write(f"• {op}: {count} 次")
+            st.write(f"• {op}: {count} times")

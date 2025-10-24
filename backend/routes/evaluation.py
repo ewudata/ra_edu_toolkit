@@ -26,7 +26,7 @@ class QueryEvaluationResponse(BaseModel):
     database: str
     query_id: str
     expression: str
-    schema: List[str]
+    schema_eval: List[str]
     rows: List[Dict[str, Any]]
     row_count: int
     trace: List[Dict[str, Any]]
@@ -72,7 +72,7 @@ def evaluate_query_expression(
         database=database,
         query_id=query_id,
         expression=payload.expression,
-        schema=evaluation.schema,
+        schema_eval=evaluation.schema,
         rows=evaluation.rows,
         row_count=len(evaluation.dataframe),
         trace=evaluation.trace,

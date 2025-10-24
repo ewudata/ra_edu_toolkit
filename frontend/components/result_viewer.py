@@ -1,5 +1,5 @@
 """
-结果查看器组件
+Result Viewer Component
 """
 
 import streamlit as st
@@ -11,113 +11,113 @@ def result_viewer_component(
     result_data: Dict[str, Any], key: str = "result_viewer"
 ) -> None:
     """
-    结果查看器组件
+    Result Viewer Component
 
     Args:
-        result_data: 查询结果数据
-        key: Streamlit 组件键
+        result_data: Query result data
+        key: Streamlit component key
     """
     if not result_data:
-        st.info("暂无查询结果")
+        st.info("No query results")
         return
 
-    # 显示基本信息
+    # Display basic information
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("行数", result_data.get("row_count", 0))
+        st.metric("Rows", result_data.get("row_count", 0))
     with col2:
-        st.metric("列数", len(result_data.get("schema", [])))
+        st.metric("Columns", len(result_data.get("schema_eval", [])))
     with col3:
-        st.metric("数据库", result_data.get("database", "未知"))
+        st.metric("Database", result_data.get("database", "Unknown"))
 
-    # 显示模式信息
-    schema = result_data.get("schema", [])
+    # Display schema information
+    schema = result_data.get("schema_eval", [])
     if schema:
-        st.subheader("结果模式")
+        st.subheader("Result Schema")
         st.write(", ".join(schema))
 
-    # 显示数据表格
+    # Display data table
     rows = result_data.get("rows", [])
     if rows:
-        st.subheader("查询结果")
+        st.subheader("Query Results")
         df = pd.DataFrame(rows)
         st.dataframe(df, use_container_width=True)
 
-        # 提供下载选项
+        # Provide download option
         csv = df.to_csv(index=False)
         st.download_button(
-            label="下载 CSV", data=csv, file_name="query_result.csv", mime="text/csv"
+            label="Download CSV", data=csv, file_name="query_result.csv", mime="text/csv"
         )
     else:
-        st.info("查询结果为空")
+        st.info("Query result is empty")
 
 
 def trace_viewer_component(
     trace_data: List[Dict[str, Any]], key: str = "trace_viewer"
 ) -> None:
     """
-    执行过程可视化组件
+    Execution Trace Visualizer Component
 
     Args:
-        trace_data: 执行跟踪数据
-        key: Streamlit 组件键
+        trace_data: Execution trace data
+        key: Streamlit component key
     """
     if not trace_data:
-        st.info("暂无执行跟踪信息")
+        st.info("No execution trace information")
         return
 
-    st.subheader("执行过程")
+    st.subheader("Execution Process")
 
     for i, step in enumerate(trace_data, 1):
-        with st.expander(f"步骤 {i}: {step.get('op', '未知操作')}"):
-            # 显示步骤信息
+        with st.expander(f"Step {i}: {step.get('op', 'Unknown operation')}"):
+            # Display step information
             col1, col2 = st.columns(2)
 
             with col1:
-                st.write("**输入模式:**")
+                st.write("**Input Schema:**")
                 input_schema = step.get("input_schema", [])
                 if input_schema:
                     st.write(", ".join(input_schema))
                 else:
-                    st.write("无")
+                    st.write("None")
 
             with col2:
-                st.write("**输出模式:**")
+                st.write("**Output Schema:**")
                 output_schema = step.get("output_schema", [])
                 if output_schema:
                     st.write(", ".join(output_schema))
                 else:
-                    st.write("无")
+                    st.write("None")
 
-            # 显示行数变化
+            # Display row count changes
             rows = step.get("rows", 0)
-            st.write(f"**结果行数:** {rows}")
+            st.write(f"**Result Rows:** {rows}")
 
-            # 显示预览数据
+            # Display preview data
             preview = step.get("preview", [])
             if preview:
-                st.write("**预览数据:**")
+                st.write("**Preview Data:**")
                 preview_df = pd.DataFrame(preview)
                 st.dataframe(preview_df, use_container_width=True)
 
-            # 显示详细信息
+            # Display detailed information
             detail = step.get("detail")
             if detail:
-                st.write("**详细信息:**")
+                st.write("**Details:**")
                 st.json(detail)
 
-            # 显示备注
+            # Display note
             note = step.get("note")
             if note:
-                st.write(f"**备注:** {note}")
+                st.write(f"**Note:** {note}")
 
 
 def error_display_component(error_message: str, key: str = "error_display") -> None:
     """
-    错误显示组件
+    Error Display Component
 
     Args:
-        error_message: 错误消息
-        key: Streamlit 组件键
+        error_message: Error message
+        key: Streamlit component key
     """
-    st.error(f"❌ 查询执行失败: {error_message}")
+    st.error(f"❌ Query execution failed: {error_message}")
