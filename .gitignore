@@ -210,3 +210,4 @@ secrets.*
 # Test results
 test-results/
 coverage/
+.DS_Store
