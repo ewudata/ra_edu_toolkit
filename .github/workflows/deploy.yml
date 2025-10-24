@@ -97,23 +97,16 @@ jobs:
           cd /home/deploy/relational
           
           # Pull latest images
-          echo "Pulling latest backend image..."
-          docker-compose -f docker-compose-backend.yml pull
-          
-          echo "Pulling latest frontend image..."
-          docker-compose -f docker-compose-frontend.yml pull
+          echo "Pulling latest images..."
+          docker-compose -f docker-compose.yml pull
           
           # Stop existing containers
           echo "Stopping existing containers..."
-          docker-compose -f docker-compose-backend.yml down || true
-          docker-compose -f docker-compose-frontend.yml down || true
+          docker-compose -f docker-compose.yml down || true
           
           # Start containers with new images
-          echo "Starting backend container..."
-          docker-compose -f docker-compose-backend.yml up -d
-          
-          echo "Starting frontend container..."
-          docker-compose -f docker-compose-frontend.yml up -d
+          echo "Starting containers..."
+          docker-compose -f docker-compose.yml up -d
           
           # Clean up unused images
           echo "Cleaning up unused Docker images..."
@@ -137,20 +130,10 @@ jobs:
           
           # Check if containers are running
           echo "Checking container status..."
-          if docker-compose -f docker-compose-backend.yml ps | grep -q "Up"; then
-            echo "✅ Backend container is running"
+          if docker-compose -f docker-compose.yml ps | grep -q "Up"; then
+            echo "✅ Containers are running"
           else
-            echo "❌ Backend container is not running"
-            docker-compose -f docker-compose-backend.yml logs --tail=20
+            echo "❌ Containers are not running"
+            docker-compose -f docker-compose.yml logs --tail=20
             exit 1
           fi
-          
-          if docker-compose -f docker-compose-frontend.yml ps | grep -q "Up"; then
-            echo "✅ Frontend container is running"
-          else
-            echo "❌ Frontend container is not running"
-            docker-compose -f docker-compose-frontend.yml logs --tail=20
-            exit 1
-          fi
-          
-          echo "✅ All containers are running successfully!"
