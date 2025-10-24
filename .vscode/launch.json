@@ -5,13 +5,53 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run run.py",
+            "name": "Start Backend Server",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/run.py",
+            "module": "uvicorn",
+            "args": [
+                "backend.main:app",
+                "--reload",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000"
+            ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
-            "args": ["pi{name}(sigma{major = 'CS'}(Students))"]
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Start Frontend App",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": [
+                "run",
+                "frontend/app.py",
+                "--server.port",
+                "8501",
+                "--server.address",
+                "0.0.0.0"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Start Dev Server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/dev_server.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         }
     ]
 }

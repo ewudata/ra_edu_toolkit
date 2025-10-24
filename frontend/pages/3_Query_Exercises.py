@@ -1,12 +1,12 @@
 """
-查询练习页面
+Query Exercises Page
 """
 
 import streamlit as st
 import sys
 import os
 
-# 添加前端路径到 Python 路径
+# Add frontend path to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
@@ -16,62 +16,69 @@ from components.result_viewer import result_viewer_component, error_display_comp
 
 def main():
     st.set_page_config(
-        page_title="查询练习 - RA 教育工具包", page_icon="📚", layout="wide"
+        page_title="Query Exercises - RA Education Toolkit",
+        page_icon="📚",
+        layout="wide",
     )
 
-    st.title("📚 关系代数查询练习")
+    st.title("📚 Relational Algebra Query Exercises")
     st.markdown("---")
 
-    # 初始化 API 客户端
+    # Initialize API client
     api_client = APIClient()
 
-    # 检查后端连接
+    # Check backend connection
     try:
         api_client.health_check()
-        st.success("✅ 后端服务连接正常")
+        st.success("✅ Backend service connected successfully")
     except Exception as e:
-        st.error(f"❌ 后端服务连接失败: {e}")
-        st.info("请确保后端服务正在运行 (uvicorn backend.main:app --reload)")
+        st.error(f"❌ Backend service connection failed: {e}")
+        st.info(
+            "Please ensure the backend service is running (uvicorn backend.main:app --reload)"
+        )
         return
 
-    # 获取数据库列表
+    # Get database list
     try:
         databases = api_client.get_databases()
     except Exception as e:
-        st.error(f"获取数据库列表失败: {e}")
+        st.error(f"Failed to get database list: {e}")
         return
 
-    # 侧边栏 - 数据库选择
+    # Sidebar - Database selection
     with st.sidebar:
-        st.header("📊 选择数据库")
+        st.header("📊 Select Database")
         selected_database = database_selector_component(databases)
 
         if selected_database:
-            st.success(f"已选择数据库: {selected_database}")
+            st.success(f"Selected database: {selected_database}")
 
     if not selected_database:
-        st.warning("请先在侧边栏选择一个数据库")
+        st.warning("Please select a database from the sidebar first")
         return
 
-    # 获取查询列表
+    # Get query list
     try:
         queries = api_client.get_queries(selected_database)
     except Exception as e:
-        st.error(f"获取查询列表失败: {e}")
+        st.error(f"Failed to get query list: {e}")
         return
 
     if not queries:
-        st.info("该数据库暂无练习查询")
+        st.info("No practice queries available for this database")
         return
 
-    # 查询选择
-    st.header("📝 选择练习")
+    # Query selection
+    st.header("📝 Select Exercise")
 
     query_options = {
-        f"{q['title']} ({q.get('difficulty', '未知难度')})": q for q in queries
+        f"{q['title']} ({q.get('difficulty', 'Unknown difficulty')})": q
+        for q in queries
     }
     selected_query_title = st.selectbox(
-        "选择要练习的查询", list(query_options.keys()), help="选择一个查询进行练习"
+        "Select a query to practice",
+        list(query_options.keys()),
+        help="Choose a query to practice",
     )
 
     if not selected_query_title:
@@ -79,57 +86,57 @@ def main():
 
     selected_query = query_options[selected_query_title]
 
-    # 显示查询详情
+    # Display query details
     st.markdown("---")
-    st.subheader("📋 练习题目")
+    st.subheader("📋 Exercise Problem")
 
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        st.write(f"**题目:** {selected_query['title']}")
-        st.write(f"**描述:** {selected_query['prompt']}")
+        st.write(f"**Title:** {selected_query['title']}")
+        st.write(f"**Description:** {selected_query['prompt']}")
 
         if selected_query.get("difficulty"):
-            st.write(f"**难度:** {selected_query['difficulty']}")
+            st.write(f"**Difficulty:** {selected_query['difficulty']}")
 
         if selected_query.get("tags"):
-            st.write(f"**标签:** {', '.join(selected_query['tags'])}")
+            st.write(f"**Tags:** {', '.join(selected_query['tags'])}")
 
     with col2:
-        # 获取详细查询信息
+        # Get detailed query information
         try:
             query_detail = api_client.get_query_detail(
                 selected_database, selected_query["id"]
             )
 
             if query_detail.get("hints"):
-                with st.expander("💡 提示"):
+                with st.expander("💡 Hints"):
                     for i, hint in enumerate(query_detail["hints"], 1):
                         st.write(f"{i}. {hint}")
 
         except Exception as e:
-            st.warning(f"获取查询详情失败: {e}")
+            st.warning(f"Failed to get query details: {e}")
 
-    # 学生解答区域
+    # Student answer area
     st.markdown("---")
-    st.subheader("✏️ 你的解答")
+    st.subheader("✏️ Your Answer")
 
     student_answer = st.text_area(
-        "输入你的关系代数表达式",
-        placeholder="在这里输入你的解答...",
+        "Enter your relational algebra expression",
+        placeholder="Enter your answer here...",
         height=150,
-        help="根据题目要求编写关系代数表达式",
+        help="Write a relational algebra expression according to the problem requirements",
     )
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         submit_answer = st.button(
-            "🚀 提交解答", type="primary", use_container_width=True
+            "🚀 Submit Answer", type="primary", use_container_width=True
         )
 
-    # 解答评估
+    # Answer evaluation
     if submit_answer and student_answer:
-        with st.spinner("正在评估你的解答..."):
+        with st.spinner("Evaluating your answer..."):
             try:
                 result = api_client.evaluate_query(
                     database=selected_database,
@@ -137,37 +144,37 @@ def main():
                     expression=student_answer,
                 )
 
-                st.success("✅ 解答提交成功!")
+                st.success("✅ Answer submitted successfully!")
 
-                # 显示结果
+                # Display results
                 result_viewer_component(result)
 
-                # 显示标准答案（如果有）
+                # Display standard answer (if available)
                 try:
                     query_detail = api_client.get_query_detail(
                         selected_database, selected_query["id"]
                     )
 
                     if query_detail.get("solution", {}).get("relational_algebra"):
-                        with st.expander("📖 查看标准答案"):
-                            st.write("**关系代数表达式:**")
+                        with st.expander("📖 View Standard Answer"):
+                            st.write("**Relational algebra expression:**")
                             st.code(query_detail["solution"]["relational_algebra"])
 
                             if query_detail["solution"].get("sql"):
-                                st.write("**对应的 SQL 查询:**")
+                                st.write("**Corresponding SQL query:**")
                                 st.code(query_detail["solution"]["sql"])
 
-                    # 显示预期结果
+                    # Display expected results
                     if query_detail.get("expected_schema") or query_detail.get(
                         "expected_rows"
                     ):
-                        with st.expander("🎯 预期结果"):
+                        with st.expander("🎯 Expected Results"):
                             if query_detail.get("expected_schema"):
-                                st.write("**预期模式:**")
+                                st.write("**Expected schema:**")
                                 st.write(", ".join(query_detail["expected_schema"]))
 
                             if query_detail.get("expected_rows"):
-                                st.write("**预期数据:**")
+                                st.write("**Expected data:**")
                                 import pandas as pd
 
                                 expected_df = pd.DataFrame(
@@ -176,32 +183,32 @@ def main():
                                 st.dataframe(expected_df, use_container_width=True)
 
                 except Exception as e:
-                    st.warning(f"获取标准答案失败: {e}")
+                    st.warning(f"Failed to get standard answer: {e}")
 
             except Exception as e:
                 error_display_component(str(e))
 
     elif submit_answer and not student_answer:
-        st.warning("请输入你的解答")
+        st.warning("Please enter your answer")
 
-    # 学习资源
-    with st.expander("📚 学习资源"):
+    # Learning resources
+    with st.expander("📚 Learning Resources"):
         st.markdown("""
-        ### 关系代数基础
+        ### Relational Algebra Basics
         
-        - **投影 (π)**: 选择特定的列
-        - **选择 (σ)**: 根据条件过滤行
-        - **连接 (⋈)**: 合并两个表
-        - **并集 (∪)**: 合并两个查询的结果
-        - **差集 (−)**: 从一个查询结果中减去另一个
+        - **Projection (π)**: Select specific columns
+        - **Selection (σ)**: Filter rows based on conditions
+        - **Join (⋈)**: Combine two tables
+        - **Union (∪)**: Combine results from two queries
+        - **Difference (−)**: Subtract one query result from another
         
-        ### 解题技巧
+        ### Problem-Solving Tips
         
-        1. **理解题目**: 仔细阅读题目描述，明确要查询什么
-        2. **分析数据**: 了解表的结构和关系
-        3. **分解问题**: 将复杂查询分解为简单步骤
-        4. **逐步构建**: 从最内层的操作开始构建表达式
-        5. **验证结果**: 检查结果是否符合预期
+        1. **Understand the problem**: Read the description carefully to identify what needs to be queried
+        2. **Analyze the data**: Understand the table structures and relationships
+        3. **Break down the problem**: Decompose complex queries into simple steps
+        4. **Build step by step**: Start constructing expressions from the innermost operations
+        5. **Verify results**: Check if the results meet expectations
         """)
 
 

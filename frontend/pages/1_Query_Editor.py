@@ -1,12 +1,12 @@
 """
-查询编辑器页面
+Query Editor Page
 """
 
 import streamlit as st
 import sys
 import os
 
-# 添加前端路径到 Python 路径
+# Add frontend path to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
@@ -28,87 +28,89 @@ from components.trace_visualizer import (
 
 def main():
     st.set_page_config(
-        page_title="查询编辑器 - RA 教育工具包", page_icon="🔍", layout="wide"
+        page_title="Query Editor - RA Education Toolkit", page_icon="🔍", layout="wide"
     )
 
-    st.title("🔍 关系代数查询编辑器")
+    st.title("🔍 Relational Algebra Query Editor")
     st.markdown("---")
 
-    # 初始化 API 客户端
+    # Initialize API client
     api_client = APIClient()
 
-    # 检查后端连接
+    # Check backend connection
     try:
         api_client.health_check()
-        st.success("✅ 后端服务连接正常")
+        st.success("✅ Backend service connected successfully")
     except Exception as e:
-        st.error(f"❌ 后端服务连接失败: {e}")
-        st.info("请确保后端服务正在运行 (uvicorn backend.main:app --reload)")
+        st.error(f"❌ Backend service connection failed: {e}")
+        st.info(
+            "Please ensure the backend service is running (uvicorn backend.main:app --reload)"
+        )
         return
 
-    # 获取数据库列表
+    # Get database list
     try:
         databases = api_client.get_databases()
     except Exception as e:
-        st.error(f"获取数据库列表失败: {e}")
+        st.error(f"Failed to get database list: {e}")
         return
 
-    # 侧边栏 - 数据库选择
+    # Sidebar - Database selection
     with st.sidebar:
-        st.header("📊 数据库选择")
+        st.header("📊 Database Selection")
         selected_database = database_selector_component(databases)
 
         if selected_database:
-            st.success(f"已选择数据库: {selected_database}")
+            st.success(f"Selected database: {selected_database}")
 
-            # 显示数据库信息
+            # Display database information
             db_info = next(
                 (db for db in databases if db["name"] == selected_database), None
             )
             if db_info:
-                st.write(f"**表数量:** {db_info['table_count']}")
-                st.write("**表列表:**")
+                st.write(f"**Table count:** {db_info['table_count']}")
+                st.write("**Table list:**")
                 for table in db_info["tables"]:
                     st.write(f"• {table}")
 
-    # 主内容区域
+    # Main content area
     if not selected_database:
-        st.warning("请先在侧边栏选择一个数据库")
+        st.warning("Please select a database from the sidebar first")
         return
 
-    # 查询输入区域
-    st.header("✏️ 查询输入")
+    # Query input area
+    st.header("✏️ Query Input")
     query_expression = query_input_component(
-        label="输入关系代数表达式",
-        placeholder="例如: π{name}(σ{major = 'CS'}(Students))",
+        label="Enter relational algebra expression",
+        placeholder="e.g., π{name}(σ{major = 'CS'}(Students))",
     )
 
-    # 执行按钮
+    # Execute button
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         execute_clicked = st.button(
-            "🚀 执行查询", type="primary", use_container_width=True
+            "🚀 Execute Query", type="primary", use_container_width=True
         )
 
-    # 查询执行和结果显示
+    # Query execution and result display
     if execute_clicked and query_expression:
-        with st.spinner("正在执行查询..."):
+        with st.spinner("Executing query..."):
             try:
-                # 这里需要先获取一个查询 ID，暂时使用默认值
-                # 在实际应用中，可能需要创建一个通用的查询评估端点
+                # Need to get a query ID first, using default value for now
+                # In actual application, may need to create a general query evaluation endpoint
                 result = api_client.evaluate_query(
                     database=selected_database,
-                    query_id="custom",  # 自定义查询
+                    query_id="custom",  # Custom query
                     expression=query_expression,
                 )
 
-                # 显示结果
-                st.success("✅ 查询执行成功!")
+                # Display results
+                st.success("✅ Query executed successfully!")
 
-                # 结果查看器
+                # Result viewer
                 result_viewer_component(result)
 
-                # 执行过程可视化
+                # Execution trace visualization
                 trace_data = result.get("trace", [])
                 if trace_data:
                     st.markdown("---")
@@ -119,29 +121,29 @@ def main():
                 error_display_component(str(e))
 
     elif execute_clicked and not query_expression:
-        st.warning("请输入查询表达式")
+        st.warning("Please enter a query expression")
 
-    # 帮助信息
-    with st.expander("💡 查询语法帮助"):
+    # Help information
+    with st.expander("💡 Query Syntax Help"):
         st.markdown("""
-        ### 关系代数操作符
+        ### Relational Algebra Operators
         
-        - **投影 (π)**: `π{attr1,attr2}(R)` - 选择特定属性
-        - **选择 (σ)**: `σ{condition}(R)` - 根据条件过滤行
-        - **重命名 (ρ)**: `ρ{old->new}(R)` - 重命名属性
-        - **连接 (⋈)**: `R ⋈ S` - 自然连接
-        - **笛卡尔积 (×)**: `R × S` - 笛卡尔积
-        - **并集 (∪)**: `R ∪ S` - 并集
-        - **差集 (−)**: `R − S` - 差集
-        - **交集 (∩)**: `R ∩ S` - 交集
+        - **Projection (π)**: `π{attr1,attr2}(R)` - Select specific attributes
+        - **Selection (σ)**: `σ{condition}(R)` - Filter rows based on condition
+        - **Rename (ρ)**: `ρ{old->new}(R)` - Rename attributes
+        - **Join (⋈)**: `R ⋈ S` - Natural join
+        - **Cartesian Product (×)**: `R × S` - Cartesian product
+        - **Union (∪)**: `R ∪ S` - Union
+        - **Difference (−)**: `R − S` - Difference
+        - **Intersection (∩)**: `R ∩ S` - Intersection
         
-        ### 示例查询
+        ### Example Queries
         
         ```sql
-        -- 选择计算机科学专业的学生姓名
+        -- Select names of computer science students
         π{name}(σ{major = 'CS'}(Students))
         
-        -- 查找选修了特定课程的学生
+        -- Find students enrolled in specific courses
         π{name}(Students ⋈ Takes ⋈ σ{course_id = 'CS101'}(Courses))
         ```
         """)
