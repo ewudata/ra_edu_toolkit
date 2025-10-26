@@ -67,6 +67,11 @@ class APIClient:
             "POST", f"/databases/{database}/queries/{query_id}/evaluate", json=data
         )
 
+    def evaluate_custom_query(self, database: str, expression: str) -> Dict[str, Any]:
+        """Evaluate custom query expression without query_id"""
+        data = {"expression": expression}
+        return self._make_request("POST", f"/databases/{database}/evaluate", json=data)
+
     def health_check(self) -> Dict[str, Any]:
         """Health check"""
         return self._make_request("GET", "/health")

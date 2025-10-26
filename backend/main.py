@@ -15,6 +15,7 @@ app = FastAPI(title="RA Education Toolkit API")
 app.include_router(databases.router)
 app.include_router(queries.router)
 app.include_router(evaluation.router)
+app.include_router(evaluation.custom_router)
 
 
 @app.get("/")

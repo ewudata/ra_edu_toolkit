@@ -17,6 +17,9 @@ router = APIRouter(
     prefix="/databases/{database}/queries/{query_id}", tags=["evaluation"]
 )
 
+# Custom query evaluation router (without query_id)
+custom_router = APIRouter(prefix="/databases/{database}", tags=["evaluation"])
+
 
 class QueryEvaluationRequest(BaseModel):
     expression: str = Field(..., min_length=1, strip_whitespace=True)
@@ -80,4 +83,41 @@ def evaluate_query_expression(
         expected_rows=detail.expected_rows,
         solution_relational_algebra=detail.solution.relational_algebra,
         solution_sql=detail.solution.sql,
+    )
+
+
+@custom_router.post("/evaluate", response_model=QueryEvaluationResponse)
+def evaluate_custom_query(
+    database: str, payload: QueryEvaluationRequest
+) -> QueryEvaluationResponse:
+    """Evaluate a custom relational algebra expression without requiring a query_id"""
+    try:
+        evaluation = relalg_service.evaluate_expression(payload.expression, database)
+    except ParseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": exc.message,
+                "line": exc.line,
+                "column": exc.column,
+                "context": exc.context,
+            },
+        ) from exc
+    except EvaluationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    return QueryEvaluationResponse(
+        database=database,
+        query_id="custom",
+        expression=payload.expression,
+        schema_eval=evaluation.schema,
+        rows=evaluation.rows,
+        row_count=len(evaluation.dataframe),
+        trace=evaluation.trace,
+        expected_schema=None,
+        expected_rows=None,
+        solution_relational_algebra=None,
+        solution_sql=None,
     )

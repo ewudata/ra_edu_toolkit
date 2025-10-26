@@ -60,7 +60,52 @@ def database_selector_component(
     return selected_db
 
 
-def query_execute_button(label: str = "Execute Query", key: str = "execute_button") -> bool:
+def database_info_component(
+    databases: list, selected_database: str, key: str = "database_info"
+) -> None:
+    """
+    Database Information Display Component
+
+    Args:
+        databases: List of databases
+        selected_database: Currently selected database name
+        key: Streamlit component key
+    """
+    if not selected_database:
+        return
+
+    # Find database info
+    db_info = next((db for db in databases if db["name"] == selected_database), None)
+
+    if not db_info:
+        return
+
+    st.markdown("---")
+    st.subheader("📊 Database Information")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("Tables", db_info.get("table_count", 0))
+
+    with col2:
+        st.metric("Database", selected_database)
+
+    st.markdown("**Available Tables:**")
+    tables = db_info.get("tables", [])
+    if tables:
+        # Display tables in a nice grid
+        cols = st.columns(3)
+        for i, table in enumerate(tables):
+            with cols[i % 3]:
+                st.markdown(f"• {table}")
+    else:
+        st.info("No tables found in this database")
+
+
+def query_execute_button(
+    label: str = "Execute Query", key: str = "execute_button"
+) -> bool:
     """
     Query Execute Button
 
