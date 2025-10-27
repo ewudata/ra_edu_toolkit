@@ -1,6 +1,4 @@
-"""
-Query Editor Page - 3-Step Workflow
-"""
+"""Relational Algebra Exercises Page - 3-Step Workflow"""
 
 import streamlit as st
 import sys
@@ -29,11 +27,13 @@ from components.query_selector import query_selector_component
 
 def main():
     st.set_page_config(
-        page_title="Query Editor - RA Education Toolkit", page_icon="🔍", layout="wide"
+        page_title="Relational Algebra Exercises - RA Education Toolkit",
+        page_icon="🧮",
+        layout="wide",
     )
 
-    st.title("🔍 Relational Algebra Query Editor")
-    st.markdown("Follow the 3-step process to practice relational algebra queries")
+    st.title("🧮 Relational Algebra Exercises")
+    st.markdown("Follow the 3-step process to practice relational algebra expressions.")
     st.markdown("---")
 
     # Initialize API client

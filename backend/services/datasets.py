@@ -7,7 +7,7 @@ import sqlite3
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 
@@ -77,7 +77,7 @@ def _summarise_database_dir(db_path: Path) -> DatabaseSummary:
     return DatabaseSummary(name=db_path.name, tables=tables)
 
 
-def _filter_sqlite_unsupported(sql_script: str) -> str:
+def _filter_sqlite_unsupported(sql_script: str) -> List[Tuple[str, int]]:
     """Strip commands that SQLite cannot execute (common in MySQL dumps)."""
 
     skip_prefixes = (
@@ -89,17 +89,70 @@ def _filter_sqlite_unsupported(sql_script: str) -> str:
         "CREATE DATABASE ",
         "DROP DATABASE ",
     )
-    filtered_lines: List[str] = []
-    for line in sql_script.splitlines():
+    filtered_lines: List[Tuple[str, int]] = []
+    for index, line in enumerate(sql_script.splitlines(), start=1):
         stripped = line.strip()
         if not stripped:
-            filtered_lines.append(line)
+            filtered_lines.append((line, index))
             continue
         upper = stripped.upper()
         if upper.startswith(skip_prefixes) or stripped.startswith("/*!"):
             continue
-        filtered_lines.append(line)
-    return "\n".join(filtered_lines)
+        filtered_lines.append((line, index))
+    return filtered_lines
+
+
+def _execute_sql_script(
+    conn: sqlite3.Connection,
+    filtered_lines: List[Tuple[str, int]],
+) -> None:
+    """Execute a SQL script line-by-line to surface precise error locations."""
+
+    cursor = conn.cursor()
+    MAX_PREVIEW_CHARS = 1000
+    statement_buffer: List[str] = []
+    line_numbers: List[int] = []
+
+    def _reset_statement() -> None:
+        statement_buffer.clear()
+        line_numbers.clear()
+
+    for line, original_line in filtered_lines:
+        statement_buffer.append(line)
+        line_numbers.append(original_line)
+        statement_text = "\n".join(statement_buffer)
+
+        if not statement_text.strip():
+            _reset_statement()
+            continue
+
+        if sqlite3.complete_statement(statement_text):
+            try:
+                cursor.executescript(statement_text)
+            except sqlite3.Error as exc:
+                statement_preview = "\n".join(
+                    stmt_line for stmt_line in statement_buffer if stmt_line.strip()
+                ).strip()
+                if statement_preview and len(statement_preview) > MAX_PREVIEW_CHARS:
+                    statement_preview = f"{statement_preview[:MAX_PREVIEW_CHARS]}..."
+                raise SqlImportError(
+                    exc.args[0] if exc.args else str(exc),
+                    line=line_numbers[0],
+                    statement=statement_preview or None,
+                ) from exc
+            _reset_statement()
+
+    if any(line.strip() for line in statement_buffer):
+        statement_preview = "\n".join(
+            stmt_line for stmt_line in statement_buffer if stmt_line.strip()
+        ).strip()
+        if statement_preview and len(statement_preview) > MAX_PREVIEW_CHARS:
+            statement_preview = f"{statement_preview[:MAX_PREVIEW_CHARS]}..."
+        raise SqlImportError(
+            "SQL script ends with an incomplete statement",
+            line=line_numbers[0] if line_numbers else None,
+            statement=statement_preview or None,
+        )
 
 
 def _iter_database_dirs() -> Iterable[Path]:
@@ -196,8 +249,8 @@ def create_database_from_sql(database: str, sql_script: str) -> DatabaseSummary:
     destination.mkdir(parents=True, exist_ok=False)
     try:
         with sqlite3.connect(":memory:") as conn:
-            cleaned_script = _filter_sqlite_unsupported(sql_script)
-            conn.executescript(cleaned_script)
+            filtered_lines = _filter_sqlite_unsupported(sql_script)
+            _execute_sql_script(conn, filtered_lines)
             tables = [
                 row[0]
                 for row in conn.execute(
@@ -292,3 +345,16 @@ def get_table_schema(database: str, relation: str, sample_rows: int = 10) -> Tab
         row_count=len(df),
         sample_rows=sample,
     )
+class SqlImportError(ValueError):
+    """Raised when SQL import fails with additional context."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        line: Optional[int] = None,
+        statement: Optional[str] = None,
+    ):
+        super().__init__(message)
+        self.line = line
+        self.statement = statement

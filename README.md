@@ -124,23 +124,28 @@ python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Student))" University
 
 ## 📚 Features
 
-### 🔍 Query Editor
-- Interactive relational algebra query writing
-- Real-time syntax checking and error hints
-- Query result preview and download
-- Step-by-step execution process visualization
-
-### 📊 Database Manager
+### 🗄️ Database Manager
 - Support for CSV/ZIP file import
 - Support for SQL script import
 - Database and table structure browsing
 - Data preview and statistics
 
-### 📚 Query Exercises
+### 🧮 Relational Algebra Exercises
+- Guided three-step practice flow
+- Database-aware pre-defined questions
+- Custom expression workspace
+- Execution trace visualization
+
+### 🧠 SQL Exercises
 - Graded practice problem system
 - Instant feedback and scoring
 - Standard answer comparison
 - Learning progress tracking
+
+### 🔄 RA ↔ SQL Reference
+- Side-by-side relational algebra and SQL solutions
+- Expected schema and result previews
+- Translation heuristics and learning tips
 
 ### 🎯 Execution Process Visualization
 - Step-by-step execution tracking

@@ -29,16 +29,17 @@ def main():
     
     This is an interactive educational platform designed for learning relational algebra, helping you:
     
-    - 🔍 **Write and test** relational algebra queries
-    - 📊 **Visualize execution processes** to understand the effects of each operation
-    - 📚 **Practice queries** through real exercises to improve your skills
     - 🗄️ **Manage databases** to import and organize learning data
+    - 🧮 **Practice relational algebra** with guided, step-by-step exercises
+    - 🧠 **Build SQL skills** alongside relational algebra understanding
+    - 🔄 **Translate** between relational algebra and SQL using side-by-side references
     
     ### Quick Start
     
-    1. Select **Query Editor** in the sidebar to start writing queries
-    2. Use **Database Manager** to import your data
-    3. Improve your skills through **Query Exercises**
+    1. Open **Database Manager** to import a sample dataset or your own files
+    2. Head to **Relational Algebra Exercises** to practice expressions with guided feedback
+    3. Strengthen your SQL intuition in **SQL Exercises**
+    4. Explore **RA 🔄 SQL** to compare canonical solutions side by side
     """)
 
     # Check backend connection status
@@ -73,33 +74,44 @@ def main():
     st.markdown("---")
     st.subheader("🚀 Feature Overview")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("""
-        ### 🔍 Query Editor
-        - Interactive query writing
-        - Real-time result preview
-        - Execution process visualization
-        - Syntax error hints
-        """)
-
-    with col2:
-        st.markdown("""
-        ### 📚 Query Exercises
-        - Graded practice problems
-        - Instant feedback
-        - Standard answer comparison
-        - Learning progress tracking
-        """)
-
-    with col3:
         st.markdown("""
         ### 🗄️ Database Manager
         - CSV/ZIP file import
         - SQL script import
         - Database browsing
         - Table structure viewing
+        """)
+
+    with col2:
+        st.markdown("""
+        ### 🧮 Relational Algebra Exercises
+        - Guided 3-step workflow
+        - Pre-defined practice catalog
+        - Custom expression workspace
+        - Execution trace visualization
+        """)
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        st.markdown("""
+        ### 🧠 SQL Exercises
+        - Curated practice problems
+        - Automated relational algebra checking
+        - SQL solution references
+        - Expected result walkthroughs
+        """)
+
+    with col4:
+        st.markdown("""
+        ### 🔄 RA ↔ SQL Reference
+        - Side-by-side solution explorer
+        - Expected schema and data previews
+        - Translation tips and heuristics
+        - Database-scoped exercise catalog
         """)
 
     # Usage instructions

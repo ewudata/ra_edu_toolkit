@@ -2,13 +2,29 @@
 API client for communicating with backend FastAPI service
 """
 
-import requests
 import os
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
+import requests
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+
+class APIClientError(Exception):
+    """Custom exception for API client errors."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: Optional[int] = None,
+        detail: Optional[Any] = None,
+    ):
+        super().__init__(message)
+        self.status_code = status_code
+        self.detail = detail
 
 
 class APIClient:
@@ -25,12 +41,48 @@ class APIClient:
             response = requests.request(method, url, **kwargs)
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code if e.response else None
+            detail_data: Optional[Any] = None
+
+            if e.response is not None:
+                try:
+                    payload = e.response.json()
+                    if isinstance(payload, dict):
+                        detail_data = payload.get("detail", payload)
+                except ValueError:
+                    detail_data = None
+
+                if detail_data is None:
+                    text = e.response.text.strip()
+                    detail_data = text or None
+
+            message = str(e)
+            if isinstance(detail_data, dict):
+                message = detail_data.get("message") or message
+            elif isinstance(detail_data, str):
+                message = detail_data or message
+
+            raise APIClientError(
+                message,
+                status_code=status_code,
+                detail=detail_data,
+            ) from e
         except requests.exceptions.RequestException as e:
-            raise Exception(f"API request failed: {e}")
+            raise APIClientError(str(e), detail=str(e)) from e
 
     def get_databases(self) -> List[Dict[str, Any]]:
         """Get available database list"""
         return self._make_request("GET", "/databases")
+
+    def get_database_schema(
+        self, database: str, sample_rows: int = 5
+    ) -> Dict[str, Any]:
+        """Get schema metadata and preview rows for a database."""
+        params = {"sample_rows": sample_rows}
+        return self._make_request(
+            "GET", f"/databases/{database}/schema", params=params
+        )
 
     def import_database_from_zip(self, name: str, file_path: str) -> Dict[str, Any]:
         """Import database from ZIP file"""

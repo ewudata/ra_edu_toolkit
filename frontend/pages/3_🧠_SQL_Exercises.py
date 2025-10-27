@@ -1,6 +1,4 @@
-"""
-Query Exercises Page
-"""
+"""SQL Exercises Page"""
 
 import streamlit as st
 import sys
@@ -16,12 +14,12 @@ from components.result_viewer import result_viewer_component, error_display_comp
 
 def main():
     st.set_page_config(
-        page_title="Query Exercises - RA Education Toolkit",
-        page_icon="📚",
+        page_title="SQL Exercises - RA Education Toolkit",
+        page_icon="🧠",
         layout="wide",
     )
 
-    st.title("📚 Relational Algebra Query Exercises")
+    st.title("🧠 SQL Exercises")
     st.markdown("---")
 
     # Initialize API client
@@ -119,10 +117,10 @@ def main():
 
     # Student answer area
     st.markdown("---")
-    st.subheader("✏️ Your Answer")
+    st.subheader("✏️ Your Relational Algebra Answer")
 
     student_answer = st.text_area(
-        "Enter your relational algebra expression",
+        "Enter your relational algebra expression (used for automated checking)",
         placeholder="Enter your answer here...",
         height=150,
         help="Write a relational algebra expression according to the problem requirements",
@@ -155,14 +153,16 @@ def main():
                         selected_database, selected_query["id"]
                     )
 
-                    if query_detail.get("solution", {}).get("relational_algebra"):
-                        with st.expander("📖 View Standard Answer"):
-                            st.write("**Relational algebra expression:**")
-                            st.code(query_detail["solution"]["relational_algebra"])
+                    solution = query_detail.get("solution", {})
+                    if solution.get("relational_algebra") or solution.get("sql"):
+                        with st.expander("📖 View Standard Answers"):
+                            if solution.get("relational_algebra"):
+                                st.write("**Relational algebra expression:**")
+                                st.code(solution["relational_algebra"])
 
-                            if query_detail["solution"].get("sql"):
-                                st.write("**Corresponding SQL query:**")
-                                st.code(query_detail["solution"]["sql"])
+                            if solution.get("sql"):
+                                st.write("**SQL query:**")
+                                st.code(solution["sql"], language="sql")
 
                     # Display expected results
                     if query_detail.get("expected_schema") or query_detail.get(
@@ -191,25 +191,44 @@ def main():
     elif submit_answer and not student_answer:
         st.warning("Please enter your answer")
 
+    # Optional SQL practice
+    st.markdown("---")
+    st.subheader("🧾 Your SQL Answer (optional)")
+    st.text_area(
+        "Draft an equivalent SQL query (not auto-graded)",
+        placeholder="Write your SQL query here...",
+        height=150,
+        key="sql_exercise_answer",
+    )
+
     # Learning resources
     with st.expander("📚 Learning Resources"):
-        st.markdown("""
+        st.markdown(
+            """
         ### Relational Algebra Basics
-        
+
         - **Projection (π)**: Select specific columns
         - **Selection (σ)**: Filter rows based on conditions
         - **Join (⋈)**: Combine two tables
         - **Union (∪)**: Combine results from two queries
         - **Difference (−)**: Subtract one query result from another
-        
+
+        ### SQL Reminders
+
+        - Use `SELECT ... FROM ...` to choose columns and tables
+        - Filter rows with `WHERE` clauses
+        - Combine tables using `JOIN` statements with explicit join conditions
+        - Aggregate with `GROUP BY` and filter aggregates in `HAVING`
+
         ### Problem-Solving Tips
-        
-        1. **Understand the problem**: Read the description carefully to identify what needs to be queried
-        2. **Analyze the data**: Understand the table structures and relationships
-        3. **Break down the problem**: Decompose complex queries into simple steps
-        4. **Build step by step**: Start constructing expressions from the innermost operations
-        5. **Verify results**: Check if the results meet expectations
-        """)
+
+        1. **Understand the problem**: Identify the required output schema and filters
+        2. **Analyze the data**: Review available relations and key attributes
+        3. **Break down the problem**: Decompose complex queries into smaller steps
+        4. **Build step by step**: Draft the relational algebra, then translate to SQL
+        5. **Verify results**: Ensure your answer matches the expected schema and rows
+        """
+        )
 
 
 if __name__ == "__main__":
