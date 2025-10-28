@@ -29,7 +29,6 @@ def query_selector_component(
         return None, None, None
 
     # Query selection
-    st.subheader("📚 Select a Query to Practice")
 
     # Create query options for selectbox
     query_options = []
@@ -46,11 +45,17 @@ def query_selector_component(
         query_options.append(option_text)
         query_map[option_text] = query
 
+    st.markdown("**Difficulty Levels:** 🟢 beginner  🟡 intermediate  🔴 advanced")
+
     selected_option = st.selectbox(
-        "Choose a query to practice:", query_options, key=f"{key_prefix}_selectbox"
+        "",
+        ["- Select a query -"] + query_options,
+        key=f"{key_prefix}_selectbox",
+        label_visibility="collapsed",
+        index=0,
     )
 
-    if not selected_option:
+    if not selected_option or selected_option == "- Select a query -":
         return None, None, None
 
     selected_query = query_map[selected_option]
@@ -113,22 +118,91 @@ def query_selector_component(
 
                 st.success("✅ Your solution executed successfully!")
 
-                # Display results
-                st.subheader("📊 Your Results")
-                st.markdown(
-                    f"**Rows returned:** {evaluation_result.get('row_count', 0)}"
-                )
+                # Display result comparison
+                st.subheader("📊 Results Comparison")
 
-                if evaluation_result.get("rows"):
-                    st.dataframe(evaluation_result["rows"])
+                user_rows = evaluation_result.get("rows") or []
+                user_row_count = evaluation_result.get("row_count", len(user_rows))
 
-                # Compare with expected results
-                st.subheader("🔍 Comparison with Expected Results")
-
+                expected_rows = evaluation_result.get("expected_rows")
+                expected_row_count: Optional[int] = None
+                expected_rows_error: Optional[str] = None
                 expected_schema = evaluation_result.get("expected_schema")
+
+                if expected_rows is not None:
+                    expected_row_count = len(expected_rows)
+                else:
+                    solution_expr = selected_query.get("solution", {}).get(
+                        "relational_algebra"
+                    )
+                    if solution_expr:
+                        cache_key = f"{key_prefix}_expected_cache_{selected_query['id']}"
+                        cached_expected = st.session_state.get(cache_key)
+                        use_cache = (
+                            cached_expected
+                            and cached_expected.get("expression") == solution_expr
+                            and cached_expected.get("database") == database
+                        )
+                        if use_cache:
+                            expected_rows = cached_expected.get("rows") or []
+                            expected_row_count = cached_expected.get("row_count", 0)
+                            if not expected_schema:
+                                expected_schema = cached_expected.get("schema") or []
+                        else:
+                            try:
+                                solution_result = api_client.evaluate_custom_query(
+                                    database=database,
+                                    expression=solution_expr,
+                                )
+                                expected_rows = solution_result.get("rows") or []
+                                expected_row_count = solution_result.get(
+                                    "row_count", len(expected_rows)
+                                )
+                                computed_schema = solution_result.get(
+                                    "schema_eval", []
+                                )
+                                if not expected_schema:
+                                    expected_schema = computed_schema
+                                st.session_state[cache_key] = {
+                                    "rows": expected_rows,
+                                    "row_count": expected_row_count,
+                                    "schema": computed_schema,
+                                    "expression": solution_expr,
+                                    "database": database,
+                                }
+                            except Exception as exc:
+                                expected_rows_error = str(exc)
+                    else:
+                        expected_rows = None
+
+                col_user, col_expected = st.columns(2)
+
+                with col_user:
+                    st.markdown("**Your Solution Output**")
+                    st.markdown(f"Rows returned: {user_row_count}")
+                    if user_rows:
+                        st.dataframe(user_rows)
+                    else:
+                        st.caption("No rows returned.")
+
+                with col_expected:
+                    st.markdown("**Expected Output**")
+                    if expected_rows_error:
+                        st.error(f"Could not generate expected output: {expected_rows_error}")
+                    elif expected_rows is not None:
+                        expected_row_count = expected_row_count or len(expected_rows)
+                        st.markdown(f"Rows expected: {expected_row_count}")
+                        if expected_rows:
+                            st.dataframe(expected_rows)
+                        else:
+                            st.caption("No rows expected.")
+                    else:
+                        st.caption("Expected result not available for this query.")
+
                 actual_schema = evaluation_result.get("schema_eval", [])
 
                 if expected_schema and actual_schema:
+                    st.subheader("🔍 Schema Comparison")
                     schema_match = set(expected_schema) == set(actual_schema)
 
                     col1, col2 = st.columns(2)
