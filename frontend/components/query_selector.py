@@ -89,7 +89,7 @@ def query_selector_component(
 
     user_solution = st.text_area(
         "Enter your relational algebra expression:",
-        placeholder="e.g., π{name}(σ{major = 'CS'}(Students))",
+        placeholder="Example: π{name}(σ{dept_name = 'Comp. Sci.'}(Student))",
         height=100,
         key=f"{key_prefix}_solution_input",
     )

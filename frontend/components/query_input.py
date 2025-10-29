@@ -8,7 +8,7 @@ from typing import Optional
 
 def query_input_component(
     label: str = "Enter Relational Algebra Expression",
-    placeholder: str = "Example: π{name}(σ{major = 'CS'}(Students))",
+    placeholder: str = "Example: π{name}(σ{dept_name = 'Comp. Sci.'}(Student))",
     key: str = "query_input",
 ) -> Optional[str]:
     """
@@ -22,11 +22,16 @@ def query_input_component(
     Returns:
         User-entered query expression, or None if empty
     """
+    label_text = label.strip() if label else ""
+    if label_text:
+        st.markdown(label_text)
+
     query = st.text_area(
-        label,
+        "",
         placeholder=placeholder,
         height=100,
         key=key,
+        label_visibility="collapsed",
         help="Enter relational algebra expression, supports projection(π), selection(σ), join(⋈) and other operations",
     )
 

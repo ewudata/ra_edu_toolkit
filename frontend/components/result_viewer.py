@@ -21,35 +21,41 @@ def result_viewer_component(
         st.info("No query results")
         return
 
-    # Display basic information
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Rows", result_data.get("row_count", 0))
-    with col2:
-        st.metric("Columns", len(result_data.get("schema_eval", [])))
-    with col3:
-        st.metric("Database", result_data.get("database", "Unknown"))
+    container = st.container()
+    with container:
+        # Display basic information
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Rows", result_data.get("row_count", 0))
+        with col2:
+            st.metric("Columns", len(result_data.get("schema_eval", [])))
+        with col3:
+            st.metric("Database", result_data.get("database", "Unknown"))
 
-    # Display schema information
-    schema = result_data.get("schema_eval", [])
-    if schema:
-        st.subheader("Result Schema")
-        st.write(", ".join(schema))
+        # Display schema information
+        schema = result_data.get("schema_eval", [])
+        if schema:
+            st.subheader("Result Schema")
+            st.write(", ".join(schema))
 
-    # Display data table
-    rows = result_data.get("rows", [])
-    if rows:
-        st.subheader("Query Results")
-        df = pd.DataFrame(rows)
-        st.dataframe(df, use_container_width=True)
+        # Display data table
+        rows = result_data.get("rows", [])
+        if rows:
+            st.subheader("Query Results")
+            df = pd.DataFrame(rows)
+            st.dataframe(df, use_container_width=True, key=f"{key}_table")
 
-        # Provide download option
-        csv = df.to_csv(index=False)
-        st.download_button(
-            label="Download CSV", data=csv, file_name="query_result.csv", mime="text/csv"
-        )
-    else:
-        st.info("Query result is empty")
+            # Provide download option
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Download CSV",
+                data=csv,
+                file_name="query_result.csv",
+                mime="text/csv",
+                key=f"{key}_download",
+            )
+        else:
+            st.info("Query result is empty")
 
 
 def trace_viewer_component(
