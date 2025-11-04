@@ -22,15 +22,13 @@ class SolutionSpec:
 @dataclass
 class QuerySummary:
     id: str
-    title: str
-    difficulty: Optional[str]
-    tags: List[str]
     prompt: str
+    difficulty: Optional[str]
+    hints: List[str]
 
 
 @dataclass
 class QueryDetail(QuerySummary):
-    hints: List[str]
     solution: SolutionSpec
     expected_schema: Optional[List[str]]
     expected_rows: Optional[List[dict]]
@@ -61,10 +59,9 @@ def list_queries(database: str) -> List[QuerySummary]:
         summaries.append(
             QuerySummary(
                 id=question["id"],
-                title=question.get("title", question["id"]),
-                difficulty=question.get("difficulty"),
-                tags=question.get("tags", []),
                 prompt=question.get("prompt", ""),
+                difficulty=question.get("difficulty"),
+                hints=list(question.get("hints", [])),
             )
         )
     return summaries
@@ -82,11 +79,9 @@ def get_query(database: str, query_id: str) -> QueryDetail:
             expected = question.get("expected_result", {})
             return QueryDetail(
                 id=question["id"],
-                title=question.get("title", question["id"]),
-                difficulty=question.get("difficulty"),
-                tags=question.get("tags", []),
                 prompt=question.get("prompt", ""),
-                hints=question.get("hints", []),
+                difficulty=question.get("difficulty"),
+                hints=list(question.get("hints", [])),
                 solution=solution,
                 expected_schema=expected.get("schema"),
                 expected_rows=expected.get("rows"),

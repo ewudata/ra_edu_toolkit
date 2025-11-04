@@ -5,7 +5,6 @@
   "questions": [
     {
       "id": "q01",
-      "title": "Computer Science Students",
       "prompt": "List the names of all students majoring in Computer Science.",
       "difficulty": "beginner",
       "solution": {
@@ -17,14 +16,13 @@
           "name"
         ]
       },
-      "tags": [
+      "hints": [
         "selection",
         "projection"
       ]
     },
     {
       "id": "q02",
-      "title": "High Credit Students",
       "prompt": "Find the ids and names of students with at least 90 total credits.",
       "difficulty": "beginner",
       "solution": {
@@ -37,14 +35,13 @@
           "name"
         ]
       },
-      "tags": [
+      "hints": [
         "selection",
         "projection"
       ]
     },
     {
       "id": "q03",
-      "title": "Students Below 30 Credits",
       "prompt": "Retrieve all information for students whose total credits are below 30.",
       "difficulty": "beginner",
       "solution": {
@@ -59,13 +56,12 @@
           "tot_cred"
         ]
       },
-      "tags": [
+      "hints": [
         "selection"
       ]
     },
     {
       "id": "q04",
-      "title": "Student Majors",
       "prompt": "Show the distinct majors represented by the students.",
       "difficulty": "beginner",
       "solution": {
@@ -77,13 +73,12 @@
           "dept_name"
         ]
       },
-      "tags": [
+      "hints": [
         "projection"
       ]
     },
     {
       "id": "q05",
-      "title": "Departments with People",
       "prompt": "List the departments that have either students or instructors.",
       "difficulty": "beginner",
       "solution": {
@@ -95,14 +90,13 @@
           "dept_name"
         ]
       },
-      "tags": [
+      "hints": [
         "union",
         "projection"
       ]
     },
     {
       "id": "q06",
-      "title": "Departments without Instructors",
       "prompt": "Find departments that currently have courses but no instructors.",
       "difficulty": "intermediate",
       "solution": {
@@ -114,14 +108,13 @@
           "dept_name"
         ]
       },
-      "tags": [
+      "hints": [
         "difference",
         "projection"
       ]
     },
     {
       "id": "q07",
-      "title": "Departments with Both Students and Instructors",
       "prompt": "Return the departments that have at least one student and at least one instructor.",
       "difficulty": "intermediate",
       "solution": {
@@ -133,14 +126,13 @@
           "dept_name"
         ]
       },
-      "tags": [
+      "hints": [
         "intersection",
         "projection"
       ]
     },
     {
       "id": "q08",
-      "title": "Rename Student Columns",
       "prompt": "Rename the student relation so that id becomes student_id and dept_name becomes major.",
       "difficulty": "beginner",
       "solution": {
@@ -155,17 +147,16 @@
           "tot_cred"
         ]
       },
-      "tags": [
+      "hints": [
         "rename"
       ]
     },
     {
       "id": "q09",
-      "title": "Courses with Department Budgets",
       "prompt": "List each course along with its title and the budget of the offering department.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id, title, dept_budget}(rho{budget->dept_budget}(course ⋈ department))",
+        "relational_algebra": "pi{course_id, title, dept_budget}(rho{budget->dept_budget}(course \u22c8 department))",
         "sql": "SELECT c.course_id, c.title, d.budget AS dept_budget FROM course AS c NATURAL JOIN department AS d;"
       },
       "expected_result": {
@@ -175,18 +166,17 @@
           "dept_budget"
         ]
       },
-      "tags": [
+      "hints": [
         "natural join",
         "rename"
       ]
     },
     {
       "id": "q10",
-      "title": "Fall 2009 Sections with Rooms",
       "prompt": "Find the sections offered in Fall 2009 along with the rooms they occupy using an explicit join condition.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{course_id, sec_id, sec_building, sec_room}( rho{building->sec_building, room_number->sec_room}(sigma{semester = 'Fall' AND year = 2009}(section)) ⋈{sec_building = class_building AND sec_room = class_room} rho{building->class_building, room_number->class_room}(classroom) )",
+        "relational_algebra": "pi{course_id, sec_id, sec_building, sec_room}( rho{building->sec_building, room_number->sec_room}(sigma{semester = 'Fall' AND year = 2009}(section)) \u22c8{sec_building = class_building AND sec_room = class_room} rho{building->class_building, room_number->class_room}(classroom) )",
         "sql": "SELECT s.course_id, s.sec_id, s.building AS sec_building, s.room_number AS sec_room\nFROM section AS s\nJOIN classroom AS c ON s.building = c.building AND s.room_number = c.room_number\nWHERE s.semester = 'Fall' AND s.year = 2009;"
       },
       "expected_result": {
@@ -197,7 +187,7 @@
           "sec_room"
         ]
       },
-      "tags": [
+      "hints": [
         "theta join",
         "rename",
         "selection"
@@ -205,11 +195,10 @@
     },
     {
       "id": "q11",
-      "title": "Same Department Student-Course Pairs",
       "prompt": "Produce student-course pairs where the student majors in the same department that offers the course using a Cartesian product.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{student_name, course_title}(sigma{student_major = course_dept}( rho{name->student_name, dept_name->student_major}(student) × rho{title->course_title, dept_name->course_dept}(course) ))",
+        "relational_algebra": "pi{student_name, course_title}(sigma{student_major = course_dept}( rho{name->student_name, dept_name->student_major}(student) \u00d7 rho{title->course_title, dept_name->course_dept}(course) ))",
         "sql": "SELECT st.name AS student_name, co.title AS course_title\nFROM student AS st CROSS JOIN course AS co\nWHERE st.dept_name = co.dept_name;"
       },
       "expected_result": {
@@ -218,7 +207,7 @@
           "course_title"
         ]
       },
-      "tags": [
+      "hints": [
         "cartesian product",
         "rename",
         "selection"
@@ -226,11 +215,10 @@
     },
     {
       "id": "q12",
-      "title": "Student-Advisor Pairs",
       "prompt": "List student names with their advisors' names.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) ⋈ advisor ⋈ rho{id->i_id, name->advisor_name}(instructor) )",
+        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) \u22c8 advisor \u22c8 rho{id->i_id, name->advisor_name}(instructor) )",
         "sql": "SELECT st.name AS student_name, inst.name AS advisor_name\nFROM student AS st\nJOIN advisor AS adv ON st.id = adv.s_id\nJOIN instructor AS inst ON adv.i_id = inst.id;"
       },
       "expected_result": {
@@ -239,14 +227,13 @@
           "advisor_name"
         ]
       },
-      "tags": [
+      "hints": [
         "natural join",
         "rename"
       ]
     },
     {
       "id": "q13",
-      "title": "Students with Grade A",
       "prompt": "Find the student-course pairs where the grade is A.",
       "difficulty": "beginner",
       "solution": {
@@ -262,18 +249,17 @@
           "year"
         ]
       },
-      "tags": [
+      "hints": [
         "selection",
         "projection"
       ]
     },
     {
       "id": "q14",
-      "title": "Courses with Prerequisites",
       "prompt": "Return the course id and title for courses that have at least one prerequisite.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id, title}(course ⋈ prereq)",
+        "relational_algebra": "pi{course_id, title}(course \u22c8 prereq)",
         "sql": "SELECT DISTINCT c.course_id, c.title\nFROM course AS c JOIN prereq AS p ON c.course_id = p.course_id;"
       },
       "expected_result": {
@@ -282,17 +268,16 @@
           "title"
         ]
       },
-      "tags": [
+      "hints": [
         "natural join"
       ]
     },
     {
       "id": "q15",
-      "title": "Students Who Have Taken Nothing",
       "prompt": "Find students who have not taken any course.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{id, name}(student) - pi{id, name}(student ⋈ pi{id}(takes))",
+        "relational_algebra": "pi{id, name}(student) - pi{id, name}(student \u22c8 pi{id}(takes))",
         "sql": "SELECT id, name FROM student\nEXCEPT\nSELECT DISTINCT st.id, st.name\nFROM student AS st\nJOIN takes AS t ON st.id = t.id;"
       },
       "expected_result": {
@@ -301,14 +286,13 @@
           "name"
         ]
       },
-      "tags": [
+      "hints": [
         "difference",
         "natural join"
       ]
     },
     {
       "id": "q16",
-      "title": "Students with A or B",
       "prompt": "Find student-course pairs where the student earned an A or a B.",
       "difficulty": "beginner",
       "solution": {
@@ -324,14 +308,13 @@
           "year"
         ]
       },
-      "tags": [
+      "hints": [
         "union",
         "selection"
       ]
     },
     {
       "id": "q17",
-      "title": "People Who Are Students and Instructors",
       "prompt": "Return the ids of people who appear as both a student and an instructor.",
       "difficulty": "intermediate",
       "solution": {
@@ -343,18 +326,17 @@
           "id"
         ]
       },
-      "tags": [
+      "hints": [
         "intersection",
         "projection"
       ]
     },
     {
       "id": "q18",
-      "title": "Section Time Slots",
       "prompt": "Show each section together with the meeting day and start time.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{course_id, sec_id, semester, year, day, start_hr, start_min}(section ⋈ time_slot)",
+        "relational_algebra": "pi{course_id, sec_id, semester, year, day, start_hr, start_min}(section \u22c8 time_slot)",
         "sql": "SELECT s.course_id, s.sec_id, s.semester, s.year, t.day, t.start_hr, t.start_min\nFROM section AS s\nJOIN time_slot AS t ON s.time_slot_id = t.time_slot_id;"
       },
       "expected_result": {
@@ -368,13 +350,12 @@
           "start_min"
         ]
       },
-      "tags": [
+      "hints": [
         "natural join"
       ]
     },
     {
       "id": "q19",
-      "title": "Fall 2009 vs Spring 2010 Sections",
       "prompt": "Report the course and section identifiers that were offered in Fall 2009 but not in Spring 2010.",
       "difficulty": "intermediate",
       "solution": {
@@ -387,7 +368,7 @@
           "sec_id"
         ]
       },
-      "tags": [
+      "hints": [
         "difference",
         "selection",
         "projection"
@@ -395,7 +376,6 @@
     },
     {
       "id": "q20",
-      "title": "Rename Prerequisite Columns",
       "prompt": "Rename the prerequisite relation so that course_id becomes main_course and prereq_id becomes required_course.",
       "difficulty": "beginner",
       "solution": {
@@ -408,13 +388,12 @@
           "required_course"
         ]
       },
-      "tags": [
+      "hints": [
         "rename"
       ]
     },
     {
       "id": "q21",
-      "title": "Students Taking All Comp Sci Courses",
       "prompt": "Find the ids of students who have taken every Computer Science course (may be empty).",
       "difficulty": "advanced",
       "solution": {
@@ -426,14 +405,13 @@
           "id"
         ]
       },
-      "tags": [
+      "hints": [
         "division",
         "projection"
       ]
     },
     {
       "id": "q22",
-      "title": "Large Classrooms",
       "prompt": "List the building and room numbers of classrooms with capacity at least 80.",
       "difficulty": "beginner",
       "solution": {
@@ -446,18 +424,17 @@
           "room_number"
         ]
       },
-      "tags": [
+      "hints": [
         "selection",
         "projection"
       ]
     },
     {
       "id": "q23",
-      "title": "High Salary Instructors",
       "prompt": "List instructors who earn more than 90,000 along with their departments.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{instructor_name, dept_name, salary}(sigma{salary > 90000}(rho{name->instructor_name}(instructor) ⋈ department))",
+        "relational_algebra": "pi{instructor_name, dept_name, salary}(sigma{salary > 90000}(rho{name->instructor_name}(instructor) \u22c8 department))",
         "sql": "SELECT inst.name AS instructor_name, inst.dept_name, inst.salary\nFROM instructor AS inst\nWHERE inst.salary > 90000;"
       },
       "expected_result": {
@@ -467,7 +444,7 @@
           "salary"
         ]
       },
-      "tags": [
+      "hints": [
         "natural join",
         "rename",
         "selection"
@@ -475,11 +452,10 @@
     },
     {
       "id": "q24",
-      "title": "Students without Advisors",
       "prompt": "Find the ids and names of students that are not assigned an advisor.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{id, name}(student) - pi{id, name}(student ⋈ rho{s_id->id}(advisor))",
+        "relational_algebra": "pi{id, name}(student) - pi{id, name}(student \u22c8 rho{s_id->id}(advisor))",
         "sql": "SELECT st.id, st.name\nFROM student AS st\nLEFT JOIN advisor AS adv ON st.id = adv.s_id\nWHERE adv.s_id IS NULL;"
       },
       "expected_result": {
@@ -488,18 +464,17 @@
           "name"
         ]
       },
-      "tags": [
+      "hints": [
         "difference",
         "natural join"
       ]
     },
     {
       "id": "q25",
-      "title": "Spring 2010 Instructors",
       "prompt": "Retrieve the names of instructors who taught during Spring 2010.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{instructor_name}(rho{id->i_id, name->instructor_name}(instructor) ⋈ sigma{semester = 'Spring' AND year = 2010}(teaches))",
+        "relational_algebra": "pi{instructor_name}(rho{id->i_id, name->instructor_name}(instructor) \u22c8 sigma{semester = 'Spring' AND year = 2010}(teaches))",
         "sql": "SELECT DISTINCT inst.name AS instructor_name\nFROM instructor AS inst\nJOIN teaches AS te ON inst.id = te.id\nWHERE te.semester = 'Spring' AND te.year = 2010;"
       },
       "expected_result": {
@@ -507,7 +482,7 @@
           "instructor_name"
         ]
       },
-      "tags": [
+      "hints": [
         "natural join",
         "rename",
         "selection"
@@ -515,11 +490,10 @@
     },
     {
       "id": "q26",
-      "title": "Courses without Prerequisites",
       "prompt": "List the courses (id and title) that have no prerequisites.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id, title}(course) - pi{course_id, title}(course ⋈ prereq)",
+        "relational_algebra": "pi{course_id, title}(course) - pi{course_id, title}(course \u22c8 prereq)",
         "sql": "SELECT c.course_id, c.title\nFROM course AS c\nLEFT JOIN prereq AS p ON c.course_id = p.course_id\nWHERE p.course_id IS NULL;"
       },
       "expected_result": {
@@ -528,18 +502,17 @@
           "title"
         ]
       },
-      "tags": [
+      "hints": [
         "difference",
         "natural join"
       ]
     },
     {
       "id": "q27",
-      "title": "Advisors from Same Department",
       "prompt": "Find student-advisor pairs where both are in the same department.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{student_name, advisor_name}(sigma{student_major = advisor_major}( rho{id->s_id, name->student_name, dept_name->student_major}(student) ⋈ advisor ⋈ rho{id->i_id, name->advisor_name, dept_name->advisor_major}(instructor) ))",
+        "relational_algebra": "pi{student_name, advisor_name}(sigma{student_major = advisor_major}( rho{id->s_id, name->student_name, dept_name->student_major}(student) \u22c8 advisor \u22c8 rho{id->i_id, name->advisor_name, dept_name->advisor_major}(instructor) ))",
         "sql": "SELECT st.name AS student_name, inst.name AS advisor_name\nFROM student AS st\nJOIN advisor AS adv ON st.id = adv.s_id\nJOIN instructor AS inst ON adv.i_id = inst.id\nWHERE st.dept_name = inst.dept_name;"
       },
       "expected_result": {
@@ -548,7 +521,7 @@
           "advisor_name"
         ]
       },
-      "tags": [
+      "hints": [
         "selection",
         "natural join",
         "rename"
@@ -556,7 +529,6 @@
     },
     {
       "id": "q28",
-      "title": "Students with A and B Grades",
       "prompt": "Return ids of students who have earned both an A and a B in different courses.",
       "difficulty": "advanced",
       "solution": {
@@ -568,14 +540,13 @@
           "id"
         ]
       },
-      "tags": [
+      "hints": [
         "intersection",
         "selection"
       ]
     },
     {
       "id": "q29",
-      "title": "Courses Passed by Students",
       "prompt": "List student-course combinations where the student did not receive an F.",
       "difficulty": "beginner",
       "solution": {
@@ -591,14 +562,13 @@
           "year"
         ]
       },
-      "tags": [
+      "hints": [
         "difference",
         "selection"
       ]
     },
     {
       "id": "q30",
-      "title": "Departments without Courses",
       "prompt": "Find departments that currently do not offer any course.",
       "difficulty": "intermediate",
       "solution": {
@@ -610,7 +580,7 @@
           "dept_name"
         ]
       },
-      "tags": [
+      "hints": [
         "difference",
         "projection"
       ]

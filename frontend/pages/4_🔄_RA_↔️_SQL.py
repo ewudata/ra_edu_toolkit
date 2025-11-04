@@ -91,14 +91,18 @@ def main() -> None:
         return
 
     for query in queries:
-        title = query.get("title") or query.get("id")
+        prompt_text = (query.get("prompt") or query.get("id") or "").strip()
+        if len(prompt_text) > 80:
+            prompt_text = f"{prompt_text[:77]}..."
         difficulty = query.get("difficulty") or "Unknown difficulty"
-        tags = ", ".join(query.get("tags") or [])
-        header = f"{title} · {difficulty}"
+        header = f"{prompt_text} · {difficulty}"
         with st.expander(header):
             st.write(f"**Prompt:** {query.get('prompt', 'No prompt provided.')}")
-            if tags:
-                st.write(f"**Tags:** {tags}")
+            hints = query.get("hints") or []
+            if hints:
+                st.write("**Hints:**")
+                for hint in hints:
+                    st.write(f"- {hint}")
 
             try:
                 detail = api_client.get_query_detail(selected_name, query["id"])

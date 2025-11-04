@@ -69,10 +69,14 @@ def main():
     # Query selection
     st.header("📝 Select Exercise")
 
-    query_options = {
-        f"{q['title']} ({q.get('difficulty', 'Unknown difficulty')})": q
-        for q in queries
-    }
+    query_options = {}
+    for query in queries:
+        difficulty = query.get("difficulty", "Unknown difficulty")
+        prompt_text = (query.get("prompt") or "").strip()
+        if len(prompt_text) > 80:
+            prompt_text = f"{prompt_text[:77]}..."
+        label = f"{prompt_text} [{query.get('id', 'unknown')}] - {difficulty}"
+        query_options[label] = query
     selected_query_title = st.selectbox(
         "Select a query to practice",
         list(query_options.keys()),
@@ -91,14 +95,16 @@ def main():
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        st.write(f"**Title:** {selected_query['title']}")
-        st.write(f"**Description:** {selected_query['prompt']}")
+        st.write(f"**Query ID:** {selected_query['id']}")
+        st.write(f"**Query Description:** {selected_query['prompt']}")
 
         if selected_query.get("difficulty"):
             st.write(f"**Difficulty:** {selected_query['difficulty']}")
 
-        if selected_query.get("tags"):
-            st.write(f"**Tags:** {', '.join(selected_query['tags'])}")
+        if selected_query.get("hints"):
+            st.write("**Hints:**")
+            for hint in selected_query["hints"]:
+                st.write(f"- {hint}")
 
     with col2:
         # Get detailed query information

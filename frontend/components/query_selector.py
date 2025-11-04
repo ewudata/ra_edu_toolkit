@@ -2,8 +2,156 @@
 Pre-defined Query Selector Component
 """
 
+from typing import Any, Dict, List, Optional, Tuple
+
 import streamlit as st
-from typing import List, Dict, Any, Optional, Tuple
+
+
+_OP_DISPLAY_NAMES: Dict[str, str] = {
+    "rel": "Relation Lookup",
+    "π": "Projection",
+    "σ": "Selection",
+    "ρ": "Rename",
+    "⋈": "Natural Join",
+    "⋈_θ": "Theta Join",
+    "×": "Cartesian Product",
+    "∪": "Union",
+    "−": "Difference",
+    "∩": "Intersection",
+    "÷": "Division",
+}
+
+
+def _format_op_label(step: Dict[str, Any]) -> str:
+    op = step.get("op")
+    if not op:
+        return "Unknown Operation"
+    friendly = _OP_DISPLAY_NAMES.get(op)
+    if op == "rel":
+        detail = step.get("detail")
+        relation_name = None
+        if isinstance(detail, str):
+            relation_name = detail
+        elif isinstance(detail, dict):
+            relation_name = detail.get("name") or detail.get("relation")
+        if relation_name:
+            return f"{friendly or 'Relation Lookup'} ({relation_name})"
+    if friendly:
+        return friendly if friendly == op else f"{friendly} ({op})"
+    return str(op)
+
+
+def _format_schema(schema: Any) -> str:
+    if not schema:
+        return "—"
+    if isinstance(schema, dict):
+        parts = []
+        for key, value in schema.items():
+            formatted = _format_schema(value)
+            parts.append(f"{key}: {formatted}")
+        return "; ".join(parts)
+    if isinstance(schema, list):
+        return "[" + ", ".join(str(col) for col in schema) + "]"
+    return str(schema)
+
+
+def _format_detail(detail: Any) -> str:
+    if detail is None:
+        return ""
+    if isinstance(detail, dict):
+        return "; ".join(f"{key}: {value}" for key, value in detail.items())
+    if isinstance(detail, list):
+        return ", ".join(str(item) for item in detail)
+    return str(detail)
+
+
+def _format_delta(delta: Any) -> str:
+    if not delta:
+        return ""
+    if isinstance(delta, dict):
+        parts = []
+        for key, value in delta.items():
+            parts.append(f"{key}: {value}")
+        return "; ".join(parts)
+    return str(delta)
+
+
+def _extract_row_count(step: Dict[str, Any]) -> Optional[int]:
+    if "rows" in step and step["rows"] is not None:
+        try:
+            return int(step["rows"])
+        except (TypeError, ValueError):
+            return None
+    delta = step.get("delta")
+    if isinstance(delta, dict):
+        for key in ("rows_after", "rows_before"):
+            value = delta.get(key)
+            if value is not None:
+                try:
+                    return int(value)
+                except (TypeError, ValueError):
+                    continue
+    return None
+
+
+def _render_trace_ui(
+    trace_data: List[Dict[str, Any]], *, header: str = "🔍 Execution Trace"
+) -> None:
+    if not trace_data:
+        return
+
+    st.subheader(header)
+
+    summary_rows: List[Dict[str, Any]] = []
+    for idx, step in enumerate(trace_data, start=1):
+        summary_rows.append(
+            {
+                "Step": idx,
+                "Operation": _format_op_label(step),
+                "Output Schema": _format_schema(step.get("output_schema")),
+                "Rows": _extract_row_count(step) or "—",
+            }
+        )
+    st.table(summary_rows)
+
+    for idx, step in enumerate(trace_data, start=1):
+        op_label = _format_op_label(step)
+        with st.expander(f"Step {idx}: {op_label}", expanded=False):
+            meta_entries: List[Dict[str, str]] = []
+
+            detail_text = _format_detail(step.get("detail"))
+            if detail_text:
+                meta_entries.append({"Property": "Detail", "Value": detail_text})
+
+            input_schema = step.get("input_schema")
+            if input_schema:
+                meta_entries.append(
+                    {"Property": "Input Schema", "Value": _format_schema(input_schema)}
+                )
+
+            output_schema = step.get("output_schema")
+            if output_schema:
+                meta_entries.append(
+                    {"Property": "Output Schema", "Value": _format_schema(output_schema)}
+                )
+
+            delta_text = _format_delta(step.get("delta"))
+            if delta_text:
+                meta_entries.append({"Property": "Delta", "Value": delta_text})
+
+            row_count = _extract_row_count(step)
+            if row_count is not None:
+                meta_entries.append({"Property": "Rows", "Value": str(row_count)})
+
+            if meta_entries:
+                st.table(meta_entries)
+
+            preview = step.get("preview")
+            st.markdown("**Output (up to 10 records):**")
+            if preview:
+                st.dataframe(preview)
+            else:
+                st.caption("No preview rows for this step.")
 
 
 def query_selector_component(
@@ -41,7 +189,10 @@ def query_selector_component(
             "advanced": "🔴",
         }.get(query.get("difficulty", "beginner"), "🟢")
 
-        option_text = f"{difficulty_icon} {query['title']} ({query.get('difficulty', 'beginner').title()})"
+        prompt_text = (query.get("prompt") or "").strip()
+        if len(prompt_text) > 80:
+            prompt_text = f"{prompt_text[:77]}..."
+        option_text = f"{difficulty_icon} {prompt_text}"
         query_options.append(option_text)
         query_map[option_text] = query
 
@@ -70,29 +221,54 @@ def query_selector_component(
         return selected_query, None, None
 
     # Display query details
-    st.markdown("---")
-    st.markdown(f"**Query:** {selected_query['title']}")
+    st.markdown(f"**Query Description:** {selected_query['prompt']}")
     st.markdown(
         f"**Difficulty:** {selected_query.get('difficulty', 'beginner').title()}"
     )
-
-    if selected_query.get("tags"):
-        tags_text = ", ".join(selected_query["tags"])
-        st.markdown(f"**Tags:** {tags_text}")
-
-    st.markdown(f"**Prompt:** {selected_query['prompt']}")
+    hints = selected_query.get("hints") or []
+    if hints:
+        hints_line = ", ".join(hints)
+        st.markdown(f"**Hint:** {hints_line}")
 
     # User solution input
     st.markdown("---")
     st.subheader("✏️ Your Solution")
-    st.markdown("Try to write the relational algebra expression for this query:")
+    st.markdown("Write the relational algebra expression for this query:")
 
     user_solution = st.text_area(
-        "Enter your relational algebra expression:",
+        "",
         placeholder="Example: π{name}(σ{dept_name = 'Comp. Sci.'}(Student))",
         height=100,
         key=f"{key_prefix}_solution_input",
+        label_visibility="collapsed",
     )
+
+    with st.expander("💡 Query Syntax Help"):
+        st.markdown(
+            """
+            ### Relational Algebra Operators
+
+            - **Projection (π)**: `π{attr1,attr2}(R)` — use `π` or `pi`, `PI`
+            - **Selection (σ)**: `σ{condition}(R)` — use `σ` or `sigma`, `SIGMA`
+            - **Rename (ρ)**: `ρ{old->new}(R)` — use `ρ` or `rho`, `RHO`
+            - **Natural Join (⋈)**: `R ⋈ S` — use `⋈` or `join`, `JOIN`
+            - **Cartesian Product (×)**: `R × S` — use `×` or `x`, `X`, `cross`, `CROSS`
+            - **Union (∪)**: `R ∪ S` — use `∪` or `union`, `UNION`
+            - **Difference (−)**: `R − S` — use `−` or `-`, `diff`, `DIFF`
+            - **Intersection (∩)**: `R ∩ S` — use `∩` or `intersect`, `INTERSECT`
+            - **Division (÷)**: `R ÷ S` — use `÷` or `/`, `div`, `DIV`
+
+            ### Example Queries
+
+            ```sql
+            -- Select names of computer science students
+            π{name}(σ{dept_name = 'Comp. Sci.'}(Student))
+
+            -- Find students enrolled in specific courses
+            π{name}(Student ⋈ Takes ⋈ σ{course_id = 'CS-101'}(Course))
+            ```
+            """
+        )
 
     # Execute button
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -115,8 +291,6 @@ def query_selector_component(
                     query_id=selected_query["id"],
                     expression=user_solution,
                 )
-
-                st.success("✅ Your solution executed successfully!")
 
                 # Display result comparison
                 st.subheader("📊 Results Comparison")
@@ -199,30 +373,11 @@ def query_selector_component(
                     else:
                         st.caption("Expected result not available for this query.")
 
-                actual_schema = evaluation_result.get("schema_eval", [])
-
-                if expected_schema and actual_schema:
-                    st.subheader("🔍 Schema Comparison")
-                    schema_match = set(expected_schema) == set(actual_schema)
-
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown("**Expected Schema:**")
-                        st.write(expected_schema)
-                    with col2:
-                        st.markdown("**Your Schema:**")
-                        st.write(actual_schema)
-
-                    if schema_match:
-                        st.success("✅ Schema matches expected result!")
-                    else:
-                        st.error("❌ Schema doesn't match expected result")
-
                 # Show trace if available
                 trace_data = evaluation_result.get("trace", [])
-                if trace_data:
-                    st.subheader("🔍 Execution Trace")
-                    st.json(trace_data)
+                _render_trace_ui(
+                    trace_data, header="🔍 Execution Trace of Your Solution"
+                )
 
             except Exception as e:
                 st.error(f"❌ Error executing your solution: {e}")
@@ -234,70 +389,44 @@ def query_selector_component(
     st.markdown("---")
     st.subheader("💡 Need Help?")
 
-    col1, col2 = st.columns(2)
+    if st.button(
+        "👁️ View Expected Solution & Results",
+        key=f"{key_prefix}_view_solution",
+    ):
+        solution_spec = selected_query.get("solution", {}) or {}
+        solution_expr = solution_spec.get("relational_algebra")
+        sql_expr = solution_spec.get("sql")
 
-    with col1:
-        show_solution = st.button(
-            "👁️ Show Solution from Catalog", key=f"{key_prefix}_show_solution"
-        )
+        if not solution_expr:
+            st.warning("Expected solution not available for this query.")
+        else:
+            st.markdown("**Expected Relational Algebra Expression:**")
+            st.code(solution_expr)
 
-    with col2:
-        execute_solution = st.button(
-            "🚀 Generate Results for Solution", key=f"{key_prefix}_execute_solution"
-        )
+            if sql_expr:
+                st.markdown("**Equivalent SQL:**")
+                st.code(sql_expr, language="sql")
 
-    if show_solution:
-        st.markdown("**Expected Relational Algebra Expression:**")
-        solution_expr = selected_query.get("solution", {}).get(
-            "relational_algebra", "Not available"
-        )
-        st.code(solution_expr)
-
-        if selected_query.get("solution", {}).get("sql"):
-            st.markdown("**Equivalent SQL:**")
-            st.code(selected_query["solution"]["sql"])
-
-        # Show additional solution details from catalog
-        if solution_expr != "Not available":
-            st.markdown("**Solution Details:**")
-            st.info(
-                f"This is the expected solution stored in the catalog for this query."
-            )
-
-    if execute_solution:
-        solution_expr = selected_query.get("solution", {}).get("relational_algebra")
-        if solution_expr:
-            with st.spinner("Generating results for expected solution..."):
+            with st.spinner("Generating expected results..."):
                 try:
-                    # Use the custom evaluation endpoint to execute the solution expression
                     solution_result = api_client.evaluate_custom_query(
                         database=database,
                         expression=solution_expr,
                     )
+                except Exception as exc:
+                    st.error(f"❌ Error executing expected solution: {exc}")
+                else:
+                    rows = solution_result.get("rows") or []
+                    st.subheader("📊 Expected Query Results")
+                    if rows:
+                        st.dataframe(rows)
+                    else:
+                        st.caption("Expected result returns no rows.")
 
-                    st.success("✅ Expected solution executed successfully!")
-
-                    st.subheader("📊 Expected Results (Generated On-the-Fly)")
-                    st.markdown(
-                        f"**Rows returned:** {solution_result.get('row_count', 0)}"
+                    trace_data = solution_result.get("trace", [])
+                    _render_trace_ui(
+                        trace_data, header="🔍 Execution Trace of Expected Solution"
                     )
 
-                    if solution_result.get("rows"):
-                        st.dataframe(solution_result["rows"])
-
-                    # Show trace
-                    trace_data = solution_result.get("trace", [])
-                    if trace_data:
-                        st.subheader("🔍 Execution Trace")
-                        st.json(trace_data)
-
-                    # Show the expression that was executed
-                    st.markdown("**Executed Expression:**")
-                    st.code(solution_expr)
-
-                except Exception as e:
-                    st.error(f"❌ Error executing expected solution: {e}")
-        else:
-            st.warning("Expected solution not available for this query.")
 
     return selected_query, user_solution, evaluation_result

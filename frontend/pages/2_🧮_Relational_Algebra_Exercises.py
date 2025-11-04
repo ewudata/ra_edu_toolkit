@@ -1,25 +1,20 @@
 """Relational Algebra Exercises Page"""
 
 import html
-import streamlit as st
-import sys
 import os
+import sys
 from typing import Any, Dict, Optional
+
+import pandas as pd
+import streamlit as st
 
 # Add frontend path to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
 from components.query_input import query_input_component
-from components.result_viewer import (
-    result_viewer_component,
-    error_display_component,
-)
-from components.trace_visualizer import (
-    trace_visualizer_component,
-    execution_summary_component,
-)
-from components.query_selector import query_selector_component
+from components.result_viewer import error_display_component
+from components.query_selector import query_selector_component, _render_trace_ui
 
 
 def _render_table_preview_html(
@@ -92,6 +87,20 @@ def _render_table_preview_html(
     )
 
 
+def _render_custom_query_output(result: Dict[str, Any]) -> None:
+    """Display custom query results and execution trace in a concise layout."""
+
+    rows = result.get("rows") or []
+    st.subheader("📊 Query Results")
+    if rows:
+        st.dataframe(pd.DataFrame(rows), use_container_width=True)
+    else:
+        st.caption("Query returned no rows.")
+
+    trace_data = result.get("trace", [])
+    _render_trace_ui(trace_data, header="🔍 Execution Trace")
+
+
 def main():
     st.set_page_config(
         page_title="Relational Algebra Exercises - RA Education Toolkit",
@@ -104,6 +113,7 @@ def main():
         "Explore datasets, review available practice material, and choose how you want to work with relational algebra expressions."
     )
     st.markdown("---")
+    st.header("📊 Choose a Database")
 
     api_client = APIClient()
 
@@ -138,8 +148,6 @@ def main():
         st.session_state.custom_query_error = None
     if "custom_query_last_expression" not in st.session_state:
         st.session_state.custom_query_last_expression = ""
-    if "custom_query_success" not in st.session_state:
-        st.session_state.custom_query_success = False
 
     # Get database list
     try:
@@ -163,7 +171,6 @@ def main():
         st.session_state.custom_query_result = None
         st.session_state.custom_query_error = None
         st.session_state.custom_query_last_expression = ""
-        st.session_state.custom_query_success = False
 
     # Inject styles shared with the database manager previews
     st.markdown(
@@ -233,9 +240,6 @@ def main():
         unsafe_allow_html=True,
     )
 
-    st.header("📊 Choose a Database")
-    st.write("Select a database below to view its tables and start practicing.")
-
     if not databases:
         st.info("No databases available.")
         return
@@ -272,6 +276,20 @@ def main():
         .relalg-selector .stSelectbox > div {{
             min-width: 12ch;
         }}
+        .relalg-selector-label {{
+            font-size: 1rem;
+            margin: 0 0 0.6rem 0;
+        }}
+        .db-highlight {{
+            background-color: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #1e3a8a;
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 0.75rem;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -281,6 +299,12 @@ def main():
     with selector_col:
         with st.container():
             st.markdown('<div class="relalg-selector">', unsafe_allow_html=True)
+            st.markdown(
+                '<p class="relalg-selector-label">'
+                "Select a database below to view its tables and start practicing:"
+                "</p>",
+                unsafe_allow_html=True,
+            )
             selected_label = st.selectbox(
                 "",
                 option_labels,
@@ -298,59 +322,46 @@ def main():
         st.session_state.custom_query_result = None
         st.session_state.custom_query_error = None
         st.session_state.custom_query_last_expression = ""
-        st.session_state.custom_query_success = False
 
     if not st.session_state.selected_database:
-        st.info("Select a database from the dropdown to continue.")
         return
 
     selected_database = st.session_state.selected_database
-    st.success(f"Current database: **{selected_database}**")
+    exp_label = f"📚 Active database: {selected_database}"
+    with st.expander(exp_label, expanded=False):
+        schema_cache = st.session_state.database_schemas
+        cache_entry = schema_cache.get(selected_database)
+        if cache_entry is None:
+            try:
+                schema_response = api_client.get_database_schema(
+                    selected_database, sample_rows=3
+                )
+                cache_entry = {"data": schema_response, "error": None}
+            except Exception as exc:
+                cache_entry = {"data": None, "error": str(exc)}
+            schema_cache[selected_database] = cache_entry
 
-    # Display information for the selected database only
-    schema_cache = st.session_state.database_schemas
-    cache_entry = schema_cache.get(selected_database)
-    if cache_entry is None:
-        try:
-            schema_response = api_client.get_database_schema(
-                selected_database, sample_rows=3
-            )
-            cache_entry = {"data": schema_response, "error": None}
-        except Exception as exc:
-            cache_entry = {"data": None, "error": str(exc)}
-        schema_cache[selected_database] = cache_entry
+        selected_db_info = next(
+            (db for db in databases if db["name"] == selected_database), {}
+        )
+        table_metadata: Dict[str, Dict[str, Any]] = {}
+        if cache_entry["data"]:
+            table_metadata = {
+                table_info["name"]: table_info
+                for table_info in cache_entry["data"].get("tables", [])
+            }
 
-    table_metadata: Dict[str, Dict[str, Any]] = {}
-    selected_db_info = next(
-        (db for db in databases if db["name"] == selected_database), {}
-    )
-    if cache_entry["data"]:
-        table_metadata = {
-            table_info["name"]: table_info
-            for table_info in cache_entry["data"].get("tables", [])
-        }
-
-    col_tables, col_stats = st.columns([3, 2])
-
-    with col_tables:
-        st.write("**Tables in this database:**")
-        if cache_entry["error"]:
+        if cache_entry.get("error"):
             st.warning(
                 f"Table previews unavailable: {cache_entry['error']}",
                 icon="⚠️",
             )
-        for table in selected_db_info.get("tables", []):
-            st.markdown(
-                _render_table_preview_html(
-                    table, table_metadata.get(table)
-                ),
-                unsafe_allow_html=True,
-            )
-
-    with col_stats:
-        st.write("**Summary:**")
-        st.write(f"• Table count: {selected_db_info.get('table_count', 0)}")
-        st.write(f"• Database name: {selected_database}")
+        else:
+            for table in selected_db_info.get("tables", []):
+                st.markdown(
+                    _render_table_preview_html(table, table_metadata.get(table)),
+                    unsafe_allow_html=True,
+                )
 
     if st.session_state.queries_for_database != selected_database:
         try:
@@ -371,7 +382,7 @@ def main():
         )
 
     st.markdown("---")
-    st.subheader("Choose how you want to practice")
+    st.header("🧭 Choose How You Want to Practice")
 
     col1, col2 = st.columns(2)
 
@@ -498,7 +509,6 @@ def main():
                         st.session_state.custom_query_last_expression = (
                             current_expression
                         )
-                        st.session_state.custom_query_success = True
                         expression_dirty = False
                     except Exception as exc:
                         error_message = str(exc)
@@ -508,56 +518,28 @@ def main():
                         st.session_state.custom_query_last_expression = (
                             current_expression
                         )
-                        st.session_state.custom_query_success = False
                         expression_dirty = False
             else:
                 st.warning("Please enter a query expression.")
                 st.session_state.custom_query_result = None
                 st.session_state.custom_query_error = None
                 st.session_state.custom_query_last_expression = ""
-                st.session_state.custom_query_success = False
                 expression_dirty = False
 
         stored_result = st.session_state.get("custom_query_result")
         stored_error = st.session_state.get("custom_query_error")
         last_expression = st.session_state.get("custom_query_last_expression", "")
-        success_flag = st.session_state.get("custom_query_success", False)
         expression_dirty = current_expression != last_expression
 
         if current_error is not None:
             error_display_component(current_error)
         elif current_result is not None:
-            st.success("✅ Custom query executed successfully!")
-            result_viewer_component(
-                current_result,
-                key=f"custom_result_viewer_{selected_database}",
-            )
-
-            trace_data = current_result.get("trace", [])
-            if trace_data:
-                st.markdown("---")
-                trace_visualizer_component(trace_data)
-                execution_summary_component(trace_data)
+            _render_custom_query_output(current_result)
         elif stored_error and not expression_dirty:
             error_display_component(stored_error)
         elif stored_result and not expression_dirty:
-            if success_flag:
-                st.success("✅ Custom query executed successfully!")
-            result_viewer_component(
-                stored_result,
-                key=f"custom_result_viewer_{selected_database}",
-            )
-
-            trace_data = stored_result.get("trace", [])
-            if trace_data:
-                st.markdown("---")
-                trace_visualizer_component(trace_data)
-                execution_summary_component(trace_data)
+            _render_custom_query_output(stored_result)
         elif stored_result and expression_dirty:
             st.info("Expression changed. Execute the query to refresh results.")
-    else:
-        st.info("Choose one of the practice options above to get started.")
-
-
 if __name__ == "__main__":
     main()

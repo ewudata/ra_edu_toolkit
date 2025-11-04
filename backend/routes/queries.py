@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ..services import queries as queries_service
 from ..services.exceptions import DatabaseNotFound, QueryNotFound
@@ -19,24 +19,21 @@ class SolutionSpecResponse(BaseModel):
 
 class QuerySummaryResponse(BaseModel):
     id: str
-    title: str
     prompt: str
     difficulty: Optional[str] = None
-    tags: List[str]
+    hints: List[str] = Field(default_factory=list)
 
     @classmethod
     def from_summary(cls, summary: QuerySummary) -> "QuerySummaryResponse":
         return cls(
             id=summary.id,
-            title=summary.title,
             prompt=summary.prompt,
             difficulty=summary.difficulty,
-            tags=summary.tags or [],
+            hints=summary.hints or [],
         )
 
 
 class QueryDetailResponse(QuerySummaryResponse):
-    hints: List[str]
     solution: SolutionSpecResponse
     expected_schema: Optional[List[str]] = None
     expected_rows: Optional[List[Dict[str, Any]]] = None
@@ -45,9 +42,7 @@ class QueryDetailResponse(QuerySummaryResponse):
     def from_detail(cls, detail: QueryDetail) -> "QueryDetailResponse":
         return cls(
             id=detail.id,
-            title=detail.title,
             difficulty=detail.difficulty,
-            tags=detail.tags or [],
             prompt=detail.prompt,
             hints=detail.hints or [],
             solution=SolutionSpecResponse(
