@@ -66,7 +66,8 @@ def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
     py = re.sub(r"\bAND\b", "and", py, flags=re.IGNORECASE)
     py = re.sub(r"\bOR\b", "or", py, flags=re.IGNORECASE)
     py = re.sub(r"\bNOT\b", "not", py, flags=re.IGNORECASE)
-    py = py.replace("=", "==")
+    # Only convert standalone equality operators; avoid touching >=, <=, !=, ==.
+    py = re.sub(r"(?<![<>=!])=(?!=)", "==", py)
 
     env_ci = {str(k).lower(): v for k, v in env.items()}
     py = _replace_identifiers(py)
