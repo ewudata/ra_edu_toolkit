@@ -26,9 +26,23 @@ class _ToAST(Transformer):
         return AST.Selection(str(cond).strip(), sub)
 
     def rename(self, items):
-        # items = [RHO, pairs, sub]
-        rho_token, pairs, sub = items
-        return AST.Rename(pairs, sub)
+        # items = [RHO, (optional NAME), (optional pairs), sub]
+        relation = None
+        pairs = []
+        sub = None
+        for item in items[1:]:
+            if isinstance(item, list):
+                pairs = item
+            elif isinstance(item, AST.Node):
+                sub = item
+            else:
+                relation = str(item).lower()
+
+        if sub is None:
+            raise ValueError("Rename missing subexpression")
+        if relation is None and not pairs:
+            raise ValueError("Rename requires a relation name or at least one attribute mapping")
+        return AST.Rename(relation, pairs, sub)
 
     def expr(self, items):
         if not items:

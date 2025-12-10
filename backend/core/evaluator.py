@@ -52,8 +52,7 @@ def _replace_identifiers(expr: str) -> str:
             elif lowered == "false":
                 result.append("False")
             else:
-                key = lowered.split(".")[-1]
-                result.append(f"env.get({key!r})")
+                result.append(f"env.get({lowered!r})")
             i = match.end()
         else:
             result.append(ch)
@@ -81,9 +80,61 @@ def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
         return False
 
 
+def _filter_aliases(aliases: Dict[str, List[str]], columns: List[str]) -> Dict[str, List[str]]:
+    col_set = set(columns)
+    return {
+        alias.lower(): [c for c in cols if c in col_set]
+        for alias, cols in aliases.items()
+        if cols
+    }
+
+
+def _combine_aliases(
+    output_cols: List[str],
+    left_aliases: Dict[str, List[str]],
+    right_aliases: Dict[str, List[str]] = None,
+) -> Dict[str, List[str]]:
+    aliases: Dict[str, List[str]] = {}
+    out_set = set(output_cols)
+
+    def _map_and_store(source: Dict[str, List[str]]):
+        for alias, cols in source.items():
+            mapped = []
+            for c in cols:
+                if c in out_set:
+                    mapped.append(c)
+                elif f"{c}_r" in out_set:
+                    mapped.append(f"{c}_r")
+            if mapped:
+                aliases[alias.lower()] = mapped
+
+    if left_aliases:
+        _map_and_store(left_aliases)
+    if right_aliases:
+        _map_and_store(right_aliases)
+    return aliases
+
+
+def _row_env(row: pd.Series, aliases: Dict[str, List[str]]) -> Dict[str, Any]:
+    env: Dict[str, Any] = {}
+    for col in row.index:
+        if col == "_prov":
+            continue
+        env[col.lower()] = row[col]
+    for alias, cols in (aliases or {}).items():
+        alias_l = alias.lower()
+        for col in cols:
+            key = f"{alias_l}.{col.lower()}"
+            if col in row.index:
+                env[key] = row[col]
+    return env
+
+
 def _product(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
     L = L.copy()
     R = R.copy()
+    left_aliases = L.attrs.get("aliases", {})
+    right_aliases = R.attrs.get("aliases", {})
     L["_k"] = 1
     R["_k"] = 1
     M = L.merge(R, on="_k", how="outer", suffixes=("", "_r"))
@@ -99,6 +150,9 @@ def _product(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
     elif "_prov_r" in M.columns:
         M["_prov"] = M["_prov"] + M["_prov_r"]
         M = M.drop(columns=["_prov_r"])
+    M.attrs["aliases"] = _combine_aliases(
+        list(M.columns), left_aliases, right_aliases
+    )
     return M
 
 
@@ -106,6 +160,8 @@ def _natural_join(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
     common = [c for c in L.columns if c in R.columns and c != "_prov"]
     if not common:
         return _product(L, R)
+    left_aliases = L.attrs.get("aliases", {})
+    right_aliases = R.attrs.get("aliases", {})
     M = L.merge(R, on=common, how="inner", suffixes=("", "_r"))
     if "_prov_x" in M.columns:
         M["_prov"] = M["_prov_x"] + M["_prov_y"]
@@ -115,6 +171,9 @@ def _natural_join(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
     elif "_prov_r" in M.columns:
         M["_prov"] = M["_prov"] + M["_prov_r"]
         M = M.drop(columns=["_prov_r"])
+    M.attrs["aliases"] = _combine_aliases(
+        list(M.columns), left_aliases, right_aliases
+    )
     return M
 
 
@@ -210,6 +269,7 @@ def eval(
                 f"Relation '{node.name}' not found. Available relations: {available}"
             )
         df = env[key].copy()
+        df.attrs["aliases"] = {node.name.lower(): _schema(df)}
         steps.append(
             {
                 "op": "rel",
@@ -228,6 +288,7 @@ def eval(
             .drop_duplicates(subset=node.attrs)
             .reset_index(drop=True)
         )
+        out.attrs["aliases"] = _filter_aliases(inp.attrs.get("aliases", {}), out.columns)
         steps.append(
             {
                 "op": "π",
@@ -246,11 +307,13 @@ def eval(
     if isinstance(node, AST.Selection):
         inp = eval(node.sub, env, steps)
         vis = [c for c in inp.columns if c != "_prov"]
+        aliases = inp.attrs.get("aliases", {})
         keeps = []
         for i, row in inp.iterrows():
-            if _cond_eval(node.cond, {c: row[c] for c in vis}):
+            if _cond_eval(node.cond, _row_env(row, aliases)):
                 keeps.append(i)
         out = inp.loc[keeps].reset_index(drop=True)
+        out.attrs["aliases"] = _filter_aliases(aliases, out.columns)
         steps.append(
             {
                 "op": "σ",
@@ -268,17 +331,41 @@ def eval(
         return out
     if isinstance(node, AST.Rename):
         inp = eval(node.sub, env, steps)
-        m = {o: n for o, n in node.pairs}
+        relation_alias = node.relation.lower() if node.relation else None
+        attr_pairs = []
+        relation_pair = None
+        for o, n in node.pairs:
+            if o in inp.columns:
+                attr_pairs.append((o, n))
+            else:
+                if relation_pair is None and relation_alias is None:
+                    relation_pair = (o, n)
+                else:
+                    raise ValueError(f"Cannot rename missing '{o}'")
+
+        if relation_alias is None and relation_pair:
+            relation_alias = relation_pair[1].lower()
+
+        m = {o: n for o, n in attr_pairs}
         for o in m:
             if o not in inp.columns:
                 raise ValueError(f"Cannot rename missing '{o}'")
-        if any((n in inp.columns and n != o) for o, n in node.pairs):
+        if any((n in inp.columns and n != o) for o, n in attr_pairs):
             raise ValueError("Rename target already exists")
         out = inp.rename(columns=m).copy()
+        aliases = inp.attrs.get("aliases", {})
+        if attr_pairs:
+            aliases = {
+                alias: [m.get(c, c) for c in cols]
+                for alias, cols in aliases.items()
+            }
+        if relation_alias:
+            aliases = {relation_alias: _schema(out)}
+        out.attrs["aliases"] = _filter_aliases(aliases, out.columns)
         steps.append(
             {
                 "op": "ρ",
-                "detail": {"renames": node.pairs},
+                "detail": {"renames": attr_pairs, "relation": relation_alias},
                 "input_schema": _schema(inp),
                 "output_schema": _schema(out),
                 "preview": _preview(out),
@@ -328,6 +415,9 @@ def eval(
             raise ValueError(f"Union-compatibility failed: {al} vs {ar}")
         tmp = pd.concat([L[al + ["_prov"]], R[ar + ["_prov"]]], ignore_index=True)
         tmp = tmp.drop_duplicates(subset=al).reset_index(drop=True)
+        tmp.attrs["aliases"] = _combine_aliases(
+            list(tmp.columns), L.attrs.get("aliases", {}), R.attrs.get("aliases", {})
+        )
         steps.append(
             {
                 "op": "∪",
@@ -351,6 +441,9 @@ def eval(
             .reset_index(drop=True)
         )
         out["_prov"] = L.loc[out.index, "_prov"].tolist() if len(out) > 0 else []
+        out.attrs["aliases"] = _combine_aliases(
+            list(out.columns), L.attrs.get("aliases", {}), R.attrs.get("aliases", {})
+        )
         steps.append(
             {
                 "op": "−",
@@ -368,6 +461,9 @@ def eval(
         if al != ar:
             raise ValueError(f"Intersection requires identical schemas: {al} vs {ar}")
         out = _intersection(L, R)
+        out.attrs["aliases"] = _combine_aliases(
+            list(out.columns), L.attrs.get("aliases", {}), R.attrs.get("aliases", {})
+        )
         steps.append(
             {
                 "op": "∩",
@@ -389,6 +485,9 @@ def eval(
             )
         quotient_attrs = [c for c in dividend_schema if c not in divisor_schema]
         out = _division(dividend, divisor, quotient_attrs, divisor_schema)
+        out.attrs["aliases"] = _filter_aliases(
+            dividend.attrs.get("aliases", {}), out.columns
+        )
         steps.append(
             {
                 "op": "÷",

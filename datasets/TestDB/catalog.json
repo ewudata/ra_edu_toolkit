@@ -1,0 +1,377 @@
+{
+  "database": "TestDB",
+  "title": "TestDB Relational Algebra Practice",
+  "description": "Twenty practice queries on the simple student-course schema with a mix of beginner to advanced relational algebra tasks.",
+  "questions": [
+    {
+      "id": "q01",
+      "prompt": "List the names of all students.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{name}(students)",
+        "sql": "SELECT name FROM students;"
+      },
+      "expected_result": {
+        "schema": [
+          "name"
+        ]
+      },
+      "hints": [
+        "projection"
+      ]
+    },
+    {
+      "id": "q02",
+      "prompt": "Retrieve the ids and names of students whose major is not CS.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{sid, name}(sigma{major <> 'CS'}(students))",
+        "sql": "SELECT sid, name FROM students WHERE major <> 'CS';"
+      },
+      "expected_result": {
+        "schema": [
+          "sid",
+          "name"
+        ]
+      },
+      "hints": [
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q03",
+      "prompt": "Show the titles of courses offered by the CS department.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{title}(sigma{dept = 'CS'}(courses))",
+        "sql": "SELECT title FROM courses WHERE dept = 'CS';"
+      },
+      "expected_result": {
+        "schema": [
+          "title"
+        ]
+      },
+      "hints": [
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q04",
+      "prompt": "Find student-course pairs where the grade is A.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{sid, cid}(sigma{grade = 'A'}(enroll))",
+        "sql": "SELECT sid, cid FROM enroll WHERE grade = 'A';"
+      },
+      "expected_result": {
+        "schema": [
+          "sid",
+          "cid"
+        ]
+      },
+      "hints": [
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q05",
+      "prompt": "Rename the student relation so sid becomes student_id and name becomes student_name.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "rho{sid->student_id, name->student_name}(students)",
+        "sql": "SELECT sid AS student_id, name AS student_name, major FROM students;"
+      },
+      "expected_result": {
+        "schema": [
+          "student_id",
+          "student_name",
+          "major"
+        ]
+      },
+      "hints": [
+        "rename"
+      ]
+    },
+    {
+      "id": "q06",
+      "prompt": "List the names of students enrolled in course C101.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{name}(students ⋈ sigma{cid = 'C101'}(enroll))",
+        "sql": "SELECT s.name\nFROM students AS s\nJOIN enroll AS e ON s.sid = e.sid\nWHERE e.cid = 'C101';"
+      },
+      "expected_result": {
+        "schema": [
+          "name"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "selection"
+      ]
+    },
+    {
+      "id": "q07",
+      "prompt": "Return the titles of courses that currently have at least one enrollment.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{title}(courses ⋈ enroll)",
+        "sql": "SELECT DISTINCT c.title\nFROM courses AS c\nJOIN enroll AS e ON c.cid = e.cid;"
+      },
+      "expected_result": {
+        "schema": [
+          "title"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "projection"
+      ]
+    },
+    {
+      "id": "q08",
+      "prompt": "Find students who are not enrolled in any course.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{sid, name}(students) - pi{sid, name}(students ⋈ enroll)",
+        "sql": "SELECT sid, name FROM students\nEXCEPT\nSELECT DISTINCT s.sid, s.name\nFROM students AS s\nJOIN enroll AS e ON s.sid = e.sid;"
+      },
+      "expected_result": {
+        "schema": [
+          "sid",
+          "name"
+        ]
+      },
+      "hints": [
+        "difference",
+        "natural join"
+      ]
+    },
+    {
+      "id": "q09",
+      "prompt": "List courses that have no students enrolled.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{cid, title}(courses) - pi{cid, title}(courses ⋈ enroll)",
+        "sql": "SELECT cid, title FROM courses\nEXCEPT\nSELECT DISTINCT c.cid, c.title\nFROM courses AS c\nJOIN enroll AS e ON c.cid = e.cid;"
+      },
+      "expected_result": {
+        "schema": [
+          "cid",
+          "title"
+        ]
+      },
+      "hints": [
+        "difference",
+        "natural join"
+      ]
+    },
+    {
+      "id": "q10",
+      "prompt": "List the majors that have at least one student currently enrolled in any course.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{major}(students ⋈ enroll)",
+        "sql": "SELECT DISTINCT s.major\nFROM students AS s\nJOIN enroll AS e ON s.sid = e.sid;"
+      },
+      "expected_result": {
+        "schema": [
+          "major"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "projection"
+      ]
+    },
+    {
+      "id": "q11",
+      "prompt": "Show student names, course titles, and grades for all enrollments.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{name, title, grade}(students ⋈ enroll ⋈ courses)",
+        "sql": "SELECT s.name, c.title, e.grade\nFROM enroll AS e\nJOIN students AS s ON e.sid = s.sid\nJOIN courses AS c ON e.cid = c.cid;"
+      },
+      "expected_result": {
+        "schema": [
+          "name",
+          "title",
+          "grade"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "projection"
+      ]
+    },
+    {
+      "id": "q12",
+      "prompt": "Find students taking any course offered by the CS department.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{name}(students ⋈ enroll ⋈ sigma{dept = 'CS'}(courses))",
+        "sql": "SELECT DISTINCT s.name\nFROM students AS s\nJOIN enroll AS e ON s.sid = e.sid\nJOIN courses AS c ON e.cid = c.cid\nWHERE c.dept = 'CS';"
+      },
+      "expected_result": {
+        "schema": [
+          "name"
+        ]
+      },
+      "hints": [
+        "selection",
+        "natural join"
+      ]
+    },
+    {
+      "id": "q13",
+      "prompt": "List the names of students who have taken both C101 and C102.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{name}((pi{sid}(sigma{cid = 'C101'}(enroll)) INTERSECT pi{sid}(sigma{cid = 'C102'}(enroll))) ⋈ students)",
+        "sql": "SELECT s.name\nFROM students AS s\nWHERE s.sid IN (SELECT sid FROM enroll WHERE cid = 'C101')\n  AND s.sid IN (SELECT sid FROM enroll WHERE cid = 'C102');"
+      },
+      "expected_result": {
+        "schema": [
+          "name"
+        ]
+      },
+      "hints": [
+        "intersection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q14",
+      "prompt": "Find students who have taken at least one course outside their major.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{name, cid}(sigma{major <> dept}(students ⋈ enroll ⋈ courses))",
+        "sql": "SELECT DISTINCT s.name, e.cid\nFROM students AS s\nJOIN enroll AS e ON s.sid = e.sid\nJOIN courses AS c ON e.cid = c.cid\nWHERE s.major <> c.dept;"
+      },
+      "expected_result": {
+        "schema": [
+          "name",
+          "cid"
+        ]
+      },
+      "hints": [
+        "theta join",
+        "selection"
+      ]
+    },
+    {
+      "id": "q15",
+      "prompt": "Return the ids of students who are enrolled in every course offered by the CS department (may be empty).",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "(pi{sid, cid}(enroll ⋈ sigma{dept = 'CS'}(courses))) DIV (pi{cid}(sigma{dept = 'CS'}(courses)))",
+        "sql": "SELECT e.sid\nFROM enroll AS e\nJOIN courses AS c ON e.cid = c.cid\nWHERE c.dept = 'CS'\nGROUP BY e.sid\nHAVING COUNT(DISTINCT e.cid) = (SELECT COUNT(*) FROM courses WHERE dept = 'CS');"
+      },
+      "expected_result": {
+        "schema": [
+          "sid"
+        ]
+      },
+      "hints": [
+        "division",
+        "grouping"
+      ]
+    },
+    {
+      "id": "q16",
+      "prompt": "Find student ids of learners enrolled in at least two different courses.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{sid1}(sigma{sid1 = sid2 AND cid1 <> cid2}(rho{sid->sid1, cid->cid1}(enroll) × rho{sid->sid2, cid->cid2}(enroll)))",
+        "sql": "SELECT e.sid\nFROM enroll AS e\nGROUP BY e.sid\nHAVING COUNT(DISTINCT e.cid) >= 2;"
+      },
+      "expected_result": {
+        "schema": [
+          "sid"
+        ]
+      },
+      "hints": [
+        "cartesian product",
+        "selection",
+        "aggregation"
+      ]
+    },
+    {
+      "id": "q17",
+      "prompt": "Identify courses that have both CS majors and non-CS majors enrolled.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{cid}(pi{cid}(sigma{major = 'CS'}(students ⋈ enroll)) INTERSECT pi{cid}(sigma{major <> 'CS'}(students ⋈ enroll)))",
+        "sql": "SELECT c.cid\nFROM courses AS c\nWHERE c.cid IN (\n  SELECT e.cid FROM enroll AS e JOIN students AS s ON e.sid = s.sid WHERE s.major = 'CS'\n) AND c.cid IN (\n  SELECT e.cid FROM enroll AS e JOIN students AS s ON e.sid = s.sid WHERE s.major <> 'CS'\n);"
+      },
+      "expected_result": {
+        "schema": [
+          "cid"
+        ]
+      },
+      "hints": [
+        "intersection",
+        "selection"
+      ]
+    },
+    {
+      "id": "q18",
+      "prompt": "Return departments that offer courses but have no students majoring in them.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{dept}(courses) - pi{major}(students)",
+        "sql": "SELECT dept FROM courses\nEXCEPT\nSELECT major FROM students;"
+      },
+      "expected_result": {
+        "schema": [
+          "dept"
+        ]
+      },
+      "hints": [
+        "difference",
+        "projection"
+      ]
+    },
+    {
+      "id": "q19",
+      "prompt": "Rename the enrollment relation so sid becomes student_id and cid becomes course_id.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "rho{sid->student_id, cid->course_id}(enroll)",
+        "sql": "SELECT sid AS student_id, cid AS course_id, grade FROM enroll;"
+      },
+      "expected_result": {
+        "schema": [
+          "student_id",
+          "course_id",
+          "grade"
+        ]
+      },
+      "hints": [
+        "rename"
+      ]
+    },
+    {
+      "id": "q20",
+      "prompt": "List student-course pairs where the student's major matches the department offering the course.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{name, cid}(sigma{major = dept}(students ⋈ enroll ⋈ courses))",
+        "sql": "SELECT DISTINCT s.name, e.cid\nFROM students AS s\nJOIN enroll AS e ON s.sid = e.sid\nJOIN courses AS c ON e.cid = c.cid\nWHERE s.major = c.dept;"
+      },
+      "expected_result": {
+        "schema": [
+          "name",
+          "cid"
+        ]
+      },
+      "hints": [
+        "theta join",
+        "selection"
+      ]
+    }
+  ]
+}

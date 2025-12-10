@@ -1,0 +1,410 @@
+{
+  "database": "Sales",
+  "title": "Sales Relational Algebra Practice",
+  "description": "Twenty practice queries on the sales schema covering selections, joins, set operations, renaming, and division-style reasoning.",
+  "questions": [
+    {
+      "id": "q01",
+      "prompt": "List the cities of offices in the Eastern region.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{CITY}(sigma{REGION = 'Eastern'}(offices))",
+        "sql": "SELECT CITY FROM offices WHERE REGION = 'Eastern';"
+      },
+      "expected_result": {
+        "schema": [
+          "CITY"
+        ]
+      },
+      "hints": [
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q02",
+      "prompt": "Retrieve the customer numbers and companies with a credit limit of at least 60,000.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{CUST_NUM, COMPANY}(sigma{CREDIT_LIMIT >= 60000}(customers))",
+        "sql": "SELECT CUST_NUM, COMPANY FROM customers WHERE CREDIT_LIMIT >= 60000;"
+      },
+      "expected_result": {
+        "schema": [
+          "CUST_NUM",
+          "COMPANY"
+        ]
+      },
+      "hints": [
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q03",
+      "prompt": "Show each sales rep name together with their office number.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{NAME, REP_OFFICE}(salesreps)",
+        "sql": "SELECT NAME, REP_OFFICE FROM salesreps;"
+      },
+      "expected_result": {
+        "schema": [
+          "NAME",
+          "REP_OFFICE"
+        ]
+      },
+      "hints": [
+        "projection"
+      ]
+    },
+    {
+      "id": "q04",
+      "prompt": "Find products that are currently out of stock.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{MFR_ID, PRODUCT_ID, DESCRIPTION}(sigma{QTY_ON_HAND = 0}(products))",
+        "sql": "SELECT MFR_ID, PRODUCT_ID, DESCRIPTION FROM products WHERE QTY_ON_HAND = 0;"
+      },
+      "expected_result": {
+        "schema": [
+          "MFR_ID",
+          "PRODUCT_ID",
+          "DESCRIPTION"
+        ]
+      },
+      "hints": [
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q05",
+      "prompt": "List orders where the quantity ordered is at least 20 along with the total amount.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "pi{ORDER_NUM, QTY, AMOUNT}(sigma{QTY >= 20}(orders))",
+        "sql": "SELECT ORDER_NUM, QTY, AMOUNT FROM orders WHERE QTY >= 20;"
+      },
+      "expected_result": {
+        "schema": [
+          "ORDER_NUM",
+          "QTY",
+          "AMOUNT"
+        ]
+      },
+      "hints": [
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q06",
+      "prompt": "Return the offices whose sales exceed their targets.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "sigma{SALES > TARGET}(offices)",
+        "sql": "SELECT * FROM offices WHERE SALES > TARGET;"
+      },
+      "expected_result": {
+        "schema": [
+          "OFFICE",
+          "CITY",
+          "REGION",
+          "MGR",
+          "TARGET",
+          "SALES"
+        ]
+      },
+      "hints": [
+        "selection"
+      ]
+    },
+    {
+      "id": "q07",
+      "prompt": "List each customer together with the name of their assigned sales rep.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{COMPANY, REP_NAME}(customers ⋈ rho{EMPL_NUM->CUST_REP, NAME->REP_NAME}(salesreps))",
+        "sql": "SELECT c.COMPANY, s.NAME AS REP_NAME\nFROM customers AS c\nJOIN salesreps AS s ON c.CUST_REP = s.EMPL_NUM;"
+      },
+      "expected_result": {
+        "schema": [
+          "COMPANY",
+          "REP_NAME"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "rename"
+      ]
+    },
+    {
+      "id": "q08",
+      "prompt": "Show each order number with the company that placed it.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{ORDER_NUM, COMPANY}(orders ⋈ rho{CUST_NUM->CUST}(customers))",
+        "sql": "SELECT o.ORDER_NUM, c.COMPANY\nFROM orders AS o\nJOIN customers AS c ON o.CUST = c.CUST_NUM;"
+      },
+      "expected_result": {
+        "schema": [
+          "ORDER_NUM",
+          "COMPANY"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "projection"
+      ]
+    },
+    {
+      "id": "q09",
+      "prompt": "List orders together with the name of the sales rep who handled them.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{ORDER_NUM, REP_NAME, AMOUNT}(orders ⋈ rho{EMPL_NUM->REP, NAME->REP_NAME}(salesreps))",
+        "sql": "SELECT o.ORDER_NUM, s.NAME AS REP_NAME, o.AMOUNT\nFROM orders AS o\nJOIN salesreps AS s ON o.REP = s.EMPL_NUM;"
+      },
+      "expected_result": {
+        "schema": [
+          "ORDER_NUM",
+          "REP_NAME",
+          "AMOUNT"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "rename"
+      ]
+    },
+    {
+      "id": "q10",
+      "prompt": "Find customers served by reps who work in the Eastern region.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{COMPANY, REGION}(sigma{REGION = 'Eastern'}(customers ⋈ rho{EMPL_NUM->CUST_REP, REP_OFFICE->OFFICE}(salesreps) ⋈ offices))",
+        "sql": "SELECT c.COMPANY, o.REGION\nFROM customers AS c\nJOIN salesreps AS s ON c.CUST_REP = s.EMPL_NUM\nJOIN offices AS o ON s.REP_OFFICE = o.OFFICE\nWHERE o.REGION = 'Eastern';"
+      },
+      "expected_result": {
+        "schema": [
+          "COMPANY",
+          "REGION"
+        ]
+      },
+      "hints": [
+        "theta join",
+        "selection",
+        "rename"
+      ]
+    },
+    {
+      "id": "q11",
+      "prompt": "Return office numbers that currently have no sales reps assigned.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{OFFICE}(offices) - pi{REP_OFFICE}(salesreps)",
+        "sql": "SELECT OFFICE FROM offices\nEXCEPT\nSELECT REP_OFFICE FROM salesreps;"
+      },
+      "expected_result": {
+        "schema": [
+          "OFFICE"
+        ]
+      },
+      "hints": [
+        "difference",
+        "projection"
+      ]
+    },
+    {
+      "id": "q12",
+      "prompt": "Find sales reps who do not report to a manager.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "sigma{MANAGER IS NULL}(salesreps)",
+        "sql": "SELECT * FROM salesreps WHERE MANAGER IS NULL;"
+      },
+      "expected_result": {
+        "schema": [
+          "EMPL_NUM",
+          "NAME",
+          "AGE",
+          "REP_OFFICE",
+          "TITLE",
+          "HIRE_DATE",
+          "MANAGER",
+          "QUOTA",
+          "SALES"
+        ]
+      },
+      "hints": [
+        "selection"
+      ]
+    },
+    {
+      "id": "q13",
+      "prompt": "List customers that have not placed any orders.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{CUST_NUM, COMPANY}(customers) - pi{CUST, COMPANY}(orders ⋈ rho{CUST_NUM->CUST}(customers))",
+        "sql": "SELECT CUST_NUM, COMPANY FROM customers\nEXCEPT\nSELECT DISTINCT c.CUST_NUM, c.COMPANY\nFROM customers AS c\nJOIN orders AS o ON c.CUST_NUM = o.CUST;"
+      },
+      "expected_result": {
+        "schema": [
+          "CUST_NUM",
+          "COMPANY"
+        ]
+      },
+      "hints": [
+        "difference",
+        "natural join"
+      ]
+    },
+    {
+      "id": "q14",
+      "prompt": "Show products that have never been ordered.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{MFR_ID, PRODUCT_ID}(products) - pi{MFR, PRODUCT}(orders)",
+        "sql": "SELECT MFR_ID, PRODUCT_ID FROM products\nEXCEPT\nSELECT DISTINCT MFR, PRODUCT FROM orders;"
+      },
+      "expected_result": {
+        "schema": [
+          "MFR_ID",
+          "PRODUCT_ID"
+        ]
+      },
+      "hints": [
+        "difference",
+        "projection"
+      ]
+    },
+    {
+      "id": "q15",
+      "prompt": "List each order with the description of the product ordered.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{ORDER_NUM, DESCRIPTION, QTY, AMOUNT}(orders ⋈ rho{MFR_ID->MFR, PRODUCT_ID->PRODUCT}(products))",
+        "sql": "SELECT o.ORDER_NUM, p.DESCRIPTION, o.QTY, o.AMOUNT\nFROM orders AS o\nJOIN products AS p ON o.MFR = p.MFR_ID AND o.PRODUCT = p.PRODUCT_ID;"
+      },
+      "expected_result": {
+        "schema": [
+          "ORDER_NUM",
+          "DESCRIPTION",
+          "QTY",
+          "AMOUNT"
+        ]
+      },
+      "hints": [
+        "theta join",
+        "rename"
+      ]
+    },
+    {
+      "id": "q16",
+      "prompt": "Show sales reps with the city of the office they work from.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{NAME, CITY}(rho{REP_OFFICE->OFFICE}(salesreps) ⋈ offices)",
+        "sql": "SELECT s.NAME, o.CITY\nFROM salesreps AS s\nJOIN offices AS o ON s.REP_OFFICE = o.OFFICE;"
+      },
+      "expected_result": {
+        "schema": [
+          "NAME",
+          "CITY"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "rename"
+      ]
+    },
+    {
+      "id": "q17",
+      "prompt": "Find pairs of different sales reps who share the same office.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{REP_A, REP_B, OFFICE_A}(sigma{REP_A < REP_B AND OFFICE_A = OFFICE_B}(rho{NAME->REP_A, REP_OFFICE->OFFICE_A}(salesreps) × rho{NAME->REP_B, REP_OFFICE->OFFICE_B}(salesreps)))",
+        "sql": "SELECT s1.NAME AS REP_A, s2.NAME AS REP_B, s1.REP_OFFICE AS OFFICE\nFROM salesreps AS s1\nJOIN salesreps AS s2 ON s1.REP_OFFICE = s2.REP_OFFICE AND s1.NAME < s2.NAME;"
+      },
+      "expected_result": {
+        "schema": [
+          "REP_A",
+          "REP_B",
+          "OFFICE_A"
+        ]
+      },
+      "hints": [
+        "cartesian product",
+        "selection",
+        "rename"
+      ]
+    },
+    {
+      "id": "q18",
+      "prompt": "List orders for manufacturer 'REI' with amount greater than 2,000.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "sigma{MFR = 'REI' AND AMOUNT > 2000}(orders)",
+        "sql": "SELECT * FROM orders WHERE MFR = 'REI' AND AMOUNT > 2000;"
+      },
+      "expected_result": {
+        "schema": [
+          "ORDER_NUM",
+          "ORDER_DATE",
+          "CUST",
+          "REP",
+          "MFR",
+          "PRODUCT",
+          "QTY",
+          "AMOUNT"
+        ]
+      },
+      "hints": [
+        "selection"
+      ]
+    },
+    {
+      "id": "q19",
+      "prompt": "Return the regions that currently have at least one customer (through their assigned rep's office).",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{REGION}(customers ⋈ rho{EMPL_NUM->CUST_REP, REP_OFFICE->OFFICE}(salesreps) ⋈ offices)",
+        "sql": "SELECT DISTINCT o.REGION\nFROM customers AS c\nJOIN salesreps AS s ON c.CUST_REP = s.EMPL_NUM\nJOIN offices AS o ON s.REP_OFFICE = o.OFFICE;"
+      },
+      "expected_result": {
+        "schema": [
+          "REGION"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "projection"
+      ]
+    },
+    {
+      "id": "q20",
+      "prompt": "Rename the order relation so that ORDER_NUM becomes ORDER_ID and AMOUNT becomes TOTAL_VALUE.",
+      "difficulty": "beginner",
+      "solution": {
+        "relational_algebra": "rho{ORDER_NUM->ORDER_ID, AMOUNT->TOTAL_VALUE}(orders)",
+        "sql": "SELECT ORDER_NUM AS ORDER_ID, ORDER_DATE, CUST, REP, MFR, PRODUCT, QTY, AMOUNT AS TOTAL_VALUE FROM orders;"
+      },
+      "expected_result": {
+        "schema": [
+          "ORDER_ID",
+          "ORDER_DATE",
+          "CUST",
+          "REP",
+          "MFR",
+          "PRODUCT",
+          "QTY",
+          "TOTAL_VALUE"
+        ]
+      },
+      "hints": [
+        "rename"
+      ]
+    }
+  ]
+}

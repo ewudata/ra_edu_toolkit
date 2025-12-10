@@ -6,7 +6,7 @@ start: expr
 
 projection: (PI) "{" attr_list "}" "(" expr ")"   -> projection
 selection:  (SIGMA) "{" COND "}" "(" expr ")"     -> selection
-rename:     (RHO) "{" rename_list "}" "(" expr ")"-> rename
+rename:     (RHO) NAME? ("{" rename_list "}")? "(" expr ")"-> rename
 
 relation: NAME                                     -> relation
 

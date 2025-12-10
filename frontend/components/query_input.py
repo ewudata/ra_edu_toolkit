@@ -8,7 +8,7 @@ from typing import Optional
 
 def query_input_component(
     label: str = "Enter Relational Algebra Expression",
-    placeholder: str = "Example: π{name}(σ{dept_name = 'Comp. Sci.'}(Student))",
+    placeholder: str = "",
     key: str = "query_input",
 ) -> Optional[str]:
     """

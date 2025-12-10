@@ -9,6 +9,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils.api_client import APIClient
+from components.query_selector import syntax_help_html
 
 
 def main():
@@ -116,7 +117,10 @@ def main():
 
     # Usage instructions
     with st.expander("📖 Detailed Usage Instructions"):
-        st.markdown("""
+        active_db = st.session_state.get("selected_database") or (
+            databases[0]["name"] if "databases" in locals() and databases else None
+        )
+        help_text = f"""
         ### Startup Guide
         
         1. **Start Backend Service**:
@@ -131,33 +135,16 @@ def main():
         
         3. **Access Application**: Open `http://localhost:8501` in your browser
         
-        ### Supported Relational Algebra Operations
-        
-        - **Projection (π)**: `π{attr1,attr2}(R)`
-        - **Selection (σ)**: `σ{condition}(R)`
-        - **Rename (ρ)**: `ρ{old->new}(R)`
-        - **Join (⋈)**: `R ⋈ S`
-        - **Cartesian Product (×)**: `R × S`
-        - **Union (∪)**: `R ∪ S`
-        - **Difference (−)**: `R − S`
-        - **Intersection (∩)**: `R ∩ S`
-        
-        ### Example Queries
-        
-        ```sql
-        -- Find computer science students
-        π{name}(σ{major = 'CS'}(Students))
-        
-        -- Find students enrolled in specific courses
-        π{name}(Students ⋈ Takes ⋈ σ{course_id = 'CS101'}(Courses))
-        ```
+        ### Supported Relational Algebra Operations & Examples
+        {syntax_help_html(active_db)}
         
         ### Troubleshooting
         
         - **Backend connection failed**: Ensure backend service is running
         - **Query execution error**: Check syntax and table names
         - **Import failed**: Ensure file format is correct and UTF-8 encoded
-        """)
+        """
+        st.markdown(help_text, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":

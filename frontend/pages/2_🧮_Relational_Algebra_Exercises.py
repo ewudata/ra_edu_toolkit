@@ -14,7 +14,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.api_client import APIClient
 from components.query_input import query_input_component
 from components.result_viewer import error_display_component
-from components.query_selector import query_selector_component, _render_trace_ui
+from components.query_selector import (
+    query_selector_component,
+    _render_trace_ui,
+    syntax_help_html,
+)
 
 
 def _render_table_preview_html(
@@ -235,6 +239,29 @@ def main():
         .table-preview-table thead {
             background-color: rgba(148, 163, 184, 0.12);
         }
+        /* Keep all buttons a transparent white so their color doesn't change */
+        .stButton > button,
+        .stForm button {
+            background-color: rgba(255, 255, 255, 0.12) !important;
+            color: inherit !important;
+            border: 1px solid rgba(255, 255, 255, 0.28) !important;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 2px 6px rgba(15, 23, 42, 0.15);
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .stButton > button:hover,
+        .stForm button:hover {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            border-color: rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24), 0 4px 10px rgba(15, 23, 42, 0.18);
+        }
+        .stButton > button:active,
+        .stForm button:active,
+        .stButton > button:focus,
+        .stForm button:focus {
+            background-color: rgba(255, 255, 255, 0.28) !important;
+            border-color: rgba(255, 255, 255, 0.45) !important;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 4px 10px rgba(15, 23, 42, 0.18);
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -449,45 +476,28 @@ def main():
         st.markdown("---")
         st.header("✏️ Custom Query Practice")
 
-        query_expression = query_input_component(
-            label="Enter your own relational algebra expression:",
-            key="custom_query_input",
-        )
-
-        with st.expander("💡 Query Syntax Help"):
-            st.markdown(
-                """
-                ### Relational Algebra Operators
-
-                - **Projection (π)**: `π{attr1,attr2}(R)` — use `π` or `pi`, `PI`
-                - **Selection (σ)**: `σ{condition}(R)` — use `σ` or `sigma`, `SIGMA`
-                - **Rename (ρ)**: `ρ{old->new}(R)` — use `ρ` or `rho`, `RHO`
-                - **Natural Join (⋈)**: `R ⋈ S` — use `⋈` or `join`, `JOIN`
-                - **Cartesian Product (×)**: `R × S` — use `×` or `x`, `X`, `cross`, `CROSS`
-                - **Union (∪)**: `R ∪ S` — use `∪` or `union`, `UNION`
-                - **Difference (−)**: `R − S` — use `−` or `-`, `diff`, `DIFF`
-                - **Intersection (∩)**: `R ∩ S` — use `∩` or `intersect`, `INTERSECT`
-                - **Division (÷)**: `R ÷ S` — use `÷` or `/`, `div`, `DIV`
-
-                ### Example Queries
-
-                ```sql
-                -- Select names of computer science students
-                π{name}(σ{dept_name = 'Comp. Sci.'}(Student))
-
-                -- Find students enrolled in specific courses
-                π{name}(Student ⋈ Takes ⋈ σ{course_id = 'CS-101'}(Course))
-                ```
-                """
+        input_key = "custom_query_input"
+        with st.form(key="custom_query_form"):
+            query_input_component(
+                label="Enter your own relational algebra expression:",
+                key=input_key,
             )
 
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            execute_clicked = st.button(
-                "🚀 Execute Custom Query", type="primary", use_container_width=True
-            )
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                execute_clicked = st.form_submit_button(
+                    "🚀 Execute Custom Query",
+                    type="primary",
+                    use_container_width=True,
+                )
 
-        current_expression = query_expression or ""
+            with st.expander("💡 Query Syntax Help"):
+                st.markdown(
+                    syntax_help_html(st.session_state.get("selected_database")),
+                    unsafe_allow_html=True,
+                )
+
+        current_expression = (st.session_state.get(input_key) or "").strip()
         last_executed_expression = st.session_state.get(
             "custom_query_last_expression", ""
         )

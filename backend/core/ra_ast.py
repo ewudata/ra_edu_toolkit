@@ -17,6 +17,7 @@ class Selection(Node):
     sub: Node
 @dataclass
 class Rename(Node):
+    relation: Optional[str]
     pairs: List[Tuple[str,str]]
     sub: Node
 @dataclass
