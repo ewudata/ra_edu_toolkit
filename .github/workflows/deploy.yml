@@ -12,7 +12,7 @@ env:
   FRONTEND_IMAGE: ghcr.io/${{ github.actor }}/relational-frontend
   DEPLOY_HOST: wkf2000.tplinkdns.com
   DEPLOY_PORT: 32222
-  DEPLOY_PATH: /home/deploy/relational
+  DEPLOY_PATH: /home/michael/relational
 
 jobs:
   build-and-push:
@@ -88,25 +88,25 @@ jobs:
     - name: Deploy to server
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: wkf2000.tplinkdns.com
-        port: 32222
+        host: ${{ env.DEPLOY_HOST }}
+        port: ${{ env.DEPLOY_PORT }}
         username: ${{ secrets.DEPLOY_USERNAME }}
         key: ${{ secrets.DEPLOY_SSH_KEY }}
         script: |
           # Navigate to deployment directory
-          cd /home/deploy/relational
+          cd ${{ env.DEPLOY_PATH }}
           
           # Pull latest images
           echo "Pulling latest images..."
-          docker-compose -f docker-compose.yml pull
+          docker compose -f docker-compose.yml pull
           
           # Stop existing containers
           echo "Stopping existing containers..."
-          docker-compose -f docker-compose.yml down || true
+          docker compose -f docker-compose.yml down || true
           
           # Start containers with new images
           echo "Starting containers..."
-          docker-compose -f docker-compose.yml up -d
+          docker compose -f docker-compose.yml up -d
           
           # Clean up unused images
           echo "Cleaning up unused Docker images..."
@@ -121,19 +121,19 @@ jobs:
     - name: Verify deployment
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: wkf2000.tplinkdns.com
-        port: 32222
+        host: ${{ env.DEPLOY_HOST }}
+        port: ${{ env.DEPLOY_PORT }}
         username: ${{ secrets.DEPLOY_USERNAME }}
         key: ${{ secrets.DEPLOY_SSH_KEY }}
         script: |
-          cd /home/deploy/relational
+          cd ${{ env.DEPLOY_PATH }}
           
           # Check if containers are running
           echo "Checking container status..."
-          if docker-compose -f docker-compose.yml ps | grep -q "Up"; then
+          if docker compose -f docker-compose.yml ps | grep -q "Up"; then
             echo "✅ Containers are running"
           else
             echo "❌ Containers are not running"
-            docker-compose -f docker-compose.yml logs --tail=20
+            docker compose -f docker-compose.yml logs --tail=20
             exit 1
           fi
