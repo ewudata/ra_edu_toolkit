@@ -152,6 +152,8 @@ def main():
         st.session_state.custom_query_error = None
     if "custom_query_last_expression" not in st.session_state:
         st.session_state.custom_query_last_expression = ""
+    if "operator_filter_select" not in st.session_state:
+        st.session_state.operator_filter_select = []
 
     # Get database list
     try:
@@ -175,6 +177,7 @@ def main():
         st.session_state.custom_query_result = None
         st.session_state.custom_query_error = None
         st.session_state.custom_query_last_expression = ""
+        st.session_state.operator_filter_select = []
 
     # Inject styles shared with the database manager previews
     st.markdown(
@@ -349,6 +352,7 @@ def main():
         st.session_state.custom_query_result = None
         st.session_state.custom_query_error = None
         st.session_state.custom_query_last_expression = ""
+        st.session_state.operator_filter_select = []
 
     if not st.session_state.selected_database:
         return
@@ -411,7 +415,7 @@ def main():
     st.markdown("---")
     st.header("🧭 Choose How You Want to Practice")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.markdown(
@@ -435,6 +439,29 @@ def main():
             )
 
     with col2:
+        st.markdown(
+            "**🧩 Operator-based Queries**\n\n"
+            "Pick operators like joins or set operations to filter exercises."
+        )
+        if st.session_state.has_catalog:
+            selected = st.session_state.practice_mode == "operators"
+            if st.button(
+                "Practice by Operator",
+                key="start_operator",
+                type="primary" if not selected else "secondary",
+            ):
+                st.session_state.practice_mode = "operators"
+        else:
+            st.caption(
+                "Operator-based practice needs a catalog of pre-defined queries."
+            )
+            st.button(
+                "Practice by Operator",
+                key="start_operator_disabled",
+                disabled=True,
+            )
+
+    with col3:
         st.markdown(
             "**✏️ Custom Queries**\n\n"
             "Practice by writing your own relational algebra expressions."
@@ -471,6 +498,66 @@ def main():
                     selected_database,
                 )
             )
+
+    elif st.session_state.practice_mode == "operators":
+        st.markdown("---")
+        st.header("🧩 Operator-Based Queries")
+
+        if not st.session_state.has_catalog:
+            st.warning(
+                "Operator-based queries are currently unavailable for this database."
+            )
+        elif not st.session_state.available_queries:
+            st.info(
+                "No pre-defined queries were found for this database. "
+                "You can still practice with custom queries."
+            )
+        else:
+            st.write(
+                "Select one or more operators to filter the available exercises."
+            )
+
+            operator_options = [
+                ("intersection", "Set Intersection"),
+                ("union", "Set Union"),
+                ("difference", "Set Difference"),
+                ("cartesian product", "Cartesian Product"),
+                ("natural join", "Natural Join"),
+                ("division", "Division"),
+            ]
+            operator_labels = [label for _, label in operator_options]
+            operator_map = {label: key for key, label in operator_options}
+
+            selected_labels = st.multiselect(
+                "Choose operators",
+                operator_labels,
+                key="operator_filter_select",
+            )
+            selected_ops = {operator_map[label] for label in selected_labels}
+
+            if not selected_ops:
+                st.info("Select at least one operator to view matching queries.")
+            else:
+                filtered_queries = []
+                for query in st.session_state.available_queries:
+                    hints = [hint.lower() for hint in (query.get("hints") or [])]
+                    if any(op in hints for op in selected_ops):
+                        filtered_queries.append(query)
+
+                if not filtered_queries:
+                    st.info(
+                        "No queries match the selected operators. "
+                        "Try another operator or clear the filter."
+                    )
+                else:
+                    _selected_query, _user_solution, _evaluation_result = (
+                        query_selector_component(
+                            filtered_queries,
+                            api_client,
+                            selected_database,
+                            key_prefix="operator_query_selector",
+                        )
+                    )
 
     elif st.session_state.practice_mode == "custom":
         st.markdown("---")
