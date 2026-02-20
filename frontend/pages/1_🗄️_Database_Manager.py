@@ -411,7 +411,7 @@ database.zip
 
     st.markdown("---")
 
-    # SQL file import
+    # SQL file import #####
     st.subheader("Import from SQL File")
     sql_message = st.session_state.pop("sql_import_success", None)
     if sql_message:
