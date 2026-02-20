@@ -12,6 +12,7 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
+from utils.auth import require_authentication
 from components.query_input import query_input_component
 from components.result_viewer import error_display_component
 from components.query_selector import (
@@ -120,6 +121,8 @@ def main():
     st.header("📊 Choose a Database")
 
     api_client = APIClient()
+    if not require_authentication(api_client):
+        return
 
     try:
         api_client.health_check()

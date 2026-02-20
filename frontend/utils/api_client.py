@@ -33,13 +33,27 @@ class APIClient:
         self.base_url = (
             base_url or os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
         ).rstrip("/")
+        self._auth_token: Optional[str] = None
+
+    def set_auth_token(self, token: Optional[str]) -> None:
+        self._auth_token = token.strip() if token else None
+
+    def clear_auth_token(self) -> None:
+        self._auth_token = None
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """Send HTTP request"""
         url = f"{self.base_url}{endpoint}"
+        headers = dict(kwargs.pop("headers", {}) or {})
+        if self._auth_token:
+            headers["Authorization"] = f"Bearer {self._auth_token}"
+        if headers:
+            kwargs["headers"] = headers
         try:
             response = requests.request(method, url, **kwargs)
             response.raise_for_status()
+            if response.status_code == 204 or not response.content:
+                return {}
             return response.json()
         except requests.exceptions.HTTPError as e:
             status_code = e.response.status_code if e.response else None
@@ -102,6 +116,10 @@ class APIClient:
                 "POST", "/databases/import/sql", files=files, data=data
             )
 
+    def delete_database(self, database: str) -> Dict[str, Any]:
+        """Delete database."""
+        return self._make_request("DELETE", f"/databases/{database}")
+
     def get_queries(self, database: str) -> List[Dict[str, Any]]:
         """Get query list for specified database"""
         return self._make_request("GET", f"/databases/{database}/queries")
@@ -127,3 +145,13 @@ class APIClient:
     def health_check(self) -> Dict[str, Any]:
         """Health check"""
         return self._make_request("GET", "/health")
+
+    def get_google_login_url(self, frontend_redirect: str) -> str:
+        """Get backend-generated Google OAuth URL."""
+        payload = self._make_request(
+            "GET", "/auth/google/start", params={"frontend_redirect": frontend_redirect}
+        )
+        auth_url = payload.get("auth_url")
+        if not auth_url:
+            raise APIClientError("Backend did not return Google OAuth URL.")
+        return str(auth_url)

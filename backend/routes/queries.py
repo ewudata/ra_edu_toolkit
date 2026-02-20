@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ..services import queries as queries_service
+from ..services.auth import require_current_user
 from ..services.exceptions import DatabaseNotFound, QueryNotFound
 from ..services.queries import QueryDetail, QuerySummary
 
@@ -55,9 +56,12 @@ class QueryDetailResponse(QuerySummaryResponse):
 
 
 @router.get("/", response_model=List[QuerySummaryResponse])
-def list_queries_for_database(database: str) -> List[QuerySummaryResponse]:
+def list_queries_for_database(
+    database: str,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> List[QuerySummaryResponse]:
     try:
-        summaries = queries_service.list_queries(database)
+        summaries = queries_service.list_queries(database, user_id=user["id"])
     except DatabaseNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -70,9 +74,13 @@ def list_queries_for_database(database: str) -> List[QuerySummaryResponse]:
 
 
 @router.get("/{query_id}", response_model=QueryDetailResponse)
-def get_query_detail(database: str, query_id: str) -> QueryDetailResponse:
+def get_query_detail(
+    database: str,
+    query_id: str,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> QueryDetailResponse:
     try:
-        detail = queries_service.get_query(database, query_id)
+        detail = queries_service.get_query(database, query_id, user_id=user["id"])
     except DatabaseNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)

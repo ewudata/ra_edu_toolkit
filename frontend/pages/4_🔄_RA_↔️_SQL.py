@@ -11,6 +11,7 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
+from utils.auth import require_authentication
 
 
 def _format_solution_block(solution: Optional[Dict[str, Any]]) -> None:
@@ -46,6 +47,8 @@ def main() -> None:
     )
 
     api_client = APIClient()
+    if not require_authentication(api_client):
+        return
 
     try:
         api_client.health_check()

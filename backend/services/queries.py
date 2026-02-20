@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
 from typing import List, Optional
 
 from . import datasets
@@ -34,26 +33,26 @@ class QueryDetail(QuerySummary):
     expected_rows: Optional[List[dict]]
 
 
-def _catalog_path(database: str) -> Path:
-    for db in datasets.list_databases():
-        if db.name == database:
-            return datasets.DATASETS_ROOT / database / CATALOG_FILENAME
-    raise DatabaseNotFound(f"Database '{database}' not found")
-
-
 @lru_cache(maxsize=32)
-def _load_catalog(database: str) -> dict:
-    path = _catalog_path(database)
-    if not path.exists():
+def _load_catalog(database: str, user_id: Optional[str]) -> dict:
+    try:
+        raw = datasets.read_database_file_bytes(
+            database, CATALOG_FILENAME, user_id=user_id
+        )
+    except FileNotFoundError:
         raise QueryNotFound(
             f"Catalog file '{CATALOG_FILENAME}' not found for database '{database}'"
         )
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        raise QueryNotFound(
+            f"Catalog file '{CATALOG_FILENAME}' is not valid JSON for database '{database}'"
+        ) from exc
 
 
-def list_queries(database: str) -> List[QuerySummary]:
-    catalog = _load_catalog(database)
+def list_queries(database: str, user_id: Optional[str] = None) -> List[QuerySummary]:
+    catalog = _load_catalog(database, user_id)
     summaries: List[QuerySummary] = []
     for question in catalog.get("questions", []):
         summaries.append(
@@ -67,8 +66,10 @@ def list_queries(database: str) -> List[QuerySummary]:
     return summaries
 
 
-def get_query(database: str, query_id: str) -> QueryDetail:
-    catalog = _load_catalog(database)
+def get_query(
+    database: str, query_id: str, user_id: Optional[str] = None
+) -> QueryDetail:
+    catalog = _load_catalog(database, user_id)
     for question in catalog.get("questions", []):
         if question["id"] == query_id:
             solution_spec = question.get("solution", {})
@@ -87,3 +88,7 @@ def get_query(database: str, query_id: str) -> QueryDetail:
                 expected_rows=expected.get("rows"),
             )
     raise QueryNotFound(f"Query '{query_id}' not found for database '{database}'")
+
+
+def clear_catalog_cache() -> None:
+    _load_catalog.cache_clear()

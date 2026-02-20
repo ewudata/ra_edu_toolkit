@@ -9,6 +9,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from utils.api_client import APIClient
+from utils.auth import require_authentication
 from components.query_selector import syntax_help_html
 
 
@@ -24,30 +25,33 @@ def main():
     st.title("🎓 Relational Algebra Education Toolkit")
     st.markdown("---")
 
+    api_client = APIClient()
+    if not require_authentication(api_client):
+        st.markdown(
+            """
+            Use this toolkit to learn relational algebra and SQL with:
+            - Database management
+            - Relational algebra exercises
+            - SQL exercises
+            - RA/SQL interchange reference
+            """
+        )
+        st.caption("Sign in with Google to continue.")
+        return
+
     # Welcome message
     st.markdown("""
     ## Welcome to the Relational Algebra Education Toolkit!
-    
-    This is an interactive educational platform designed for learning relational algebra, helping you:
-    
+
     - 🗄️ **Manage databases** to import and organize learning data
     - 🧮 **Practice relational algebra** with guided, step-by-step exercises
     - 🧠 **Build SQL skills** alongside relational algebra understanding
     - 🔄 **Translate** between relational algebra and SQL using side-by-side references
-    
-    ### Quick Start
-    
-    1. Open **Database Manager** to import a sample dataset or your own files
-    2. Head to **Relational Algebra Exercises** to practice expressions with guided feedback
-    3. Strengthen your SQL intuition in **SQL Exercises**
-    4. Explore **RA 🔄 SQL** to compare canonical solutions side by side
     """)
 
     # Check backend connection status
     st.markdown("---")
     st.subheader("🔗 System Status")
-
-    api_client = APIClient()
 
     col1, col2 = st.columns(2)
 

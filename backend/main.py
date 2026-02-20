@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from dotenv import load_dotenv
 
-from .routes import databases, evaluation, queries
+from .routes import auth, databases, evaluation, queries
 
 # Load environment variables
 load_dotenv()
@@ -16,6 +16,7 @@ app.include_router(databases.router)
 app.include_router(queries.router)
 app.include_router(evaluation.router)
 app.include_router(evaluation.custom_router)
+app.include_router(auth.router)
 
 
 @app.get("/")

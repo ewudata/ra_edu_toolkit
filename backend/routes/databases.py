@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from ..services import datasets
+from ..services import queries as queries_service
+from ..services.auth import require_current_user
 from ..services.datasets import DatabaseSchema, DatabaseSummary, TableSchema
 
 router = APIRouter(prefix="/databases", tags=["databases"])
@@ -15,11 +17,15 @@ class DatabaseSummaryResponse(BaseModel):
     name: str
     tables: List[str]
     table_count: int
+    is_default: bool = False
 
     @classmethod
     def from_summary(cls, summary: DatabaseSummary) -> "DatabaseSummaryResponse":
         return cls(
-            name=summary.name, tables=summary.tables, table_count=summary.table_count
+            name=summary.name,
+            tables=summary.tables,
+            table_count=summary.table_count,
+            is_default=summary.is_default,
         )
 
 
@@ -60,11 +66,13 @@ class DatabaseSchemaResponse(BaseModel):
 
 
 @router.get("/", response_model=List[DatabaseSummaryResponse])
-def list_available_databases() -> List[DatabaseSummaryResponse]:
+def list_available_databases(
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> List[DatabaseSummaryResponse]:
     """Expose the catalog of sample databases bundled with the toolkit."""
 
     try:
-        databases: List[DatabaseSummary] = datasets.list_databases()
+        databases = datasets.list_databases(user_id=user["id"])
     except FileNotFoundError as exc:  # pragma: no cover - infrastructure issue
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return [DatabaseSummaryResponse.from_summary(db) for db in databases]
@@ -78,6 +86,7 @@ def list_available_databases() -> List[DatabaseSummaryResponse]:
 async def import_database_from_zip(
     name: str = Form(...),
     file: UploadFile = File(...),
+    user: Dict[str, Any] = Depends(require_current_user),
 ) -> DatabaseSummaryResponse:
     """Create a new database from an uploaded ZIP archive of CSV files."""
 
@@ -85,7 +94,8 @@ async def import_database_from_zip(
         raise HTTPException(status_code=400, detail="Expected a .zip upload")
     try:
         content = await file.read()
-        summary = datasets.create_database_from_zip(name, content)
+        summary = datasets.create_database_from_zip(name, content, user_id=user["id"])
+        queries_service.clear_catalog_cache()
     except FileExistsError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -102,8 +112,8 @@ async def import_database_from_zip(
         ) from exc
     except ValueError as exc:
         raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-    ) from exc
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
     return DatabaseSummaryResponse.from_summary(summary)
 
 
@@ -114,11 +124,14 @@ async def import_database_from_zip(
 def get_database_schema(
     database: str,
     sample_rows: int = 5,
+    user: Dict[str, Any] = Depends(require_current_user),
 ) -> DatabaseSchemaResponse:
     """Return column metadata and a row preview for each table in a database."""
 
     try:
-        schema = datasets.get_database_schema(database, sample_rows=sample_rows)
+        schema = datasets.get_database_schema(
+            database, sample_rows=sample_rows, user_id=user["id"]
+        )
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -138,6 +151,7 @@ def get_database_schema(
 async def import_database_from_sql(
     name: str = Form(...),
     file: UploadFile = File(...),
+    user: Dict[str, Any] = Depends(require_current_user),
 ) -> DatabaseSummaryResponse:
     """Create a new database from an uploaded SQL script."""
 
@@ -151,7 +165,10 @@ async def import_database_from_sql(
             raise HTTPException(
                 status_code=400, detail="SQL script must be UTF-8 encoded"
             ) from exc
-        summary = datasets.create_database_from_sql(name, sql_script)
+        summary = datasets.create_database_from_sql(
+            name, sql_script, user_id=user["id"]
+        )
+        queries_service.clear_catalog_cache()
     except FileExistsError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -161,3 +178,17 @@ async def import_database_from_sql(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
     return DatabaseSummaryResponse.from_summary(summary)
+
+
+@router.delete("/{database}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_database(
+    database: str,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> None:
+    try:
+        datasets.delete_database(database, user_id=user["id"])
+        queries_service.clear_catalog_cache()
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc

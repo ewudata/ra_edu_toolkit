@@ -61,10 +61,12 @@ def _rows_from_dataframe(df: pd.DataFrame) -> List[Dict[str, object]]:
     return preview.to_dict(orient="records")
 
 
-def evaluate_expression(expression: str, database: str) -> EvaluationResult:
+def evaluate_expression(
+    expression: str, database: str, *, user_id: str | None = None
+) -> EvaluationResult:
     """Parse and evaluate a relational algebra expression against a database."""
 
-    env = datasets.load_database_env(database)
+    env = datasets.load_database_env(database, user_id=user_id)
     try:
         ast = stepper_mod.parse(expression)
     except UnexpectedInput as exc:

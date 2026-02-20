@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ..services import queries as queries_service, relalg as relalg_service
+from ..services.auth import require_current_user
 from ..services.exceptions import (
     DatabaseNotFound,
     EvaluationError,
@@ -41,10 +42,13 @@ class QueryEvaluationResponse(BaseModel):
 
 @router.post("/evaluate", response_model=QueryEvaluationResponse)
 def evaluate_query_expression(
-    database: str, query_id: str, payload: QueryEvaluationRequest
+    database: str,
+    query_id: str,
+    payload: QueryEvaluationRequest,
+    user: Dict[str, Any] = Depends(require_current_user),
 ) -> QueryEvaluationResponse:
     try:
-        detail = queries_service.get_query(database, query_id)
+        detail = queries_service.get_query(database, query_id, user_id=user["id"])
     except DatabaseNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -55,7 +59,11 @@ def evaluate_query_expression(
         ) from exc
 
     try:
-        evaluation = relalg_service.evaluate_expression(payload.expression, database)
+        evaluation = relalg_service.evaluate_expression(
+            payload.expression,
+            database,
+            user_id=user["id"],
+        )
     except ParseError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -88,11 +96,17 @@ def evaluate_query_expression(
 
 @custom_router.post("/evaluate", response_model=QueryEvaluationResponse)
 def evaluate_custom_query(
-    database: str, payload: QueryEvaluationRequest
+    database: str,
+    payload: QueryEvaluationRequest,
+    user: Dict[str, Any] = Depends(require_current_user),
 ) -> QueryEvaluationResponse:
     """Evaluate a custom relational algebra expression without requiring a query_id"""
     try:
-        evaluation = relalg_service.evaluate_expression(payload.expression, database)
+        evaluation = relalg_service.evaluate_expression(
+            payload.expression,
+            database,
+            user_id=user["id"],
+        )
     except ParseError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

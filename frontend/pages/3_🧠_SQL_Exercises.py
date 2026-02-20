@@ -8,6 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
+from utils.auth import require_authentication
 from components.query_input import database_selector_component
 from components.result_viewer import result_viewer_component, error_display_component
 
@@ -24,6 +25,8 @@ def main():
 
     # Initialize API client
     api_client = APIClient()
+    if not require_authentication(api_client):
+        return
 
     # Check backend connection
     try:
