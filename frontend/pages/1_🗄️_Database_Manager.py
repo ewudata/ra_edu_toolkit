@@ -13,6 +13,25 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient, APIClientError
+from utils.auth import require_authentication
+
+
+PREVIEW_CACHE_KEY = "db_preview_cache"
+PREVIEW_ERROR_KEY = "db_preview_errors"
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _cached_health_check(base_url: str, auth_token: Optional[str]) -> Dict[str, Any]:
+    client = APIClient(base_url=base_url)
+    client.set_auth_token(auth_token)
+    return client.health_check()
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _cached_get_databases(base_url: str, auth_token: Optional[str]) -> Dict[str, Any]:
+    client = APIClient(base_url=base_url)
+    client.set_auth_token(auth_token)
+    return {"databases": client.get_databases()}
 
 
 def _render_table_preview_html(
@@ -85,6 +104,39 @@ def _render_table_preview_html(
     )
 
 
+def _fetch_database_preview(api_client: APIClient, database_name: str) -> None:
+    preview_cache = st.session_state.setdefault(PREVIEW_CACHE_KEY, {})
+    preview_errors = st.session_state.setdefault(PREVIEW_ERROR_KEY, {})
+
+    try:
+        schema_response = api_client.get_database_schema(database_name, sample_rows=5)
+        preview_cache[database_name] = {
+            table_info["name"]: table_info
+            for table_info in schema_response.get("tables", [])
+        }
+        preview_errors.pop(database_name, None)
+    except (APIClientError, Exception) as exc:
+        preview_errors[database_name] = str(exc)
+        preview_cache.pop(database_name, None)
+
+
+def _clear_preview_cache(database_name: Optional[str] = None) -> None:
+    if database_name is None:
+        st.session_state.pop(PREVIEW_CACHE_KEY, None)
+        st.session_state.pop(PREVIEW_ERROR_KEY, None)
+        return
+
+    preview_cache = st.session_state.get(PREVIEW_CACHE_KEY, {})
+    preview_errors = st.session_state.get(PREVIEW_ERROR_KEY, {})
+    preview_cache.pop(database_name, None)
+    preview_errors.pop(database_name, None)
+
+
+def _clear_db_list_cache() -> None:
+    _cached_health_check.clear()
+    _cached_get_databases.clear()
+
+
 def main():
     st.set_page_config(
         page_title="Database Manager - RA Education Toolkit",
@@ -97,10 +149,13 @@ def main():
 
     # Initialize API client
     api_client = APIClient()
+    if not require_authentication(api_client):
+        return
 
     # Check backend connection
     try:
-        api_client.health_check()
+        auth_token = st.session_state.get("auth_token")
+        _cached_health_check(api_client.base_url, auth_token)
         st.success("✅ Backend service connected successfully")
     except APIClientError as e:
         st.error(f"❌ Backend service connection failed: {e}")
@@ -117,7 +172,9 @@ def main():
 
     # Get database list
     try:
-        databases = api_client.get_databases()
+        auth_token = st.session_state.get("auth_token")
+        databases_payload = _cached_get_databases(api_client.base_url, auth_token)
+        databases = databases_payload.get("databases", [])
     except APIClientError as e:
         st.error(f"Failed to get database list: {e}")
         return
@@ -206,36 +263,46 @@ def main():
         st.session_state["sql_name_input"] = "SQLDatabase"
         st.session_state.pop("sql_file_uploader", None)
 
+    st.session_state.setdefault(PREVIEW_CACHE_KEY, {})
+    st.session_state.setdefault(PREVIEW_ERROR_KEY, {})
+
     # Display existing databases
     st.header("📊 Existing Databases")
 
     if databases:
         for db in databases:
-            with st.expander(f"🗃️ {db['name']} ({db['table_count']} tables)"):
+            db_name = db["name"]
+            with st.expander(f"🗃️ {db_name} ({db['table_count']} tables)"):
                 col1, col2 = st.columns(2)
 
-                table_metadata: Dict[str, Dict[str, Any]] = {}
-                preview_error: Optional[str] = None
-                try:
-                    schema_response = api_client.get_database_schema(
-                        db["name"], sample_rows=5
-                    )
-                    table_metadata = {
-                        table_info["name"]: table_info
-                        for table_info in schema_response.get("tables", [])
-                    }
-                except APIClientError as e:
-                    preview_error = str(e)
-                except Exception as e:
-                    preview_error = str(e)
-
                 with col1:
+                    preview_cache = st.session_state[PREVIEW_CACHE_KEY]
+                    preview_errors = st.session_state[PREVIEW_ERROR_KEY]
+                    preview_loaded = db_name in preview_cache
+
+                    if preview_loaded:
+                        if st.button("Refresh table previews", key=f"refresh_{db_name}"):
+                            _fetch_database_preview(api_client, db_name)
+                    else:
+                        if st.button("Load table previews", key=f"load_{db_name}"):
+                            _fetch_database_preview(api_client, db_name)
+                            preview_loaded = db_name in st.session_state[PREVIEW_CACHE_KEY]
+
+                    table_metadata: Dict[str, Dict[str, Any]] = st.session_state[
+                        PREVIEW_CACHE_KEY
+                    ].get(db_name, {})
+                    preview_error: Optional[str] = st.session_state[
+                        PREVIEW_ERROR_KEY
+                    ].get(db_name)
+
                     st.write("**Table list:**")
                     if preview_error:
                         st.warning(
                             f"Table previews unavailable: {preview_error}",
                             icon="⚠️",
                         )
+                    elif not preview_loaded:
+                        st.info("Load table previews to view schema and sample rows.")
                     for table in db["tables"]:
                         st.markdown(
                             _render_table_preview_html(
@@ -248,6 +315,29 @@ def main():
                     st.write("**Statistics:**")
                     st.write(f"• Table count: {db['table_count']}")
                     st.write(f"• Database name: {db['name']}")
+                    st.write(
+                        f"• Default dataset: {'Yes' if db.get('is_default') else 'No'}"
+                    )
+                    action_label = (
+                        f"Hide {db['name']}"
+                        if db.get("is_default")
+                        else f"Delete {db['name']}"
+                    )
+                    if st.button(
+                        action_label,
+                        key=f"delete_db_{db['name']}",
+                    ):
+                        try:
+                            api_client.delete_database(db_name)
+                            _clear_preview_cache(db_name)
+                            _clear_db_list_cache()
+                            if db.get("is_default"):
+                                st.success(f"Hidden shared dataset: {db_name}")
+                            else:
+                                st.success(f"Deleted database: {db_name}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Delete failed: {e}")
     else:
         st.info("No databases available")
 
@@ -303,6 +393,8 @@ database.zip
                 st.session_state["zip_import_success"] = (
                     f"✅ Successfully imported database: {result['name']}"
                 )
+                _clear_preview_cache()
+                _clear_db_list_cache()
                 st.session_state["reset_zip_form"] = True
                 st.rerun()
 
@@ -357,6 +449,8 @@ database.zip
                 st.session_state["sql_import_success"] = (
                     f"✅ Successfully imported database: {result['name']}"
                 )
+                _clear_preview_cache()
+                _clear_db_list_cache()
                 st.session_state["reset_sql_form"] = True
                 st.rerun()
 

@@ -74,12 +74,43 @@ cp .env.example .env
 - `BACKEND_BASE_URL` - Backend API base URL (default: `http://localhost:8000`)
 - `BACKEND_HOST` - Backend host address (default: `0.0.0.0`)
 - `BACKEND_PORT` - Backend port (default: `8000`)
+- `FRONTEND_BASE_URL` - Frontend URL used for OAuth redirects (default: `http://localhost:8501`)
 - `FRONTEND_HOST` - Frontend host address (default: `0.0.0.0`)
 - `FRONTEND_PORT` - Frontend port (default: `8501`)
+- `SUPABASE_URL` - Supabase project URL or project ref
+- `SUPABASE_ANON_KEY` - Supabase anon key (OAuth + token verification)
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (backend only)
+- `OAUTH_STATE_SECRET` - Secret used to sign OAuth state tokens (backend only)
 - `DEBUG` - Enable debug mode (default: `True`)
 - `RELOAD` - Enable auto-reload (default: `True`)
 
 For production, use `.env.production` as a template and set `DEBUG=False` and `RELOAD=False`.
+
+For Google login and user dataset metadata:
+1. Enable Google provider in Supabase Authentication.
+2. Add redirect URL `http://localhost:8000/auth/google/callback` (or your backend URL).
+3. Run `assets/supabase_user_datasets_setup.sql` in Supabase SQL editor.
+4. Create private storage buckets:
+   - `ra-default-datasets`
+   - `ra-user-datasets` (or set `SUPABASE_USER_DATASETS_BUCKET`)
+5. Seed shared default datasets in `public.default_datasets`:
+   ```sql
+   insert into public.default_datasets (dataset_name, bucket_name, object_prefix)
+   values
+     ('Sales', 'ra-default-datasets', 'Sales'),
+     ('TestDB', 'ra-default-datasets', 'TestDB'),
+     ('University', 'ra-default-datasets', 'University')
+   on conflict (dataset_name) do update
+     set bucket_name = excluded.bucket_name,
+         object_prefix = excluded.object_prefix,
+         enabled = true;
+   ```
+6. Upload CSV files and each dataset `catalog.json` to `ra-default-datasets` using the same prefixes.
+
+Dataset behavior:
+- `Sales`, `TestDB`, and `University` are shared datasets loaded from Supabase Storage.
+- User-imported datasets are stored in Supabase Storage under user prefixes.
+- Deleting a shared default dataset in UI hides it only for the current user.
 
 ### Starting Services
 
@@ -129,6 +160,7 @@ python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Student))" University
 - Support for SQL script import
 - Database and table structure browsing
 - Data preview and statistics
+- Lazy-loaded table previews (loaded per database on demand) for faster page reruns
 
 ### 🧮 Relational Algebra Exercises
 - Guided three-step practice flow

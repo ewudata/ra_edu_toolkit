@@ -1,18 +1,30 @@
 from __future__ import annotations
 
 import io
+import os
 import re
-import shutil
 import sqlite3
 import zipfile
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from pathlib import PurePosixPath
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATASETS_ROOT = PROJECT_ROOT / "datasets"
+from .supabase import (
+    DefaultDatasetRow,
+    SupabaseDatasetError,
+    SupabaseStorageError,
+    UserDatasetRow,
+    delete_user_dataset as delete_user_dataset_row,
+    list_default_datasets,
+    list_user_datasets,
+    storage_delete_prefix,
+    storage_download_object,
+    storage_list_objects,
+    storage_upload_object,
+    upsert_user_dataset,
+)
 
 
 @dataclass
@@ -33,6 +45,7 @@ class TableSchema:
 class DatabaseSummary:
     name: str
     tables: List[str]
+    is_default: bool = False
 
     @property
     def table_count(self) -> int:
@@ -45,11 +58,32 @@ class DatabaseSchema:
     tables: List[TableSchema]
 
 
-def _ensure_datasets_root(*, create: bool = False) -> None:
-    if create:
-        DATASETS_ROOT.mkdir(parents=True, exist_ok=True)
-    elif not DATASETS_ROOT.exists():
-        raise FileNotFoundError(f"Datasets directory not found at {DATASETS_ROOT}")
+@dataclass
+class DatasetLocation:
+    name: str
+    bucket: str
+    prefix: str
+    is_default: bool
+    source_type: str
+    hidden: bool
+
+
+_SCHEMA_PREVIEW_CACHE: Dict[Tuple[str, str, int], "DatabaseSchema"] = {}
+
+
+class SqlImportError(ValueError):
+    """Raised when SQL import fails with additional context."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        line: Optional[int] = None,
+        statement: Optional[str] = None,
+    ):
+        super().__init__(message)
+        self.line = line
+        self.statement = statement
 
 
 def _normalise_database_name(database: str) -> str:
@@ -72,14 +106,201 @@ def _normalise_table_stem(name: str) -> str:
     return candidate
 
 
-def _summarise_database_dir(db_path: Path) -> DatabaseSummary:
-    tables = [csv_path.stem.lower() for csv_path in _iter_csv_files(db_path)]
-    return DatabaseSummary(name=db_path.name, tables=tables)
+def _normalise_user_id(user_id: str) -> str:
+    candidate = user_id.strip()
+    if not candidate:
+        raise ValueError("User id must be a non-empty string")
+    return re.sub(r"[^A-Za-z0-9_-]", "_", candidate)
+
+
+def _join_prefix(prefix: str, name: str) -> str:
+    p = prefix.strip("/")
+    n = name.strip("/")
+    if not p:
+        return n
+    if not n:
+        return p
+    return f"{p}/{n}"
+
+
+def _schema_cache_key(
+    database: str,
+    sample_rows: int,
+    user_id: Optional[str],
+) -> Tuple[str, str, int]:
+    cache_user = user_id or ""
+    cache_db = _normalise_database_name(database)
+    cache_rows = max(sample_rows, 0)
+    return cache_user, cache_db, cache_rows
+
+
+def clear_schema_preview_cache(database: Optional[str] = None) -> None:
+    if database is None:
+        _SCHEMA_PREVIEW_CACHE.clear()
+        return
+
+    normalised = _normalise_database_name(database)
+    stale_keys = [key for key in _SCHEMA_PREVIEW_CACHE if key[1] == normalised]
+    for key in stale_keys:
+        _SCHEMA_PREVIEW_CACHE.pop(key, None)
+
+
+def _approximate_csv_row_count(raw: bytes) -> int:
+    if not raw:
+        return 0
+    text = raw.decode("utf-8", errors="ignore")
+    if not text.strip():
+        return 0
+    line_count = len(text.splitlines())
+    return max(line_count - 1, 0)
+
+
+def _default_rows_by_name() -> Dict[str, DefaultDatasetRow]:
+    try:
+        rows = list_default_datasets()
+    except SupabaseDatasetError as exc:
+        raise FileNotFoundError(str(exc)) from exc
+    return {row.dataset_name: row for row in rows if row.enabled}
+
+
+def _user_rows_by_name(user_id: str) -> Dict[str, UserDatasetRow]:
+    try:
+        rows = list_user_datasets(user_id)
+    except SupabaseDatasetError as exc:
+        raise FileNotFoundError(str(exc)) from exc
+    return {row.database_name: row for row in rows}
+
+
+def _list_table_names(bucket: str, prefix: str) -> List[str]:
+    try:
+        names = storage_list_objects(bucket, prefix)
+    except SupabaseStorageError as exc:
+        raise FileNotFoundError(str(exc)) from exc
+    tables: List[str] = []
+    for name in names:
+        p = PurePosixPath(name)
+        if p.suffix.lower() != ".csv":
+            continue
+        tables.append(p.stem.lower())
+    return sorted(set(tables))
+
+
+def _build_location_from_default(row: DefaultDatasetRow) -> DatasetLocation:
+    return DatasetLocation(
+        name=row.dataset_name,
+        bucket=row.bucket_name,
+        prefix=row.object_prefix,
+        is_default=True,
+        source_type="default",
+        hidden=False,
+    )
+
+
+def _build_location_from_user(row: UserDatasetRow) -> DatasetLocation:
+    return DatasetLocation(
+        name=row.database_name,
+        bucket=row.bucket_name,
+        prefix=row.object_prefix,
+        is_default=row.is_default,
+        source_type=row.source_type,
+        hidden=row.hidden,
+    )
+
+
+def _resolve_location(database: str, user_id: Optional[str]) -> DatasetLocation:
+    name = _normalise_database_name(database)
+    default_rows = _default_rows_by_name()
+    default_row = default_rows.get(name)
+
+    user_row: Optional[UserDatasetRow] = None
+    if user_id:
+        user_row = _user_rows_by_name(user_id).get(name)
+
+    if user_row and user_row.source_type == "user" and not user_row.hidden:
+        return _build_location_from_user(user_row)
+
+    if default_row:
+        if user_row and user_row.source_type == "default" and user_row.hidden:
+            raise FileNotFoundError(f"Database '{name}' is hidden for this user.")
+        return _build_location_from_default(default_row)
+
+    raise FileNotFoundError(f"Database '{name}' not found.")
+
+
+def list_databases(user_id: Optional[str] = None) -> List[DatabaseSummary]:
+    default_rows = _default_rows_by_name()
+    user_rows = _user_rows_by_name(user_id) if user_id else {}
+
+    hidden_defaults = {
+        name
+        for name, row in user_rows.items()
+        if row.source_type == "default" and row.hidden
+    }
+
+    summaries: Dict[str, DatabaseSummary] = {}
+
+    for name, row in default_rows.items():
+        if name in hidden_defaults:
+            continue
+        tables = _list_table_names(row.bucket_name, row.object_prefix)
+        summaries[name] = DatabaseSummary(name=name, tables=tables, is_default=True)
+
+    for name, row in user_rows.items():
+        if row.source_type != "user" or row.hidden:
+            continue
+        tables = _list_table_names(row.bucket_name, row.object_prefix)
+        summaries[name] = DatabaseSummary(name=name, tables=tables, is_default=False)
+
+    return [summaries[name] for name in sorted(summaries.keys())]
+
+
+def _upload_csv_map(
+    *,
+    bucket: str,
+    prefix: str,
+    csv_map: Dict[str, bytes],
+) -> None:
+    for filename, content in csv_map.items():
+        object_path = _join_prefix(prefix, filename)
+        storage_upload_object(
+            bucket=bucket,
+            object_path=object_path,
+            content=content,
+            content_type="text/csv",
+            upsert=False,
+        )
+
+
+def _extract_csv_map_from_zip(zip_bytes: bytes) -> Dict[str, bytes]:
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+            members = [info for info in archive.infolist() if not info.is_dir()]
+            csv_map: Dict[str, bytes] = {}
+            for info in members:
+                rel_path = PurePosixPath(info.filename)
+                if rel_path.is_absolute() or ".." in rel_path.parts:
+                    raise ValueError("ZIP archive contains invalid paths")
+                if rel_path.name.startswith(".") or (
+                    rel_path.parts and rel_path.parts[0].startswith("__MACOSX")
+                ):
+                    continue
+                if rel_path.suffix.lower() != ".csv":
+                    continue
+                table_name = _normalise_table_stem(rel_path.stem)
+                filename = f"{table_name}.csv"
+                if filename in csv_map:
+                    raise ValueError(f"Duplicate table name '{table_name}' in ZIP")
+                with archive.open(info) as src:
+                    csv_map[filename] = src.read()
+    except zipfile.BadZipFile as exc:
+        raise ValueError("Provided file is not a valid ZIP archive") from exc
+
+    if not csv_map:
+        raise ValueError("ZIP archive does not contain any CSV files")
+    return csv_map
 
 
 def _filter_sqlite_unsupported(sql_script: str) -> List[Tuple[str, int]]:
-    """Strip commands that SQLite cannot execute (common in MySQL dumps)."""
-
     skip_prefixes = (
         "SET ",
         "LOCK TABLES",
@@ -89,250 +310,319 @@ def _filter_sqlite_unsupported(sql_script: str) -> List[Tuple[str, int]]:
         "CREATE DATABASE ",
         "DROP DATABASE ",
     )
-    filtered_lines: List[Tuple[str, int]] = []
-    for index, line in enumerate(sql_script.splitlines(), start=1):
+    filtered: List[Tuple[str, int]] = []
+    for line_no, line in enumerate(sql_script.splitlines(), start=1):
         stripped = line.strip()
         if not stripped:
-            filtered_lines.append((line, index))
+            filtered.append((line, line_no))
             continue
         upper = stripped.upper()
         if upper.startswith(skip_prefixes) or stripped.startswith("/*!"):
             continue
-        filtered_lines.append((line, index))
-    return filtered_lines
+        filtered.append((line, line_no))
+    return filtered
 
 
-def _execute_sql_script(
-    conn: sqlite3.Connection,
-    filtered_lines: List[Tuple[str, int]],
-) -> None:
-    """Execute a SQL script line-by-line to surface precise error locations."""
-
+def _execute_sql_script(conn: sqlite3.Connection, filtered: List[Tuple[str, int]]) -> None:
     cursor = conn.cursor()
-    MAX_PREVIEW_CHARS = 1000
+    max_preview = 1000
     statement_buffer: List[str] = []
     line_numbers: List[int] = []
 
-    def _reset_statement() -> None:
+    def reset() -> None:
         statement_buffer.clear()
         line_numbers.clear()
 
-    for line, original_line in filtered_lines:
+    for line, line_no in filtered:
         statement_buffer.append(line)
-        line_numbers.append(original_line)
+        line_numbers.append(line_no)
         statement_text = "\n".join(statement_buffer)
-
         if not statement_text.strip():
-            _reset_statement()
+            reset()
             continue
-
         if sqlite3.complete_statement(statement_text):
             try:
                 cursor.executescript(statement_text)
             except sqlite3.Error as exc:
-                statement_preview = "\n".join(
-                    stmt_line for stmt_line in statement_buffer if stmt_line.strip()
+                snippet = "\n".join(
+                    l for l in statement_buffer if l.strip()
                 ).strip()
-                if statement_preview and len(statement_preview) > MAX_PREVIEW_CHARS:
-                    statement_preview = f"{statement_preview[:MAX_PREVIEW_CHARS]}..."
+                if snippet and len(snippet) > max_preview:
+                    snippet = f"{snippet[:max_preview]}..."
                 raise SqlImportError(
                     exc.args[0] if exc.args else str(exc),
-                    line=line_numbers[0],
-                    statement=statement_preview or None,
+                    line=line_numbers[0] if line_numbers else None,
+                    statement=snippet or None,
                 ) from exc
-            _reset_statement()
+            reset()
 
     if any(line.strip() for line in statement_buffer):
-        statement_preview = "\n".join(
-            stmt_line for stmt_line in statement_buffer if stmt_line.strip()
-        ).strip()
-        if statement_preview and len(statement_preview) > MAX_PREVIEW_CHARS:
-            statement_preview = f"{statement_preview[:MAX_PREVIEW_CHARS]}..."
+        snippet = "\n".join(l for l in statement_buffer if l.strip()).strip()
+        if snippet and len(snippet) > max_preview:
+            snippet = f"{snippet[:max_preview]}..."
         raise SqlImportError(
             "SQL script ends with an incomplete statement",
             line=line_numbers[0] if line_numbers else None,
-            statement=statement_preview or None,
+            statement=snippet or None,
         )
 
 
-def _iter_database_dirs() -> Iterable[Path]:
-    _ensure_datasets_root()
-    for entry in sorted(DATASETS_ROOT.iterdir()):
-        if entry.is_dir():
-            yield entry
+def _extract_csv_map_from_sql(sql_script: str) -> Dict[str, bytes]:
+    csv_map: Dict[str, bytes] = {}
+    with sqlite3.connect(":memory:") as conn:
+        filtered = _filter_sqlite_unsupported(sql_script)
+        _execute_sql_script(conn, filtered)
+        tables = [
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            )
+        ]
+        if not tables:
+            raise ValueError("SQL script did not create any tables")
 
-
-def _iter_csv_files(db_path: Path) -> Iterable[Path]:
-    for entry in sorted(db_path.iterdir()):
-        if entry.is_file() and entry.suffix.lower() == ".csv":
-            yield entry
-
-
-def list_databases() -> List[DatabaseSummary]:
-    """Return every database available under the datasets root."""
-
-    databases: List[DatabaseSummary] = []
-    for db_dir in _iter_database_dirs():
-        databases.append(_summarise_database_dir(db_dir))
-    return databases
-
-
-def _resolve_database_path(database: str) -> Path:
-    normalised = _normalise_database_name(database)
-    db_path = (DATASETS_ROOT / normalised).resolve()
-    if not db_path.is_dir():
-        available = ", ".join(db.name for db in list_databases()) or "<none>"
-        raise FileNotFoundError(
-            f"Database '{database}' not found under {DATASETS_ROOT}. Available: {available}"
-        )
-    return db_path
-
-
-def _write_csv_file(destination: Path, filename: str, data: bytes) -> None:
-    dest_path = destination / filename
-    if dest_path.exists():
-        raise ValueError(f"Duplicate table name '{dest_path.stem}' detected during import")
-    with dest_path.open("wb") as handle:
-        handle.write(data)
-
-
-def create_database_from_zip(database: str, zip_bytes: bytes) -> DatabaseSummary:
-    normalised_name = _normalise_database_name(database)
-    _ensure_datasets_root(create=True)
-    destination = DATASETS_ROOT / normalised_name
-    if destination.exists():
-        raise FileExistsError(f"Database '{normalised_name}' already exists")
-
-    try:
-        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
-            members = [info for info in archive.infolist() if not info.is_dir()]
-            csv_members = []
-            for info in members:
-                rel_path = Path(info.filename)
-                if rel_path.is_absolute() or ".." in rel_path.parts:
-                    raise ValueError("ZIP archive contains invalid paths")
-                if rel_path.name.startswith(".") or (
-                    rel_path.parts and rel_path.parts[0].startswith("__MACOSX")
-                ):
-                    continue
-                if rel_path.suffix.lower() != ".csv":
-                    continue
-                csv_members.append(info)
-
-            if not csv_members:
-                raise ValueError("ZIP archive does not contain any CSV files")
-
-            destination.mkdir(parents=True, exist_ok=False)
-            try:
-                for info in csv_members:
-                    rel_path = Path(info.filename)
-                    table_name = _normalise_table_stem(rel_path.stem)
-                    file_name = f"{table_name}.csv"
-                    with archive.open(info) as src:
-                        _write_csv_file(destination, file_name, src.read())
-            except Exception:
-                shutil.rmtree(destination, ignore_errors=True)
-                raise
-    except zipfile.BadZipFile as exc:
-        raise ValueError("Provided file is not a valid ZIP archive") from exc
-
-    return _summarise_database_dir(destination)
-
-
-def create_database_from_sql(database: str, sql_script: str) -> DatabaseSummary:
-    normalised_name = _normalise_database_name(database)
-    _ensure_datasets_root(create=True)
-    destination = DATASETS_ROOT / normalised_name
-    if destination.exists():
-        raise FileExistsError(f"Database '{normalised_name}' already exists")
-
-    destination.mkdir(parents=True, exist_ok=False)
-    try:
-        with sqlite3.connect(":memory:") as conn:
-            filtered_lines = _filter_sqlite_unsupported(sql_script)
-            _execute_sql_script(conn, filtered_lines)
-            tables = [
-                row[0]
-                for row in conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+        for table in tables:
+            table_name = _normalise_table_stem(table)
+            df = pd.read_sql_query(f'SELECT * FROM "{table}"', conn)
+            buf = io.StringIO()
+            df.to_csv(buf, index=False)
+            filename = f"{table_name}.csv"
+            if filename in csv_map:
+                raise ValueError(
+                    f"Duplicate table name '{table_name}' generated during SQL import"
                 )
-            ]
-            if not tables:
-                raise ValueError("SQL script did not create any tables")
-
-            for table in tables:
-                normalised_table = _normalise_table_stem(table)
-                df = pd.read_sql_query(f'SELECT * FROM "{table}"', conn)
-                csv_path = destination / f"{normalised_table}.csv"
-                if csv_path.exists():
-                    raise ValueError(f"Duplicate table name '{normalised_table}' generated during SQL import")
-                df.to_csv(csv_path, index=False)
-    except Exception:
-        shutil.rmtree(destination, ignore_errors=True)
-        raise
-
-    return _summarise_database_dir(destination)
+            csv_map[filename] = buf.getvalue().encode("utf-8")
+    return csv_map
 
 
-def load_database_env(database: str) -> Dict[str, pd.DataFrame]:
-    """Load a database into the evaluation environment (relations keyed by lower-case name)."""
+def _user_dataset_prefix(user_id: str, database: str) -> str:
+    safe_user = _normalise_user_id(user_id)
+    safe_db = _normalise_database_name(database)
+    return f"{safe_user}/{safe_db}"
 
-    db_path = _resolve_database_path(database)
-    env: Dict[str, pd.DataFrame] = {}
-    for csv_path in _iter_csv_files(db_path):
-        rel_name = csv_path.stem.lower()
-        df = pd.read_csv(csv_path)
-        df = df.copy()
-        df.columns = [c.lower() for c in df.columns]
-        df["_prov"] = [[(rel_name, int(i))] for i in range(len(df))]
-        env[rel_name] = df
-    if not env:
+
+def create_database_from_zip(
+    database: str,
+    zip_bytes: bytes,
+    *,
+    user_id: Optional[str] = None,
+) -> DatabaseSummary:
+    if not user_id:
+        raise ValueError("Authenticated user id is required for dataset import.")
+
+    name = _normalise_database_name(database)
+    default_rows = _default_rows_by_name()
+    if name in default_rows:
+        raise ValueError(
+            f"Database '{name}' is a shared default name and cannot be overwritten."
+        )
+
+    user_rows = _user_rows_by_name(user_id)
+    existing = user_rows.get(name)
+    if existing and existing.source_type == "user" and not existing.hidden:
+        raise FileExistsError(f"Database '{name}' already exists")
+
+    csv_map = _extract_csv_map_from_zip(zip_bytes)
+    bucket = os.getenv("SUPABASE_USER_DATASETS_BUCKET", "ra-user-datasets")
+    prefix = _user_dataset_prefix(user_id, name)
+    if existing and existing.source_type == "user":
+        storage_delete_prefix(existing.bucket_name, existing.object_prefix)
+    _upload_csv_map(bucket=bucket, prefix=prefix, csv_map=csv_map)
+
+    upsert_user_dataset(
+        user_id=user_id,
+        database_name=name,
+        source_type="user",
+        bucket_name=bucket,
+        object_prefix=prefix,
+        is_default=False,
+        hidden=False,
+    )
+    clear_schema_preview_cache(name)
+    return DatabaseSummary(
+        name=name,
+        tables=sorted(PurePosixPath(f).stem.lower() for f in csv_map.keys()),
+        is_default=False,
+    )
+
+
+def create_database_from_sql(
+    database: str,
+    sql_script: str,
+    *,
+    user_id: Optional[str] = None,
+) -> DatabaseSummary:
+    if not user_id:
+        raise ValueError("Authenticated user id is required for dataset import.")
+
+    name = _normalise_database_name(database)
+    default_rows = _default_rows_by_name()
+    if name in default_rows:
+        raise ValueError(
+            f"Database '{name}' is a shared default name and cannot be overwritten."
+        )
+
+    user_rows = _user_rows_by_name(user_id)
+    existing = user_rows.get(name)
+    if existing and existing.source_type == "user" and not existing.hidden:
+        raise FileExistsError(f"Database '{name}' already exists")
+
+    csv_map = _extract_csv_map_from_sql(sql_script)
+    bucket = os.getenv("SUPABASE_USER_DATASETS_BUCKET", "ra-user-datasets")
+    prefix = _user_dataset_prefix(user_id, name)
+    if existing and existing.source_type == "user":
+        storage_delete_prefix(existing.bucket_name, existing.object_prefix)
+    _upload_csv_map(bucket=bucket, prefix=prefix, csv_map=csv_map)
+
+    upsert_user_dataset(
+        user_id=user_id,
+        database_name=name,
+        source_type="user",
+        bucket_name=bucket,
+        object_prefix=prefix,
+        is_default=False,
+        hidden=False,
+    )
+    clear_schema_preview_cache(name)
+    return DatabaseSummary(
+        name=name,
+        tables=sorted(PurePosixPath(f).stem.lower() for f in csv_map.keys()),
+        is_default=False,
+    )
+
+
+def delete_database(database: str, *, user_id: Optional[str] = None) -> None:
+    if not user_id:
+        raise ValueError("Authenticated user id is required.")
+
+    name = _normalise_database_name(database)
+    default_rows = _default_rows_by_name()
+    user_rows = _user_rows_by_name(user_id)
+
+    if name in default_rows:
+        default_row = default_rows[name]
+        upsert_user_dataset(
+            user_id=user_id,
+            database_name=name,
+            source_type="default",
+            bucket_name=default_row.bucket_name,
+            object_prefix=default_row.object_prefix,
+            is_default=True,
+            hidden=True,
+        )
+        clear_schema_preview_cache(name)
+        return
+
+    row = user_rows.get(name)
+    if row and row.source_type == "user":
+        try:
+            storage_delete_prefix(row.bucket_name, row.object_prefix)
+        except SupabaseStorageError as exc:
+            raise FileNotFoundError(str(exc)) from exc
+        delete_user_dataset_row(user_id, name)
+        clear_schema_preview_cache(name)
+        return
+
+    raise FileNotFoundError(f"Database '{name}' not found")
+
+
+def is_default_database(database: str) -> bool:
+    name = _normalise_database_name(database)
+    return name in _default_rows_by_name()
+
+
+def _load_relation_dataframe(bucket: str, object_path: str, relation_name: str) -> pd.DataFrame:
+    raw = storage_download_object(bucket, object_path)
+    df = pd.read_csv(io.BytesIO(raw))
+    df = df.copy()
+    df.columns = [c.lower() for c in df.columns]
+    df["_prov"] = [[(relation_name, int(i))] for i in range(len(df))]
+    return df
+
+
+def load_database_env(
+    database: str,
+    *,
+    user_id: Optional[str] = None,
+) -> Dict[str, pd.DataFrame]:
+    location = _resolve_location(database, user_id)
+    names = storage_list_objects(location.bucket, location.prefix)
+    csv_names = [name for name in names if PurePosixPath(name).suffix.lower() == ".csv"]
+    if not csv_names:
         raise ValueError(f"Database '{database}' does not contain any CSV files")
+
+    env: Dict[str, pd.DataFrame] = {}
+    for name in sorted(csv_names):
+        relation = PurePosixPath(name).stem.lower()
+        object_path = _join_prefix(location.prefix, name)
+        env[relation] = _load_relation_dataframe(location.bucket, object_path, relation)
     return env
 
 
-def get_database_schema(database: str, sample_rows: int = 10) -> DatabaseSchema:
-    """Return schema metadata (columns, row counts, previews) for a database."""
+def get_database_schema(
+    database: str,
+    sample_rows: int = 10,
+    *,
+    user_id: Optional[str] = None,
+) -> DatabaseSchema:
+    key = _schema_cache_key(database, sample_rows, user_id)
+    cached = _SCHEMA_PREVIEW_CACHE.get(key)
+    if cached is not None:
+        return cached
 
-    db_path = _resolve_database_path(database)
+    location = _resolve_location(database, user_id)
+    names = storage_list_objects(location.bucket, location.prefix)
+    csv_names = [name for name in names if PurePosixPath(name).suffix.lower() == ".csv"]
+    if not csv_names:
+        raise ValueError(f"Database '{database}' does not contain any CSV files")
+
     tables: List[TableSchema] = []
-    for csv_path in _iter_csv_files(db_path):
-        rel_name = csv_path.stem.lower()
-        df = pd.read_csv(csv_path)
-        df = df.copy()
-        df.columns = [c.lower() for c in df.columns]
-        columns = [ColumnSchema(name=col, dtype=str(df[col].dtype)) for col in df.columns]
-        preview_df = df.head(sample_rows).copy()
+    for name in sorted(csv_names):
+        relation = PurePosixPath(name).stem.lower()
+        object_path = _join_prefix(location.prefix, name)
+        raw = storage_download_object(location.bucket, object_path)
+        row_count = _approximate_csv_row_count(raw)
+        preview_df = pd.read_csv(io.BytesIO(raw), nrows=max(sample_rows, 0))
+        preview_df = preview_df.copy()
+        preview_df.columns = [c.lower() for c in preview_df.columns]
+        columns = [
+            ColumnSchema(name=col, dtype=str(preview_df[col].dtype))
+            for col in preview_df.columns
+        ]
         preview_df = preview_df.where(pd.notnull(preview_df), None)
         sample = preview_df.to_dict(orient="records")
         tables.append(
             TableSchema(
-                name=rel_name,
+                name=relation,
                 columns=columns,
-                row_count=len(df),
+                row_count=row_count,
                 sample_rows=sample,
             )
         )
-    if not tables:
-        raise ValueError(f"Database '{database}' does not contain any CSV files")
-    return DatabaseSchema(name=database, tables=tables)
+    schema = DatabaseSchema(name=database, tables=tables)
+    _SCHEMA_PREVIEW_CACHE[key] = schema
+    return schema
 
 
-def get_table_schema(database: str, relation: str, sample_rows: int = 10) -> TableSchema:
-    """Return metadata for a single relation within a database."""
-
-    db_path = _resolve_database_path(database)
-    target = None
+def get_table_schema(
+    database: str,
+    relation: str,
+    sample_rows: int = 10,
+    *,
+    user_id: Optional[str] = None,
+) -> TableSchema:
+    location = _resolve_location(database, user_id)
     relation_lower = relation.lower()
-    for csv_path in _iter_csv_files(db_path):
-        if csv_path.stem.lower() == relation_lower:
-            target = csv_path
-            break
-    if target is None:
+    object_name = f"{relation_lower}.csv"
+    names = storage_list_objects(location.bucket, location.prefix)
+    if object_name not in names:
         raise FileNotFoundError(
             f"Relation '{relation}' not found in database '{database}'"
         )
-    df = pd.read_csv(target)
+    object_path = _join_prefix(location.prefix, object_name)
+    raw = storage_download_object(location.bucket, object_path)
+    df = pd.read_csv(io.BytesIO(raw))
     df = df.copy()
     df.columns = [c.lower() for c in df.columns]
     columns = [ColumnSchema(name=col, dtype=str(df[col].dtype)) for col in df.columns]
@@ -345,16 +635,17 @@ def get_table_schema(database: str, relation: str, sample_rows: int = 10) -> Tab
         row_count=len(df),
         sample_rows=sample,
     )
-class SqlImportError(ValueError):
-    """Raised when SQL import fails with additional context."""
 
-    def __init__(
-        self,
-        message: str,
-        *,
-        line: Optional[int] = None,
-        statement: Optional[str] = None,
-    ):
-        super().__init__(message)
-        self.line = line
-        self.statement = statement
+
+def read_database_file_bytes(
+    database: str,
+    filename: str,
+    *,
+    user_id: Optional[str] = None,
+) -> bytes:
+    location = _resolve_location(database, user_id)
+    object_path = _join_prefix(location.prefix, filename)
+    try:
+        return storage_download_object(location.bucket, object_path)
+    except SupabaseStorageError as exc:
+        raise FileNotFoundError(str(exc)) from exc
