@@ -5,3 +5,4 @@ pandas
 uvicorn[standard]
 requests
 python-dotenv
+pytest
