@@ -18,6 +18,7 @@ from utils.auth import require_authentication
 
 PREVIEW_CACHE_KEY = "db_preview_cache"
 PREVIEW_ERROR_KEY = "db_preview_errors"
+PROTECTED_DEFAULT_DATASETS = {"sales", "university", "testdb"}
 
 
 @st.cache_data(ttl=30, show_spinner=False)
@@ -280,6 +281,7 @@ def main():
                     preview_errors = st.session_state[PREVIEW_ERROR_KEY]
                     preview_loaded = db_name in preview_cache
 
+                    st.write("**Table list:**")
                     if preview_loaded:
                         if st.button("Refresh table previews", key=f"refresh_{db_name}"):
                             _fetch_database_preview(api_client, db_name)
@@ -295,7 +297,6 @@ def main():
                         PREVIEW_ERROR_KEY
                     ].get(db_name)
 
-                    st.write("**Table list:**")
                     if preview_error:
                         st.warning(
                             f"Table previews unavailable: {preview_error}",
@@ -318,26 +319,31 @@ def main():
                     st.write(
                         f"• Default dataset: {'Yes' if db.get('is_default') else 'No'}"
                     )
-                    action_label = (
-                        f"Hide {db['name']}"
-                        if db.get("is_default")
-                        else f"Delete {db['name']}"
+                    show_action_button = not (
+                        db.get("is_default")
+                        and db_name.lower() in PROTECTED_DEFAULT_DATASETS
                     )
-                    if st.button(
-                        action_label,
-                        key=f"delete_db_{db['name']}",
-                    ):
-                        try:
-                            api_client.delete_database(db_name)
-                            _clear_preview_cache(db_name)
-                            _clear_db_list_cache()
-                            if db.get("is_default"):
-                                st.success(f"Hidden shared dataset: {db_name}")
-                            else:
-                                st.success(f"Deleted database: {db_name}")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Delete failed: {e}")
+                    if show_action_button:
+                        action_label = (
+                            f"Hide {db['name']}"
+                            if db.get("is_default")
+                            else f"Delete {db['name']}"
+                        )
+                        if st.button(
+                            action_label,
+                            key=f"delete_db_{db['name']}",
+                        ):
+                            try:
+                                api_client.delete_database(db_name)
+                                _clear_preview_cache(db_name)
+                                _clear_db_list_cache()
+                                if db.get("is_default"):
+                                    st.success(f"Hidden shared dataset: {db_name}")
+                                else:
+                                    st.success(f"Deleted database: {db_name}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Delete failed: {e}")
     else:
         st.info("No databases available")
 

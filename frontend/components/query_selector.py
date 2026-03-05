@@ -6,6 +6,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 
+from utils.query_difficulty import (
+    difficulty_display_label,
+    normalize_difficulty,
+    sort_queries_by_difficulty,
+)
+
 
 _OP_DISPLAY_NAMES: Dict[str, str] = {
     "rel": "Relation Lookup",
@@ -271,12 +277,13 @@ def query_selector_component(
     query_options = []
     query_map = {}
 
-    for query in queries:
+    for query in sort_queries_by_difficulty(queries):
+        normalized_difficulty = normalize_difficulty(query.get("difficulty"))
         difficulty_icon = {
             "beginner": "🟢",
             "intermediate": "🟡",
-            "advanced": "🔴",
-        }.get(query.get("difficulty", "beginner"), "🟢")
+            "difficult": "🔴",
+        }.get(normalized_difficulty, "⚪")
 
         prompt_text = (query.get("prompt") or "").strip()
         if len(prompt_text) > 80:
@@ -285,7 +292,7 @@ def query_selector_component(
         query_options.append(option_text)
         query_map[option_text] = query
 
-    st.markdown("**Difficulty Levels:** 🟢 beginner  🟡 intermediate  🔴 advanced")
+    st.markdown("**Difficulty Levels:** 🟢 beginner  🟡 intermediate  🔴 difficult")
 
     selected_option = st.selectbox(
         "",
@@ -311,9 +318,7 @@ def query_selector_component(
 
     # Display query details
     st.markdown(f"**Query Description:** {selected_query['prompt']}")
-    st.markdown(
-        f"**Difficulty:** {selected_query.get('difficulty', 'beginner').title()}"
-    )
+    st.markdown(f"**Difficulty:** {difficulty_display_label(selected_query.get('difficulty'))}")
     hints = selected_query.get("hints") or []
     if hints:
         hints_line = ", ".join(hints)

@@ -462,7 +462,7 @@ def storage_delete_prefix(bucket: str, prefix: str) -> None:
             **_service_headers(),
             "Content-Type": "application/json",
         },
-        json_body=objects,
+        json_body={"prefixes": objects},
         error_cls=SupabaseStorageError,
         error_message="Failed to delete storage objects.",
     )

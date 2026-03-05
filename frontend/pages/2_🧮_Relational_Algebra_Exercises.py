@@ -20,6 +20,34 @@ from components.query_selector import (
     _render_trace_ui,
     syntax_help_html,
 )
+from utils.query_difficulty import sort_queries_by_difficulty
+
+OPERATOR_OPTIONS = [
+    ("selection", "Selection"),
+    ("project", "Project"),
+    ("rename", "Rename"),
+    ("intersection", "Set Intersection"),
+    ("union", "Set Union"),
+    ("difference", "Set Difference"),
+    ("cartesian product", "Cartesian Product"),
+    ("natural join", "Natural Join"),
+    ("division", "Division"),
+]
+
+OPERATOR_ALIASES = {
+    "selection": {"selection", "select", "sigma", "σ"},
+    "project": {"project", "projection", "pi", "π"},
+    "rename": {"rename", "renaming", "rho", "ρ"},
+}
+
+
+def _query_matches_selected_operators(query: Dict[str, Any], selected_ops: set[str]) -> bool:
+    hints = [str(hint).lower() for hint in (query.get("hints") or [])]
+    hints_text = " ".join(hints)
+    return all(
+        any(alias in hints_text for alias in OPERATOR_ALIASES.get(op, {op}))
+        for op in selected_ops
+    )
 
 
 def _render_table_preview_html(
@@ -400,7 +428,7 @@ def main():
     if st.session_state.queries_for_database != selected_database:
         try:
             queries = api_client.get_queries(selected_database)
-            st.session_state.available_queries = queries
+            st.session_state.available_queries = sort_queries_by_difficulty(queries)
             st.session_state.has_catalog = bool(queries)
             st.session_state.catalog_error = None
         except Exception as exc:
@@ -520,16 +548,8 @@ def main():
                 "Select one or more operators to filter the available exercises."
             )
 
-            operator_options = [
-                ("intersection", "Set Intersection"),
-                ("union", "Set Union"),
-                ("difference", "Set Difference"),
-                ("cartesian product", "Cartesian Product"),
-                ("natural join", "Natural Join"),
-                ("division", "Division"),
-            ]
-            operator_labels = [label for _, label in operator_options]
-            operator_map = {label: key for key, label in operator_options}
+            operator_labels = [label for _, label in OPERATOR_OPTIONS]
+            operator_map = {label: key for key, label in OPERATOR_OPTIONS}
 
             selected_labels = st.multiselect(
                 "Choose operators",
@@ -543,8 +563,7 @@ def main():
             else:
                 filtered_queries = []
                 for query in st.session_state.available_queries:
-                    hints = [hint.lower() for hint in (query.get("hints") or [])]
-                    if any(op in hints for op in selected_ops):
+                    if _query_matches_selected_operators(query, selected_ops):
                         filtered_queries.append(query)
 
                 if not filtered_queries:

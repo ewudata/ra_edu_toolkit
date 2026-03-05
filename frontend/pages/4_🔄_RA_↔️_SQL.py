@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
 from utils.auth import require_authentication
+from utils.query_difficulty import difficulty_display_label, sort_queries_by_difficulty
 
 
 def _format_solution_block(solution: Optional[Dict[str, Any]]) -> None:
@@ -81,7 +82,9 @@ def main() -> None:
         return
 
     try:
-        queries: List[Dict[str, Any]] = api_client.get_queries(selected_name)
+        queries: List[Dict[str, Any]] = sort_queries_by_difficulty(
+            api_client.get_queries(selected_name)
+        )
     except Exception as exc:
         st.error(f"Failed to load exercises for '{selected_name}': {exc}")
         return
@@ -97,7 +100,7 @@ def main() -> None:
         prompt_text = (query.get("prompt") or query.get("id") or "").strip()
         if len(prompt_text) > 80:
             prompt_text = f"{prompt_text[:77]}..."
-        difficulty = query.get("difficulty") or "Unknown difficulty"
+        difficulty = difficulty_display_label(query.get("difficulty"))
         header = f"{prompt_text} · {difficulty}"
         with st.expander(header):
             st.write(f"**Prompt:** {query.get('prompt', 'No prompt provided.')}")

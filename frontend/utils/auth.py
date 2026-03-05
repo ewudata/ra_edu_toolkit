@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import os
 
 import streamlit as st
@@ -83,7 +84,20 @@ def require_authentication(api_client: APIClient) -> bool:
     try:
         frontend_redirect = os.getenv("FRONTEND_BASE_URL", "http://localhost:8501")
         oauth_url = api_client.get_google_login_url(frontend_redirect)
-        st.link_button("Continue with Google", oauth_url, type="primary")
+        safe_oauth_url = html.escape(oauth_url, quote=True)
+        st.markdown(
+            (
+                '<a href="'
+                f"{safe_oauth_url}"
+                '" target="_self" '
+                'style="display:inline-block;padding:0.5rem 0.85rem;'
+                'border-radius:0.5rem;background:#1f77b4;color:#fff;'
+                'text-decoration:none;font-weight:600;">'
+                "Log in with Google"
+                "</a>"
+            ),
+            unsafe_allow_html=True,
+        )
     except Exception as exc:
         st.session_state.auth_error = str(exc)
 

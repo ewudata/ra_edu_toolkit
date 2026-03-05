@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.api_client import APIClient
 from utils.auth import require_authentication
+from utils.query_difficulty import difficulty_display_label, sort_queries_by_difficulty
 from components.query_input import database_selector_component
 from components.result_viewer import result_viewer_component, error_display_component
 
@@ -60,7 +61,7 @@ def main():
 
     # Get query list
     try:
-        queries = api_client.get_queries(selected_database)
+        queries = sort_queries_by_difficulty(api_client.get_queries(selected_database))
     except Exception as e:
         st.error(f"Failed to get query list: {e}")
         return
@@ -74,7 +75,7 @@ def main():
 
     query_options = {}
     for query in queries:
-        difficulty = query.get("difficulty", "Unknown difficulty")
+        difficulty = difficulty_display_label(query.get("difficulty"))
         prompt_text = (query.get("prompt") or "").strip()
         if len(prompt_text) > 80:
             prompt_text = f"{prompt_text[:77]}..."
@@ -102,7 +103,9 @@ def main():
         st.write(f"**Query Description:** {selected_query['prompt']}")
 
         if selected_query.get("difficulty"):
-            st.write(f"**Difficulty:** {selected_query['difficulty']}")
+            st.write(
+                f"**Difficulty:** {difficulty_display_label(selected_query.get('difficulty'))}"
+            )
 
         if selected_query.get("hints"):
             st.write("**Hints:**")

@@ -76,3 +76,16 @@ def test_clear_db_list_cache_calls_clear_hooks():
         module._cached_get_databases = original_databases
 
     assert called == {"health": 1, "databases": 1}
+
+
+def test_database_manager_protects_default_dataset_actions():
+    source = Path("frontend/pages/1_🗄️_Database_Manager.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "PROTECTED_DEFAULT_DATASETS" in source
+    assert '"sales"' in source
+    assert '"university"' in source
+    assert '"testdb"' in source
+    assert "db_name.lower() in PROTECTED_DEFAULT_DATASETS" in source
+    assert "show_action_button = not (" in source
