@@ -215,3 +215,6 @@ secrets.*
 test-results/
 coverage/
 .DS_Store
+
+# Local git worktrees
+.worktrees/
