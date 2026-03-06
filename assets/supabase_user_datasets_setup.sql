@@ -56,6 +56,17 @@ create table if not exists public.default_datasets (
     updated_at timestamptz not null default now()
 );
 
+create table if not exists public.query_mastery (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    database_name text not null,
+    query_id text not null,
+    mastered_at timestamptz not null default now(),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    unique (user_id, database_name, query_id)
+);
+
 create index if not exists user_datasets_user_idx
     on public.user_datasets (user_id, database_name);
 
@@ -64,6 +75,9 @@ create index if not exists user_datasets_lookup_idx
 
 create index if not exists default_datasets_enabled_idx
     on public.default_datasets (enabled, dataset_name);
+
+create index if not exists query_mastery_user_idx
+    on public.query_mastery (user_id, database_name, query_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -85,8 +99,14 @@ create trigger trg_default_datasets_updated_at
 before update on public.default_datasets
 for each row execute function public.set_updated_at();
 
+drop trigger if exists trg_query_mastery_updated_at on public.query_mastery;
+create trigger trg_query_mastery_updated_at
+before update on public.query_mastery
+for each row execute function public.set_updated_at();
+
 alter table public.user_datasets enable row level security;
 alter table public.default_datasets enable row level security;
+alter table public.query_mastery enable row level security;
 
 drop policy if exists "user_datasets_select_own" on public.user_datasets;
 create policy "user_datasets_select_own"
@@ -119,3 +139,28 @@ on public.default_datasets
 for select
 to authenticated
 using (enabled = true);
+
+drop policy if exists "query_mastery_select_own" on public.query_mastery;
+create policy "query_mastery_select_own"
+on public.query_mastery
+for select
+using (auth.uid() = user_id);
+
+drop policy if exists "query_mastery_insert_own" on public.query_mastery;
+create policy "query_mastery_insert_own"
+on public.query_mastery
+for insert
+with check (auth.uid() = user_id);
+
+drop policy if exists "query_mastery_update_own" on public.query_mastery;
+create policy "query_mastery_update_own"
+on public.query_mastery
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "query_mastery_delete_own" on public.query_mastery;
+create policy "query_mastery_delete_own"
+on public.query_mastery
+for delete
+using (auth.uid() = user_id);

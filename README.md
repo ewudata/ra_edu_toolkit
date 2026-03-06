@@ -86,10 +86,11 @@ cp .env.example .env
 
 For production, use `.env.production` as a template and set `DEBUG=False` and `RELOAD=False`.
 
-For Google login and user dataset metadata:
+For Google login, user dataset metadata, and query mastery tracking:
 1. Enable Google provider in Supabase Authentication.
 2. Add redirect URL `http://localhost:8000/auth/google/callback` (or your backend URL).
 3. Run `assets/supabase_user_datasets_setup.sql` in Supabase SQL editor.
+   This provisions `user_datasets`, `default_datasets`, and `query_mastery`.
 4. Create private storage buckets:
    - `ra-default-datasets`
    - `ra-user-datasets` (or set `SUPABASE_USER_DATASETS_BUCKET`)
