@@ -4,3 +4,4 @@ requests
 pandas
 python-dotenv
 pytest
+streamlit-cookies-manager-ext

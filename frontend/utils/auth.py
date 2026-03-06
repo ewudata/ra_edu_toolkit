@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 import html
+import json
 import os
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import streamlit as st
+from streamlit_cookies_manager_ext import EncryptedCookieManager
 
 from utils.api_client import APIClient
 
 RETURN_PAGE_PARAM = "return_page"
 AUTH_PARAM_KEYS = ("auth_error", "auth_token", "auth_email")
+AUTH_COOKIE_KEY = "ra_edu_auth"
+AUTH_COOKIE_PASSWORD_ENV = "AUTH_COOKIE_PASSWORD"
+AUTH_COOKIE_PREFIX = "ra_edu_"
+AUTH_COOKIE_PENDING_WRITE_KEY = "auth_cookie_sync_pending"
+AUTH_COOKIE_PENDING_CLEAR_KEY = "auth_cookie_clear_pending"
 
 
 def _init_auth_state() -> None:
@@ -21,6 +28,10 @@ def _init_auth_state() -> None:
         st.session_state.auth_user_email = None
     if "auth_error" not in st.session_state:
         st.session_state.auth_error = None
+    if AUTH_COOKIE_PENDING_WRITE_KEY not in st.session_state:
+        st.session_state[AUTH_COOKIE_PENDING_WRITE_KEY] = False
+    if AUTH_COOKIE_PENDING_CLEAR_KEY not in st.session_state:
+        st.session_state[AUTH_COOKIE_PENDING_CLEAR_KEY] = False
 
 
 def _apply_auth_token(api_client: APIClient) -> None:
@@ -31,7 +42,101 @@ def _apply_auth_token(api_client: APIClient) -> None:
         api_client.clear_auth_token()
 
 
-def _consume_oauth_callback_params(api_client: APIClient) -> None:
+def _serialize_persisted_auth(token: str, email: str) -> str:
+    return json.dumps(
+        {"auth_token": token, "auth_user_email": email},
+        separators=(",", ":"),
+    )
+
+
+def _cookie_password() -> str:
+    return (
+        os.getenv(AUTH_COOKIE_PASSWORD_ENV)
+        or os.getenv("OAUTH_STATE_SECRET")
+        or "ra-edu-auth-dev-only"
+    )
+
+
+def _get_cookie_manager() -> EncryptedCookieManager:
+    return EncryptedCookieManager(
+        password=_cookie_password(),
+        prefix=AUTH_COOKIE_PREFIX,
+        path="/",
+    )
+
+
+def _restore_persisted_auth(
+    api_client: APIClient, cookie_manager: EncryptedCookieManager | None
+) -> None:
+    if st.session_state.get("auth_token"):
+        return
+
+    if cookie_manager is None or not cookie_manager.ready():
+        return
+
+    try:
+        raw_cookie = cookie_manager.get(AUTH_COOKIE_KEY)
+        if not raw_cookie:
+            return
+        payload = json.loads(str(raw_cookie))
+    except (TypeError, ValueError):
+        return
+
+    token = payload.get("auth_token")
+    if not token:
+        return
+
+    st.session_state.auth_token = str(token)
+    st.session_state.auth_user_email = str(
+        payload.get("auth_user_email") or "Google User"
+    )
+    st.session_state.auth_error = None
+    _apply_auth_token(api_client)
+
+
+def _persist_auth_cookie(
+    cookie_manager: EncryptedCookieManager | None, token: str, email: str
+) -> bool:
+    if cookie_manager is None or not cookie_manager.ready():
+        return False
+    cookie_manager[AUTH_COOKIE_KEY] = _serialize_persisted_auth(token, email)
+    cookie_manager.save()
+    return True
+
+
+def _clear_persisted_auth_cookie(cookie_manager: EncryptedCookieManager | None) -> bool:
+    if cookie_manager is None or not cookie_manager.ready():
+        return False
+    if AUTH_COOKIE_KEY in cookie_manager:
+        del cookie_manager[AUTH_COOKIE_KEY]
+        cookie_manager.save()
+    return True
+
+
+def _sync_pending_auth_cookie_state(
+    cookie_manager: EncryptedCookieManager | None,
+) -> None:
+    if cookie_manager is None or not cookie_manager.ready():
+        return
+
+    if st.session_state.get(AUTH_COOKIE_PENDING_CLEAR_KEY):
+        _clear_persisted_auth_cookie(cookie_manager)
+        st.session_state[AUTH_COOKIE_PENDING_CLEAR_KEY] = False
+
+    if st.session_state.get(AUTH_COOKIE_PENDING_WRITE_KEY) and st.session_state.get(
+        "auth_token"
+    ):
+        _persist_auth_cookie(
+            cookie_manager,
+            st.session_state.auth_token,
+            st.session_state.get("auth_user_email") or "Google User",
+        )
+        st.session_state[AUTH_COOKIE_PENDING_WRITE_KEY] = False
+
+
+def _consume_oauth_callback_params(
+    api_client: APIClient, cookie_manager: EncryptedCookieManager | None
+) -> None:
     params = st.query_params
     token = params.get("auth_token")
     email = params.get("auth_email")
@@ -50,6 +155,13 @@ def _consume_oauth_callback_params(api_client: APIClient) -> None:
         st.session_state.auth_user_email = str(email or "Google User")
         st.session_state.auth_error = None
         _apply_auth_token(api_client)
+        if not _persist_auth_cookie(
+            cookie_manager,
+            st.session_state.auth_token,
+            st.session_state.auth_user_email,
+        ):
+            st.session_state[AUTH_COOKIE_PENDING_WRITE_KEY] = True
+            return
         for key in AUTH_PARAM_KEYS:
             if key in params:
                 del params[key]
@@ -87,14 +199,33 @@ def _logout(api_client: APIClient) -> None:
     st.session_state.auth_error = None
     st.session_state.progress_cache = {}
     st.session_state.progress_error = None
+    st.session_state[AUTH_COOKIE_PENDING_WRITE_KEY] = False
+    cookie_manager = _get_cookie_manager()
+    if not _clear_persisted_auth_cookie(cookie_manager):
+        st.session_state[AUTH_COOKIE_PENDING_CLEAR_KEY] = True
+    else:
+        st.session_state[AUTH_COOKIE_PENDING_CLEAR_KEY] = False
     _apply_auth_token(api_client)
     st.rerun()
 
 
 def render_sidebar_account(api_client: APIClient) -> bool:
     _init_auth_state()
-    _consume_oauth_callback_params(api_client)
+    cookie_manager = _get_cookie_manager()
+    _consume_oauth_callback_params(api_client, cookie_manager)
+    _sync_pending_auth_cookie_state(cookie_manager)
+    _restore_persisted_auth(api_client, cookie_manager)
     _apply_auth_token(api_client)
+
+    if (
+        not st.session_state.get("auth_token")
+        and cookie_manager is not None
+        and not cookie_manager.ready()
+    ):
+        with st.sidebar:
+            st.header("Account")
+            st.caption("Loading session...")
+        st.stop()
 
     with st.sidebar:
         st.header("Account")
