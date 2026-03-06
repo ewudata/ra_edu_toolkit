@@ -150,7 +150,9 @@ def main():
 
     # Initialize API client
     api_client = APIClient()
-    if not require_authentication(api_client):
+    if not require_authentication(
+        api_client, return_page="pages/1_🗄️_Database_Manager.py"
+    ):
         return
 
     # Check backend connection

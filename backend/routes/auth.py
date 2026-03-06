@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
@@ -19,6 +19,21 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 def _frontend_base_url() -> str:
     return os.getenv("FRONTEND_BASE_URL", "http://localhost:8501").rstrip("/")
+
+
+def _merge_redirect_query_params(target_url: str, params: dict[str, str]) -> str:
+    split_url = urlsplit(target_url)
+    merged_query = dict(parse_qsl(split_url.query, keep_blank_values=True))
+    merged_query.update(params)
+    return urlunsplit(
+        (
+            split_url.scheme,
+            split_url.netloc,
+            split_url.path,
+            urlencode(merged_query),
+            split_url.fragment,
+        )
+    )
 
 
 class GoogleAuthStartResponse(BaseModel):
@@ -78,11 +93,11 @@ def google_callback(
         )
         return RedirectResponse(url=destination, status_code=status.HTTP_302_FOUND)
 
-    redirect_query = urlencode(
+    target = _merge_redirect_query_params(
+        frontend_redirect,
         {
             "auth_token": token,
             "auth_email": user.get("email") or "",
-        }
+        },
     )
-    target = f"{frontend_redirect.rstrip('/')}/?{redirect_query}"
     return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)

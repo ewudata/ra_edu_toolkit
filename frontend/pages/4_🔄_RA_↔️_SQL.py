@@ -48,7 +48,9 @@ def main() -> None:
     )
 
     api_client = APIClient()
-    if not require_authentication(api_client):
+    if not require_authentication(
+        api_client, return_page="pages/4_🔄_RA_↔️_SQL.py"
+    ):
         return
 
     try:

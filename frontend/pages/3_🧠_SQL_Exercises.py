@@ -26,7 +26,9 @@ def main():
 
     # Initialize API client
     api_client = APIClient()
-    if not require_authentication(api_client):
+    if not require_authentication(
+        api_client, return_page="pages/3_🧠_SQL_Exercises.py"
+    ):
         return
 
     # Check backend connection

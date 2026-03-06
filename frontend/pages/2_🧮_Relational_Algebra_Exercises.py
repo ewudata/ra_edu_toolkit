@@ -149,7 +149,9 @@ def main():
     st.header("📊 Choose a Database")
 
     api_client = APIClient()
-    if not require_authentication(api_client):
+    if not require_authentication(
+        api_client, return_page="pages/2_🧮_Relational_Algebra_Exercises.py"
+    ):
         return
 
     try:
@@ -185,6 +187,8 @@ def main():
         st.session_state.custom_query_last_expression = ""
     if "operator_filter_select" not in st.session_state:
         st.session_state.operator_filter_select = []
+    if st.session_state.practice_mode == "predefined":
+        st.session_state.practice_mode = "operators"
 
     # Get database list
     try:
@@ -295,6 +299,14 @@ def main():
             background-color: rgba(255, 255, 255, 0.28) !important;
             border-color: rgba(255, 255, 255, 0.45) !important;
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35), 0 4px 10px rgba(15, 23, 42, 0.18);
+        }
+        [data-baseweb="tag"] {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid rgba(148, 163, 184, 0.6) !important;
+        }
+        [data-baseweb="tag"] span {
+            color: #0f172a !important;
         }
         </style>
         """,
@@ -439,60 +451,39 @@ def main():
 
     if st.session_state.catalog_error:
         st.warning(
-            "Pre-defined queries could not be loaded from `catalog.json` "
+            "The query catalog could not be loaded from `catalog.json` "
             f"for **{selected_database}**: {st.session_state.catalog_error}"
         )
 
     st.markdown("---")
     st.header("🧭 Choose How You Want to Practice")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         st.markdown(
-            "**📚 Pre-defined Queries**\n\n"
-            "Use curated exercises sourced from the dataset's `catalog.json` file."
-        )
-        if st.session_state.has_catalog:
-            selected = st.session_state.practice_mode == "predefined"
-            if st.button(
-                "Practice with Pre-defined Queries",
-                key="start_predefined",
-                type="primary" if not selected else "secondary",
-            ):
-                st.session_state.practice_mode = "predefined"
-        else:
-            st.caption("This database does not provide a catalog of pre-defined queries.")
-            st.button(
-                "practice with Pre-defined Queries",
-                key="start_predefined_disabled",
-                disabled=True,
-            )
-
-    with col2:
-        st.markdown(
-            "**🧩 Operator-based Queries**\n\n"
-            "Pick operators like joins or set operations to filter exercises."
+            "**🧩 Operator-Based Queries**\n\n"
+            "Browse the full query catalog or narrow it by operators like joins or set operations."
         )
         if st.session_state.has_catalog:
             selected = st.session_state.practice_mode == "operators"
             if st.button(
-                "Practice by Operator",
+                "Browse Queries",
                 key="start_operator",
                 type="primary" if not selected else "secondary",
             ):
                 st.session_state.practice_mode = "operators"
         else:
             st.caption(
-                "Operator-based practice needs a catalog of pre-defined queries."
+                "This database does not provide a query catalog to browse."
             )
             st.button(
-                "Practice by Operator",
+                "Browse Queries",
                 key="start_operator_disabled",
                 disabled=True,
             )
 
-    with col3:
+    with col2:
         st.markdown(
             "**✏️ Custom Queries**\n\n"
             "Practice by writing your own relational algebra expressions."
@@ -505,32 +496,7 @@ def main():
         ):
             st.session_state.practice_mode = "custom"
 
-    if st.session_state.practice_mode == "predefined":
-        st.markdown("---")
-        st.header("📚 Pre-defined Queries")
-
-        if not st.session_state.has_catalog:
-            st.warning(
-                "Pre-defined queries are currently unavailable for this database."
-            )
-        elif not st.session_state.available_queries:
-            st.info(
-                "No pre-defined queries were found for this database. "
-                "You can still practice with custom queries."
-            )
-        else:
-            st.write(
-                "Browse the curated exercises and test your solutions against the expected results."
-            )
-            _selected_query, _user_solution, _evaluation_result = (
-                query_selector_component(
-                    st.session_state.available_queries,
-                    api_client,
-                    selected_database,
-                )
-            )
-
-    elif st.session_state.practice_mode == "operators":
+    if st.session_state.practice_mode == "operators":
         st.markdown("---")
         st.header("🧩 Operator-Based Queries")
 
@@ -545,7 +511,7 @@ def main():
             )
         else:
             st.write(
-                "Select one or more operators to filter the available exercises."
+                "Browse all available exercises or select operators to narrow the list."
             )
 
             operator_labels = [label for _, label in OPERATOR_OPTIONS]
@@ -559,27 +525,28 @@ def main():
             selected_ops = {operator_map[label] for label in selected_labels}
 
             if not selected_ops:
-                st.info("Select at least one operator to view matching queries.")
+                filtered_queries = st.session_state.available_queries
             else:
-                filtered_queries = []
-                for query in st.session_state.available_queries:
-                    if _query_matches_selected_operators(query, selected_ops):
-                        filtered_queries.append(query)
+                filtered_queries = [
+                    query
+                    for query in st.session_state.available_queries
+                    if _query_matches_selected_operators(query, selected_ops)
+                ]
 
-                if not filtered_queries:
-                    st.info(
-                        "No queries match the selected operators. "
-                        "Try another operator or clear the filter."
+            if not filtered_queries:
+                st.info(
+                    "No queries match the selected operators. "
+                    "Try another operator or clear the filter."
+                )
+            else:
+                _selected_query, _user_solution, _evaluation_result = (
+                    query_selector_component(
+                        filtered_queries,
+                        api_client,
+                        selected_database,
+                        key_prefix="operator_query_selector",
                     )
-                else:
-                    _selected_query, _user_solution, _evaluation_result = (
-                        query_selector_component(
-                            filtered_queries,
-                            api_client,
-                            selected_database,
-                            key_prefix="operator_query_selector",
-                        )
-                    )
+                )
 
     elif st.session_state.practice_mode == "custom":
         st.markdown("---")
