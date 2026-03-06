@@ -50,6 +50,38 @@ def test_empty_operator_selection_means_show_all_queries():
     assert filtered == queries
 
 
+def test_progress_filter_can_hide_mastered_queries():
+    module = _load_relalg_page_module()
+    queries = [
+        {"id": "q1", "hints": ["selection"]},
+        {"id": "q2", "hints": ["natural join"]},
+    ]
+
+    filtered = module._filter_queries_by_progress(
+        queries,
+        mastered_query_ids={"q1"},
+        progress_filter="unmastered",
+    )
+
+    assert [query["id"] for query in filtered] == ["q2"]
+
+
+def test_progress_filter_can_show_only_mastered_queries():
+    module = _load_relalg_page_module()
+    queries = [
+        {"id": "q1", "hints": ["selection"]},
+        {"id": "q2", "hints": ["natural join"]},
+    ]
+
+    filtered = module._filter_queries_by_progress(
+        queries,
+        mastered_query_ids={"q1"},
+        progress_filter="mastered",
+    )
+
+    assert [query["id"] for query in filtered] == ["q1"]
+
+
 def test_predefined_mode_card_copy_is_removed():
     page_source = Path(
         "frontend/pages/2_🧮_Relational_Algebra_Exercises.py"
@@ -66,3 +98,12 @@ def test_operator_multiselect_selected_tags_use_light_pill_styling():
     assert '[data-baseweb="tag"]' in page_source
     assert "background-color: #ffffff" in page_source
     assert "color: #0f172a" in page_source
+
+
+def test_operator_page_includes_progress_filter_copy():
+    page_source = Path(
+        "frontend/pages/2_🧮_Relational_Algebra_Exercises.py"
+    ).read_text(encoding="utf-8")
+
+    assert '"Unmastered"' in page_source
+    assert '"Mastered"' in page_source

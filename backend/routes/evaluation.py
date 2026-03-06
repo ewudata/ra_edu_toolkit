@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ..services import queries as queries_service, relalg as relalg_service
+from ..services import grading as grading_service, queries as queries_service, relalg as relalg_service
 from ..services.auth import require_current_user
 from ..services.exceptions import (
     DatabaseNotFound,
@@ -13,6 +13,7 @@ from ..services.exceptions import (
     ParseError,
     QueryNotFound,
 )
+from ..services.learning_progress import upsert_query_mastery
 
 router = APIRouter(
     prefix="/databases/{database}/queries/{query_id}", tags=["evaluation"]
@@ -78,6 +79,21 @@ def evaluate_query_expression(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
+
+    solution_expression = detail.solution.relational_algebra
+    if solution_expression:
+        solution_result = relalg_service.evaluate_expression(
+            solution_expression,
+            database,
+            user_id=user["id"],
+        )
+        comparison = grading_service.compare_results(evaluation, solution_result)
+        if comparison.matches:
+            upsert_query_mastery(
+                user_id=user["id"],
+                database_name=database,
+                query_id=query_id,
+            )
 
     return QueryEvaluationResponse(
         database=database,

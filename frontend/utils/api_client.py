@@ -128,6 +128,10 @@ class APIClient:
         """Get query details"""
         return self._make_request("GET", f"/databases/{database}/queries/{query_id}")
 
+    def get_query_mastery(self, database: str) -> Dict[str, Any]:
+        """Get mastered query ids for the current user and database."""
+        return self._make_request("GET", f"/databases/{database}/queries/mastery")
+
     def evaluate_query(
         self, database: str, query_id: str, expression: str
     ) -> Dict[str, Any]:

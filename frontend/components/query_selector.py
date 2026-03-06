@@ -254,6 +254,7 @@ def query_selector_component(
     api_client,
     database: str,
     key_prefix: str = "query_selector",
+    mastered_query_ids: Optional[set[str]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str], Optional[Dict[str, Any]]]:
     """
     Pre-defined Query Selector Component
@@ -277,6 +278,8 @@ def query_selector_component(
     query_options = []
     query_map = {}
 
+    mastered_query_ids = mastered_query_ids or set()
+
     for query in sort_queries_by_difficulty(queries):
         normalized_difficulty = normalize_difficulty(query.get("difficulty"))
         difficulty_icon = {
@@ -284,11 +287,12 @@ def query_selector_component(
             "intermediate": "🟡",
             "difficult": "🔴",
         }.get(normalized_difficulty, "⚪")
+        mastery_marker = "✓ " if query.get("id") in mastered_query_ids else ""
 
         prompt_text = (query.get("prompt") or "").strip()
         if len(prompt_text) > 80:
             prompt_text = f"{prompt_text[:77]}..."
-        option_text = f"{difficulty_icon} {prompt_text}"
+        option_text = f"{mastery_marker}{difficulty_icon} {prompt_text}"
         query_options.append(option_text)
         query_map[option_text] = query
 

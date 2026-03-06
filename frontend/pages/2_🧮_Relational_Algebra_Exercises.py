@@ -40,6 +40,12 @@ OPERATOR_ALIASES = {
     "rename": {"rename", "renaming", "rho", "ρ"},
 }
 
+PROGRESS_FILTER_OPTIONS = {
+    "Unmastered": "unmastered",
+    "All": "all",
+    "Mastered": "mastered",
+}
+
 
 def _query_matches_selected_operators(query: Dict[str, Any], selected_ops: set[str]) -> bool:
     hints = [str(hint).lower() for hint in (query.get("hints") or [])]
@@ -48,6 +54,19 @@ def _query_matches_selected_operators(query: Dict[str, Any], selected_ops: set[s
         any(alias in hints_text for alias in OPERATOR_ALIASES.get(op, {op}))
         for op in selected_ops
     )
+
+
+def _filter_queries_by_progress(
+    queries: list[Dict[str, Any]],
+    *,
+    mastered_query_ids: set[str],
+    progress_filter: str,
+) -> list[Dict[str, Any]]:
+    if progress_filter == "mastered":
+        return [query for query in queries if query.get("id") in mastered_query_ids]
+    if progress_filter == "unmastered":
+        return [query for query in queries if query.get("id") not in mastered_query_ids]
+    return list(queries)
 
 
 def _render_table_preview_html(
@@ -187,6 +206,8 @@ def main():
         st.session_state.custom_query_last_expression = ""
     if "operator_filter_select" not in st.session_state:
         st.session_state.operator_filter_select = []
+    if "operator_progress_filter" not in st.session_state:
+        st.session_state.operator_progress_filter = "Unmastered"
     if st.session_state.practice_mode == "predefined":
         st.session_state.practice_mode = "operators"
 
@@ -514,6 +535,18 @@ def main():
                 "Browse all available exercises or select operators to narrow the list."
             )
 
+            mastered_query_ids: set[str] = set()
+            mastery_load_error: Optional[str] = None
+            try:
+                mastery_payload = api_client.get_query_mastery(selected_database)
+                mastered_query_ids = {
+                    str(query_id)
+                    for query_id in (mastery_payload.get("query_ids") or [])
+                    if query_id
+                }
+            except Exception as exc:
+                mastery_load_error = str(exc)
+
             operator_labels = [label for _, label in OPERATOR_OPTIONS]
             operator_map = {label: key for key, label in OPERATOR_OPTIONS}
 
@@ -524,8 +557,16 @@ def main():
             )
             selected_ops = {operator_map[label] for label in selected_labels}
 
+            progress_label = st.radio(
+                "Progress",
+                list(PROGRESS_FILTER_OPTIONS.keys()),
+                key="operator_progress_filter",
+                horizontal=True,
+            )
+            progress_filter = PROGRESS_FILTER_OPTIONS[progress_label]
+
             if not selected_ops:
-                filtered_queries = st.session_state.available_queries
+                filtered_queries = list(st.session_state.available_queries)
             else:
                 filtered_queries = [
                     query
@@ -533,10 +574,21 @@ def main():
                     if _query_matches_selected_operators(query, selected_ops)
                 ]
 
+            filtered_queries = _filter_queries_by_progress(
+                filtered_queries,
+                mastered_query_ids=mastered_query_ids,
+                progress_filter=progress_filter,
+            )
+
+            if mastery_load_error:
+                st.caption(
+                    f"Progress data unavailable right now: {mastery_load_error}"
+                )
+
             if not filtered_queries:
                 st.info(
-                    "No queries match the selected operators. "
-                    "Try another operator or clear the filter."
+                    "No queries match the selected filters. "
+                    "Try another operator, switch progress, or clear the filter."
                 )
             else:
                 _selected_query, _user_solution, _evaluation_result = (
@@ -545,6 +597,7 @@ def main():
                         api_client,
                         selected_database,
                         key_prefix="operator_query_selector",
+                        mastered_query_ids=mastered_query_ids,
                     )
                 )
 

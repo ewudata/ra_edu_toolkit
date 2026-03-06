@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from ..services import queries as queries_service
 from ..services.auth import require_current_user
 from ..services.exceptions import DatabaseNotFound, QueryNotFound
+from ..services.learning_progress import list_mastered_query_ids
 from ..services.queries import QueryDetail, QuerySummary
 
 router = APIRouter(prefix="/databases/{database}/queries", tags=["queries"])
@@ -55,6 +56,10 @@ class QueryDetailResponse(QuerySummaryResponse):
         )
 
 
+class QueryMasteryResponse(BaseModel):
+    query_ids: List[str] = Field(default_factory=list)
+
+
 @router.get("/", response_model=List[QuerySummaryResponse])
 def list_queries_for_database(
     database: str,
@@ -71,6 +76,17 @@ def list_queries_for_database(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
     return [QuerySummaryResponse.from_summary(summary) for summary in summaries]
+
+
+@router.get("/mastery", response_model=QueryMasteryResponse)
+def get_query_mastery(
+    database: str,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> QueryMasteryResponse:
+    query_ids = sorted(
+        list_mastered_query_ids(user_id=user["id"], database_name=database)
+    )
+    return QueryMasteryResponse(query_ids=query_ids)
 
 
 @router.get("/{query_id}", response_model=QueryDetailResponse)
