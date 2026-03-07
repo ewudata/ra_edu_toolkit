@@ -1,0 +1,28 @@
+services:
+  frontend:
+    image: ghcr.io/ewudata/relational-frontend:latest
+    container_name: ra-frontend
+    restart: unless-stopped
+    labels:
+      service: relational-frontend
+    env_file: .env
+    networks:
+      - 1panel-network
+    ports:
+      - "8508:8501"
+
+  backend:
+    image: ghcr.io/ewudata/relational-backend:latest
+    container_name: ra-backend
+    restart: unless-stopped
+    env_file: .env
+    labels:
+      service: relational-backend
+    networks:
+      - 1panel-network
+    ports:
+      - "8507:8000"
+
+networks:
+  1panel-network:
+    external: true
