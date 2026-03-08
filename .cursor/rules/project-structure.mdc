@@ -4,12 +4,12 @@ alwaysApply: true
 
 # RA Education Toolkit - Project Structure Guide
 
-This is a relational algebra education platform with a FastAPI backend and Streamlit frontend.
+This is a relational algebra education platform with a FastAPI backend and React + Vite + Tailwind frontend.
 
 ## Core Architecture
 
 - **Backend**: FastAPI service in [backend/](mdc:backend/) with routes in [backend/routes/](mdc:backend/routes/)
-- **Frontend**: Streamlit app in [frontend/](mdc:frontend/) with pages in [frontend/pages/](mdc:frontend/pages/)
+- **Frontend**: React + Vite + Tailwind app in [frontend/](mdc:frontend/) with pages in [frontend/src/pages/](mdc:frontend/src/pages/)
 - **Core Engine**: Relational algebra parser and evaluator in [backend/core/](mdc:backend/core/)
 - **Services**: Business logic in [backend/services/](mdc:backend/services/)
 - **Datasets**: Sample databases in [datasets/](mdc:datasets/)
@@ -18,19 +18,20 @@ This is a relational algebra education platform with a FastAPI backend and Strea
 ## Key Entry Points
 
 - **Backend API**: [backend/main.py](mdc:backend/main.py) - FastAPI application
-- **Frontend App**: [frontend/app.py](mdc:frontend/app.py) - Streamlit application  
+- **Frontend App**: [frontend/src/App.tsx](mdc:frontend/src/App.tsx) - React application with routing
 - **CLI Tool**: [scripts/run_cli.py](mdc:scripts/run_cli.py) - Command-line interface
 - **Dev Server**: [scripts/dev_server.py](mdc:scripts/dev_server.py) - Development server
 
 ## Import Patterns
 
 - Backend imports: `from backend.core.stepper import run`
-- Frontend imports: `from frontend.utils.api_client import APIClient`
+- Frontend imports: `import { api } from '../lib/api'`
 - Scripts add project root to path: `sys.path.insert(0, str(Path(__file__).parent.parent))`
 
 ## File Organization
 
-- **Routes**: API endpoints in [backend/routes/](mdc:backend/routes/) (moved from backend/api/routes/)
-- **Components**: Reusable UI components in [frontend/components/](mdc:frontend/components/)
-- **Pages**: Multi-page Streamlit app in [frontend/pages/](mdc:frontend/pages/)
+- **Routes**: API endpoints in [backend/routes/](mdc:backend/routes/)
+- **Components**: Reusable React components in [frontend/src/components/](mdc:frontend/src/components/)
+- **Pages**: React page components in [frontend/src/pages/](mdc:frontend/src/pages/)
+- **Lib**: API client, auth, and utilities in [frontend/src/lib/](mdc:frontend/src/lib/)
 - **Core Logic**: RA parser, AST, evaluator in [backend/core/](mdc:backend/core/)

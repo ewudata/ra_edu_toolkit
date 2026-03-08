@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Development server startup script
-Starts both backend FastAPI service and frontend Streamlit application
+Starts both backend FastAPI service and frontend React application
 """
 
 import subprocess
@@ -47,25 +47,14 @@ def start_backend():
 
 
 def start_frontend():
-    """Start frontend Streamlit application"""
+    """Start frontend React dev server"""
     print("🚀 Starting frontend application...")
     try:
-        # Get configuration from environment
-        host = os.getenv("FRONTEND_HOST", "0.0.0.0")
-        port = os.getenv("FRONTEND_PORT", "8501")
+        port = os.getenv("FRONTEND_PORT", "5173")
 
         subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "streamlit",
-                "run",
-                "frontend/0_🏠_Home.py",
-                "--server.port",
-                port,
-                "--server.address",
-                host,
-            ],
+            ["npm", "run", "dev", "--", "--port", port],
+            cwd=str(Path(__file__).parent.parent / "frontend"),
             check=True,
         )
     except subprocess.CalledProcessError as e:
@@ -89,7 +78,7 @@ def main():
     backend_host = os.getenv("BACKEND_HOST", "0.0.0.0")
     backend_port = os.getenv("BACKEND_PORT", "8000")
     frontend_host = os.getenv("FRONTEND_HOST", "0.0.0.0")
-    frontend_port = os.getenv("FRONTEND_PORT", "8501")
+    frontend_port = os.getenv("FRONTEND_PORT", "5173")
 
     print("📋 Service Information:")
     print(f"   • Backend API: http://{backend_host}:{backend_port}")

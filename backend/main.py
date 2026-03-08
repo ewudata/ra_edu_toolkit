@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from .routes import auth, databases, evaluation, queries
@@ -10,6 +11,14 @@ from .routes import auth, databases, evaluation, queries
 load_dotenv()
 
 app = FastAPI(title="RA Education Toolkit API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8501").split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Register routes
 app.include_router(databases.router)

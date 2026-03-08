@@ -1,0 +1,213 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&family=Lora:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #74c8b8;
+  --color-primary-dark: #5cb5a5;
+  --color-primary-light: #dff5ef;
+  --color-primary-50: #f3fbf8;
+  --color-primary-100: #e7f7f2;
+  --color-success: #74c8b8;
+  --color-success-light: #f3fbf8;
+  --color-warning: #d0aa67;
+  --color-warning-light: #faf3e4;
+  --color-danger: #c88f8f;
+  --color-danger-light: #fbefef;
+  --color-surface: #f3f3f3;
+  --color-op: #74c8b8;
+  --color-attr: #7fc8e8;
+  --color-rel: #22c55e;
+  --color-cond: #7986a3;
+  --font-sans: 'Nunito Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Lora', 'Nunito Sans', system-ui, sans-serif;
+}
+
+html {
+  background: #f3f3f3;
+}
+
+body {
+  @apply text-slate-800 antialiased;
+  font-family: var(--font-sans);
+  background: #f3f3f3;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(116, 200, 184, 0.3);
+  outline-offset: 2px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: #f3f3f3;
+}
+
+.app-container {
+  margin: 0 auto;
+  max-width: 1220px;
+  padding: 0 1.25rem;
+}
+
+.app-kicker {
+  color: #615a96;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.app-heading {
+  color: #374151;
+  font-size: clamp(1.75rem, 2.6vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.02;
+}
+
+.app-subheading {
+  color: #667085;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.app-block {
+  border: 1px solid #efefef;
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 16px 34px rgba(24, 39, 75, 0.08);
+}
+
+.app-soft-block {
+  border: 1px solid #f0f0f0;
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(24, 39, 75, 0.06);
+}
+
+.app-input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: #ffffff;
+  color: #374151;
+  padding: 0.8rem 1rem;
+}
+
+.app-input:focus {
+  border-color: #74c8b8;
+  box-shadow: 0 0 0 4px rgba(116, 200, 184, 0.16);
+  outline: none;
+}
+
+.app-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid #87d7c8;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #8ddfd2 0%, #8ee0a2 100%);
+  color: #214c45;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.7rem 1.15rem;
+  box-shadow: 0 12px 26px rgba(116, 200, 184, 0.24);
+}
+
+.app-primary-btn:hover {
+  background: linear-gradient(135deg, #7fd4c7 0%, #7fd695 100%);
+  transform: translateY(-1px);
+}
+
+.app-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid #cbeae3;
+  border-radius: 1rem;
+  background: rgba(243, 251, 248, 0.94);
+  color: #3d6f67;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.7rem 1.15rem;
+}
+
+.app-secondary-btn:hover {
+  background: #e7f7f2;
+}
+
+.app-nav-link {
+  display: inline-block;
+  color: #5f6b7a;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.2rem 0;
+}
+
+.app-nav-link:hover {
+  color: #4b5563;
+}
+
+.app-nav-link-active {
+  color: #2f7f72;
+}
+
+.app-icon-tile {
+  border: 1px solid #cbeae3;
+  background: linear-gradient(135deg, #effaf7 0%, #e7f7ef 100%);
+}
+
+.app-icon-tile-soft {
+  border: 1px solid #d7eee7;
+  background: #f3fbf8;
+}
+
+.app-icon-glyph {
+  color: #3f8f81;
+}
+
+.app-icon-glyph-soft {
+  color: #4b9b8d;
+}
+
+.app-code {
+  border: 1px solid #ececec;
+  border-radius: 1rem;
+  background: #ffffff;
+  color: #374151;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0 0.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -18,7 +18,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _frontend_base_url() -> str:
-    return os.getenv("FRONTEND_BASE_URL", "http://localhost:8501").rstrip("/")
+    return os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
 
 
 def _merge_redirect_query_params(target_url: str, params: dict[str, str]) -> str:
@@ -42,7 +42,7 @@ class GoogleAuthStartResponse(BaseModel):
 
 @router.get("/google/start", response_model=GoogleAuthStartResponse)
 def google_start(
-    frontend_redirect: str = Query(default="http://localhost:8501"),
+    frontend_redirect: str = Query(default="http://localhost:5173"),
 ) -> GoogleAuthStartResponse:
     try:
         auth_url = build_google_oauth_url(frontend_redirect)
