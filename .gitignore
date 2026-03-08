@@ -177,7 +177,6 @@ $RECYCLE.BIN/
 # Output files
 output/
 *.csv
-*.json
 !datasets/**/*.csv
 !datasets/**/*.json
 
