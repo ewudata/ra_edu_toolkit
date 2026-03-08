@@ -8,6 +8,17 @@ import DataTable from '../components/DataTable';
 import TraceViewer from '../components/TraceViewer';
 import SyntaxHelp from '../components/SyntaxHelp';
 import { sortQueries, difficultyIcon, difficultyLabel } from '../lib/difficulty';
+import {
+  FunctionSquare,
+  Database as DatabaseIcon,
+  LayoutList,
+  Pencil,
+  Play,
+  Eye,
+  Lightbulb,
+  BarChart3,
+  Filter,
+} from 'lucide-react';
 
 const OPERATOR_OPTIONS = [
   ['selection', 'Selection'],
@@ -162,7 +173,7 @@ export default function RAExercises() {
   }
 
   if (backendOk === false) {
-    return <AuthGate><StatusBadge variant="error">❌ Backend service connection failed</StatusBadge></AuthGate>;
+    return <AuthGate><StatusBadge variant="error">Backend service connection failed</StatusBadge></AuthGate>;
   }
 
   const selectedDbInfo = databases.find((d) => d.name === selectedDb);
@@ -171,18 +182,21 @@ export default function RAExercises() {
     <AuthGate>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">🧮 Relational Algebra Exercises</h1>
-          <p className="mt-1 text-gray-600">Explore datasets, review available practice material, and choose how you want to work with relational algebra expressions.</p>
+          <h1 className="text-2xl font-bold text-slate-800">Relational Algebra Exercises</h1>
+          <p className="mt-1 text-sm text-slate-500">Explore datasets, review available practice material, and choose how you want to work with RA expressions.</p>
         </div>
 
-        {backendOk && <StatusBadge variant="success">✅ Backend service connected successfully</StatusBadge>}
+        {backendOk && <StatusBadge variant="success">Backend service connected successfully</StatusBadge>}
 
         <section>
-          <h2 className="text-xl font-semibold text-gray-800 mb-3">📊 Choose a Database</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <DatabaseIcon className="w-4 h-4 text-primary" />
+            <h2 className="text-lg font-semibold text-slate-700">Choose a Database</h2>
+          </div>
           <select
             value={selectedDb}
             onChange={(e) => { setSelectedDb(e.target.value); setMode(null); }}
-            className="w-full sm:w-80 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full sm:w-80 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors cursor-pointer"
           >
             <option value="">- Select a database -</option>
             {databases.map((db) => (
@@ -193,7 +207,7 @@ export default function RAExercises() {
 
         {selectedDb && selectedDbInfo && (
           <>
-            <Collapsible title={`📚 Active database: ${selectedDb}`}>
+            <Collapsible title={`Active database: ${selectedDb}`}>
               <div className="space-y-0.5">
                 {selectedDbInfo.tables.map((t) => (
                   <TablePreview key={t} tableName={t} metadata={schemaMap[t]} />
@@ -201,29 +215,39 @@ export default function RAExercises() {
               </div>
             </Collapsible>
 
-            <hr className="border-gray-200" />
-            <h2 className="text-xl font-semibold text-gray-800">🧭 Choose How You Want to Practice</h2>
+            <hr className="border-slate-200" />
+            <h2 className="text-lg font-semibold text-slate-700">Choose How You Want to Practice</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">
-                <h3 className="font-semibold text-gray-800">🧩 Operator-Based Queries</h3>
-                <p className="text-sm text-gray-600">Browse the full query catalog or narrow it by operators like joins or set operations.</p>
+              <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+                    <LayoutList className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-700">Operator-Based Queries</h3>
+                </div>
+                <p className="text-sm text-slate-500">Browse the full query catalog or narrow it by operators like joins or set operations.</p>
                 {queries.length > 0 ? (
                   <button
                     onClick={() => setMode('operators')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${mode === 'operators' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${mode === 'operators' ? 'bg-primary-50 text-primary border border-primary-100' : 'bg-primary text-white hover:bg-primary-dark'}`}
                   >
                     Browse Queries
                   </button>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">This database does not provide a query catalog to browse.</p>
+                  <p className="text-sm text-slate-400 italic">This database does not provide a query catalog to browse.</p>
                 )}
               </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">
-                <h3 className="font-semibold text-gray-800">✏️ Custom Queries</h3>
-                <p className="text-sm text-gray-600">Practice by writing your own relational algebra expressions.</p>
+              <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <Pencil className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-700">Custom Queries</h3>
+                </div>
+                <p className="text-sm text-slate-500">Practice by writing your own relational algebra expressions.</p>
                 <button
                   onClick={() => setMode('custom')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${mode === 'custom' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${mode === 'custom' ? 'bg-primary-50 text-primary border border-primary-100' : 'bg-primary text-white hover:bg-primary-dark'}`}
                 >
                   Practice with Custom Queries
                 </button>
@@ -234,15 +258,18 @@ export default function RAExercises() {
 
         {mode === 'operators' && (
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-800">🧩 Operator-Based Queries</h2>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-primary" />
+              <h2 className="text-lg font-semibold text-slate-700">Operator-Based Queries</h2>
+            </div>
 
             <div className="flex flex-wrap gap-2">
               {OPERATOR_OPTIONS.map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => toggleOp(key)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    selectedOps.has(key) ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                    selectedOps.has(key) ? 'bg-primary-50 border-primary-100 text-primary' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   {label}
@@ -250,16 +277,20 @@ export default function RAExercises() {
               ))}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               {(['unmastered', 'all', 'mastered'] as const).map((f) => (
-                <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                  <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-blue-600" />
+                <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer text-slate-600">
+                  <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-primary" />
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                 </label>
               ))}
             </div>
 
-            <p className="text-xs text-gray-500">🟢 beginner &nbsp; 🟡 intermediate &nbsp; 🔴 difficult</p>
+            <div className="flex gap-4 text-xs text-slate-400">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> beginner</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> intermediate</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> difficult</span>
+            </div>
 
             {filteredQueries.length === 0 ? (
               <StatusBadge variant="info">No queries match the selected filters. Try another operator, switch progress, or clear the filter.</StatusBadge>
@@ -268,7 +299,7 @@ export default function RAExercises() {
                 <select
                   value={selectedQueryId}
                   onChange={(e) => setSelectedQueryId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
                 >
                   <option value="">- Select a query -</option>
                   {filteredQueries.map((q) => {
@@ -280,85 +311,96 @@ export default function RAExercises() {
 
                 {queryDetail && (
                   <div className="space-y-4">
-                    <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-2">
-                      <p className="text-sm"><span className="font-semibold">Query Description:</span> {queryDetail.prompt}</p>
-                      <p className="text-sm"><span className="font-semibold">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-2">
+                      <p className="text-sm text-slate-600"><span className="font-semibold text-slate-700">Query Description:</span> {queryDetail.prompt}</p>
+                      <p className="text-sm text-slate-600"><span className="font-semibold text-slate-700">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
                       {queryDetail.hints?.length ? (
-                        <p className="text-sm"><span className="font-semibold">Hint:</span> {queryDetail.hints.join(', ')}</p>
+                        <p className="text-sm text-slate-600"><span className="font-semibold text-slate-700">Hint:</span> {queryDetail.hints.join(', ')}</p>
                       ) : null}
                     </div>
 
                     <form onSubmit={handleExecute} className="space-y-3">
-                      <h3 className="text-lg font-semibold text-gray-800">✏️ Your Solution</h3>
-                      <p className="text-sm text-gray-600">Write the relational algebra expression for this query:</p>
+                      <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                        <Pencil className="w-4 h-4 text-primary" />
+                        Your Solution
+                      </h3>
+                      <p className="text-sm text-slate-500">Write the relational algebra expression for this query:</p>
                       <textarea
                         value={solution}
                         onChange={(e) => setSolution(e.target.value)}
-                        className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+                        className="w-full h-24 px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y transition-colors"
                       />
                       <div className="flex justify-center">
-                        <button type="submit" disabled={executing} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
-                          {executing ? 'Executing...' : '🚀 Execute My Solution'}
+                        <button type="submit" disabled={executing} className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 cursor-pointer">
+                          <Play className="w-4 h-4" />
+                          {executing ? 'Executing...' : 'Execute My Solution'}
                         </button>
                       </div>
-                      <Collapsible title="💡 Query Syntax Help">
+                      <Collapsible title="Query Syntax Help">
                         <SyntaxHelp database={selectedDb} />
                       </Collapsible>
                     </form>
 
-                    {resultError && <StatusBadge variant="error">❌ Error executing your solution: {resultError}</StatusBadge>}
+                    {resultError && <StatusBadge variant="error">Error executing your solution: {resultError}</StatusBadge>}
 
                     {result && (
                       <div className="space-y-6">
-                        <h3 className="text-lg font-semibold text-gray-800">📊 Results Comparison</h3>
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                          <BarChart3 className="w-4 h-4 text-primary" />
+                          Results Comparison
+                        </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <h4 className="font-semibold text-gray-700">Your Solution Output</h4>
-                            <p className="text-sm text-gray-600">Rows returned: {result.row_count}</p>
-                            {result.rows.length > 0 ? <DataTable rows={result.rows} /> : <p className="text-sm text-gray-500 italic">No rows returned.</p>}
+                            <h4 className="font-semibold text-slate-600 text-sm">Your Solution Output</h4>
+                            <p className="text-sm text-slate-500">Rows returned: {result.row_count}</p>
+                            {result.rows.length > 0 ? <DataTable rows={result.rows} /> : <p className="text-sm text-slate-400 italic">No rows returned.</p>}
                           </div>
                           <div className="space-y-2">
-                            <h4 className="font-semibold text-gray-700">Expected Output</h4>
+                            <h4 className="font-semibold text-slate-600 text-sm">Expected Output</h4>
                             {result.expected_rows ? (
                               <>
-                                <p className="text-sm text-gray-600">Rows expected: {result.expected_rows.length}</p>
-                                {result.expected_rows.length > 0 ? <DataTable rows={result.expected_rows} /> : <p className="text-sm text-gray-500 italic">No rows expected.</p>}
+                                <p className="text-sm text-slate-500">Rows expected: {result.expected_rows.length}</p>
+                                {result.expected_rows.length > 0 ? <DataTable rows={result.expected_rows} /> : <p className="text-sm text-slate-400 italic">No rows expected.</p>}
                               </>
-                            ) : <p className="text-sm text-gray-500 italic">Expected result not available for this query.</p>}
+                            ) : <p className="text-sm text-slate-400 italic">Expected result not available for this query.</p>}
                           </div>
                         </div>
-                        <TraceViewer trace={result.trace} title="🔍 Execution Trace of Your Solution" />
+                        <TraceViewer trace={result.trace} title="Execution Trace of Your Solution" />
                       </div>
                     )}
 
-                    <hr className="border-gray-200" />
-                    <h3 className="text-lg font-semibold text-gray-800">💡 Need Help?</h3>
+                    <hr className="border-slate-200" />
+                    <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                      <Lightbulb className="w-4 h-4 text-amber-500" />
+                      Need Help?
+                    </h3>
                     <button
                       onClick={handleViewSolution}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm hover:bg-slate-50 transition-colors cursor-pointer text-slate-600"
                     >
-                      👁️ View Expected Solution & Results
+                      <Eye className="w-4 h-4" />
+                      View Expected Solution & Results
                     </button>
 
                     {showSolution && queryDetail.solution && (
-                      <div className="space-y-3 bg-white border border-gray-200 rounded-lg p-5">
+                      <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-5">
                         {queryDetail.solution.relational_algebra && (
                           <div>
-                            <p className="font-semibold text-sm text-gray-700 mb-1">Expected Relational Algebra Expression:</p>
-                            <pre className="bg-gray-50 p-3 rounded text-sm font-mono overflow-x-auto">{queryDetail.solution.relational_algebra}</pre>
+                            <p className="font-semibold text-sm text-slate-600 mb-1">Expected Relational Algebra Expression:</p>
+                            <pre className="bg-slate-50 p-3 rounded-lg text-sm font-mono overflow-x-auto text-slate-700">{queryDetail.solution.relational_algebra}</pre>
                           </div>
                         )}
                         {queryDetail.solution.sql && (
                           <div>
-                            <p className="font-semibold text-sm text-gray-700 mb-1">Equivalent SQL:</p>
-                            <pre className="bg-gray-50 p-3 rounded text-sm font-mono overflow-x-auto">{queryDetail.solution.sql}</pre>
+                            <p className="font-semibold text-sm text-slate-600 mb-1">Equivalent SQL:</p>
+                            <pre className="bg-slate-50 p-3 rounded-lg text-sm font-mono overflow-x-auto text-slate-700">{queryDetail.solution.sql}</pre>
                           </div>
                         )}
                         {solutionResult && (
                           <>
-                            <h4 className="font-semibold text-gray-800">📊 Expected Query Results</h4>
-                            {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-gray-500 italic">Expected result returns no rows.</p>}
-                            <TraceViewer trace={solutionResult.trace} title="🔍 Execution Trace of Expected Solution" />
+                            <h4 className="font-semibold text-slate-700">Expected Query Results</h4>
+                            {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-slate-400 italic">Expected result returns no rows.</p>}
+                            <TraceViewer trace={solutionResult.trace} title="Execution Trace of Expected Solution" />
                           </>
                         )}
                       </div>
@@ -372,33 +414,40 @@ export default function RAExercises() {
 
         {mode === 'custom' && (
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-800">✏️ Custom Query Practice</h2>
+            <div className="flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-primary" />
+              <h2 className="text-lg font-semibold text-slate-700">Custom Query Practice</h2>
+            </div>
             <form onSubmit={handleCustomExecute} className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Enter your own relational algebra expression:</label>
+              <label className="text-sm font-medium text-slate-600">Enter your own relational algebra expression:</label>
               <textarea
                 value={customExpr}
                 onChange={(e) => setCustomExpr(e.target.value)}
-                className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+                className="w-full h-24 px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y transition-colors"
               />
               <div className="flex justify-center">
-                <button type="submit" disabled={customExecuting} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
-                  {customExecuting ? 'Executing...' : '🚀 Execute Custom Query'}
+                <button type="submit" disabled={customExecuting} className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 cursor-pointer">
+                  <Play className="w-4 h-4" />
+                  {customExecuting ? 'Executing...' : 'Execute Custom Query'}
                 </button>
               </div>
-              <Collapsible title="💡 Query Syntax Help">
+              <Collapsible title="Query Syntax Help">
                 <SyntaxHelp database={selectedDb} />
               </Collapsible>
             </form>
 
-            {customError && <StatusBadge variant="error">❌ Query execution failed: {customError}</StatusBadge>}
+            {customError && <StatusBadge variant="error">Query execution failed: {customError}</StatusBadge>}
 
             {customResult && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800">📊 Query Results</h3>
+                <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  Query Results
+                </h3>
                 {customResult.rows.length > 0 ? (
                   <DataTable rows={customResult.rows} />
                 ) : (
-                  <p className="text-sm text-gray-500 italic">Query returned no rows.</p>
+                  <p className="text-sm text-slate-400 italic">Query returned no rows.</p>
                 )}
                 <TraceViewer trace={customResult.trace} />
               </div>

@@ -1,3 +1,4 @@
+import { ListOrdered } from 'lucide-react';
 import type { TraceStep } from '../lib/api';
 import Collapsible from './Collapsible';
 import DataTable from './DataTable';
@@ -60,30 +61,33 @@ interface Props {
   title?: string;
 }
 
-export default function TraceViewer({ trace, title = '🔍 Execution Trace' }: Props) {
+export default function TraceViewer({ trace, title = 'Execution Trace' }: Props) {
   if (!trace.length) return null;
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+      <h3 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+        <ListOrdered className="w-4 h-4 text-primary" />
+        {title}
+      </h3>
 
-      <div className="overflow-auto border border-gray-200 rounded-lg">
-        <table className="min-w-full text-sm divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="overflow-auto border border-slate-200 rounded-lg">
+        <table className="min-w-full text-sm divide-y divide-slate-200">
+          <thead className="bg-slate-50">
             <tr>
-              <th className="px-3 py-2 text-left font-semibold text-gray-700">Step</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-700">Operation</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-700">Output Schema</th>
-              <th className="px-3 py-2 text-left font-semibold text-gray-700">Rows</th>
+              <th className="px-3 py-2 text-left font-semibold text-slate-600 w-14">Step</th>
+              <th className="px-3 py-2 text-left font-semibold text-slate-600">Operation</th>
+              <th className="px-3 py-2 text-left font-semibold text-slate-600">Output Schema</th>
+              <th className="px-3 py-2 text-left font-semibold text-slate-600 w-16">Rows</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-slate-100 bg-white">
             {trace.map((step, i) => (
-              <tr key={i} className="hover:bg-gray-50">
-                <td className="px-3 py-2 text-gray-700">{i + 1}</td>
-                <td className="px-3 py-2 text-gray-700">{formatOpLabel(step)}</td>
-                <td className="px-3 py-2 text-gray-700">{formatSchema(step.output_schema)}</td>
-                <td className="px-3 py-2 text-gray-700">{extractRowCount(step) ?? '—'}</td>
+              <tr key={i} className="hover:bg-primary-50/40 transition-colors">
+                <td className="px-3 py-2 text-slate-500 font-medium">{i + 1}</td>
+                <td className="px-3 py-2 text-slate-700 font-medium">{formatOpLabel(step)}</td>
+                <td className="px-3 py-2 text-slate-600 font-mono text-xs">{formatSchema(step.output_schema)}</td>
+                <td className="px-3 py-2 text-slate-600">{extractRowCount(step) ?? '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -97,35 +101,35 @@ export default function TraceViewer({ trace, title = '🔍 Execution Trace' }: P
               <div className="grid grid-cols-2 gap-4">
                 {step.input_schema && (
                   <div>
-                    <span className="font-medium text-gray-600">Input Schema:</span>{' '}
-                    <span className="text-gray-800">{formatSchema(step.input_schema)}</span>
+                    <span className="font-medium text-slate-500">Input Schema:</span>{' '}
+                    <span className="text-slate-700 font-mono text-xs">{formatSchema(step.input_schema)}</span>
                   </div>
                 )}
                 {step.output_schema && (
                   <div>
-                    <span className="font-medium text-gray-600">Output Schema:</span>{' '}
-                    <span className="text-gray-800">{formatSchema(step.output_schema)}</span>
+                    <span className="font-medium text-slate-500">Output Schema:</span>{' '}
+                    <span className="text-slate-700 font-mono text-xs">{formatSchema(step.output_schema)}</span>
                   </div>
                 )}
               </div>
               {formatDetail(step.detail) && (
                 <div>
-                  <span className="font-medium text-gray-600">Detail:</span>{' '}
-                  <span className="text-gray-800">{formatDetail(step.detail)}</span>
+                  <span className="font-medium text-slate-500">Detail:</span>{' '}
+                  <span className="text-slate-700">{formatDetail(step.detail)}</span>
                 </div>
               )}
               {extractRowCount(step) != null && (
                 <div>
-                  <span className="font-medium text-gray-600">Rows:</span>{' '}
-                  <span className="text-gray-800">{extractRowCount(step)}</span>
+                  <span className="font-medium text-slate-500">Rows:</span>{' '}
+                  <span className="text-slate-700">{extractRowCount(step)}</span>
                 </div>
               )}
               <div>
-                <p className="font-medium text-gray-600 mb-1">Output (up to 10 records):</p>
+                <p className="font-medium text-slate-500 mb-1">Output (up to 10 records):</p>
                 {step.preview?.length ? (
                   <DataTable rows={step.preview} compact />
                 ) : (
-                  <p className="text-gray-400 italic text-xs">No preview rows for this step.</p>
+                  <p className="text-slate-400 italic text-xs">No preview rows for this step.</p>
                 )}
               </div>
             </div>

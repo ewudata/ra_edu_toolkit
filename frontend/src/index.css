@@ -1,17 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #3b82f6;
-  --color-primary-dark: #2563eb;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-op: #6f42c1;
-  --color-attr: #d73a49;
-  --color-rel: #0366d6;
-  --color-cond: #e36209;
+  --color-primary: #4F46E5;
+  --color-primary-dark: #4338CA;
+  --color-primary-light: #818CF8;
+  --color-primary-50: #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-success: #10B981;
+  --color-success-light: #D1FAE5;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FEF3C7;
+  --color-danger: #EF4444;
+  --color-danger-light: #FEE2E2;
+  --color-surface: #F8FAFC;
+  --color-op: #7C3AED;
+  --color-attr: #DC2626;
+  --color-rel: #2563EB;
+  --color-cond: #D97706;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-surface text-slate-800 antialiased;
+  font-family: var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
