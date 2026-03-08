@@ -9,7 +9,7 @@ services:
     networks:
       - 1panel-network
     ports:
-      - "8508:8501"
+      - "8508:80"
 
   backend:
     image: ghcr.io/ewudata/relational-backend:latest
