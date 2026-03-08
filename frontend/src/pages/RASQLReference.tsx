@@ -42,20 +42,20 @@ export default function RASQLReference() {
   const shell = 'space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6';
   const hero = 'rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]';
   const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
-  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#7d77ad]';
+  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#615a96]';
   const sectionTitle = 'text-xl font-semibold text-[#3f4761]';
-  const iconTile = 'flex h-12 w-12 items-center justify-center rounded-[18px] border border-[#d8d4fb] bg-[#f1f0ff]';
-  const textInput = 'w-full rounded-2xl border border-[#d8dded] bg-white/92 px-4 py-3 text-sm text-[#3f4761] focus:border-[#9791e0] focus:outline-none focus:ring-4 focus:ring-[rgba(199,195,242,0.5)] transition-colors cursor-pointer';
-  const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d8dded] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-sm font-semibold text-[#55607d] transition-colors duration-200 hover:bg-[#f3f4fd] cursor-pointer';
+  const iconTile = 'app-icon-tile flex h-12 w-12 items-center justify-center rounded-[18px]';
+  const textInput = 'app-input w-full rounded-2xl bg-white/92 px-4 py-3 text-sm cursor-pointer';
+  const secondaryButton = 'app-secondary-btn';
 
   return (
     <div className={shell}>
       <section className={hero}>
         <div className="space-y-3">
-          <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#7d77ad]">Academic Practice Studio</p>
+          <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">RA ↔ SQL Reference</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#68718c] sm:text-base">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5f6b7a] sm:text-base">
               Explore side-by-side relational algebra and SQL solutions to build intuition for translating between both representations.
             </p>
           </div>
@@ -66,14 +66,14 @@ export default function RASQLReference() {
         <aside className={`${blockCard} space-y-4`}>
           <div className="flex items-center gap-3">
             <div className={iconTile}>
-              <DatabaseIcon className="h-5 w-5 text-[#6e68b1]" />
+              <DatabaseIcon className="app-icon-glyph h-5 w-5" />
             </div>
             <div>
               <p className={sectionLabel}>Setup</p>
               <h2 className={sectionTitle}>Select Database</h2>
             </div>
           </div>
-          <p className="text-sm leading-6 text-[#68718c]">
+          <p className="text-sm leading-6 text-[#5f6b7a]">
             Choose a dataset to load cataloged exercises, expected results, and paired reference solutions.
           </p>
           <select
@@ -101,12 +101,12 @@ export default function RASQLReference() {
               <div className={blockCard}>
                 <div className="flex items-center gap-3">
                   <div className={iconTile}>
-                    <BookOpen className="h-5 w-5 text-[#6e68b1]" />
+                    <BookOpen className="app-icon-glyph h-5 w-5" />
                   </div>
                   <div>
                     <p className={sectionLabel}>Reference Catalog</p>
                     <h2 className={sectionTitle}>
-                      Exercises for <code className="rounded-xl border border-[#d8dded] bg-[#f6f5ff] px-2 py-1 text-sm font-mono text-[#55607d]">{selectedDb}</code>
+                      Exercises for <code className="rounded-xl border border-[#cbeae3] bg-[#f3fbf8] px-2 py-1 text-sm font-mono text-[#3d6f67]">{selectedDb}</code>
                     </h2>
                   </div>
                 </div>
@@ -118,11 +118,11 @@ export default function RASQLReference() {
                   return (
                     <Collapsible key={q.id} title={`${prompt} · ${difficultyLabel(q.difficulty)}`}>
                       <div className="space-y-4" onMouseEnter={() => loadDetail(q.id)}>
-                        <p className="text-sm text-[#68718c]"><span className="font-semibold text-[#55607d]">Prompt:</span> {q.prompt ?? 'No prompt provided.'}</p>
+                        <p className="text-sm text-[#5f6b7a]"><span className="font-semibold text-[#55607d]">Prompt:</span> {q.prompt ?? 'No prompt provided.'}</p>
                         {q.hints?.length ? (
                           <div className="text-sm">
                             <span className="font-semibold text-[#55607d]">Hints:</span>
-                            <ul className="ml-2 list-disc list-inside text-[#68718c]">
+                            <ul className="ml-2 list-disc list-inside text-[#5f6b7a]">
                               {q.hints.map((h, i) => <li key={i}>{h}</li>)}
                             </ul>
                           </div>
@@ -140,7 +140,7 @@ export default function RASQLReference() {
                             {(detail.expected_schema || detail.expected_rows) && (
                               <Collapsible title="Expected Result">
                                 {detail.expected_schema && (
-                                  <p className="mb-2 text-sm"><span className="font-semibold text-[#55607d]">Schema:</span> <span className="font-mono text-xs text-[#68718c]">{detail.expected_schema.join(', ')}</span></p>
+                                  <p className="mb-2 text-sm"><span className="font-semibold text-[#55607d]">Schema:</span> <span className="font-mono text-xs text-[#5f6b7a]">{detail.expected_schema.join(', ')}</span></p>
                                 )}
                                 {detail.expected_rows?.length ? <DataTable rows={detail.expected_rows} /> : null}
                               </Collapsible>
@@ -179,13 +179,13 @@ export default function RASQLReference() {
 
           <div className={blockCard}>
             <Collapsible title="Translation Tips">
-              <div className="space-y-1.5 text-sm text-[#68718c]">
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Set operations:</strong> Union (∪), difference (−), and intersection (∩) correspond to UNION, EXCEPT, and INTERSECT.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Aggregation:</strong> Use GROUP BY and HAVING to mirror grouping operators.</span></p>
+              <div className="space-y-1.5 text-sm text-[#5f6b7a]">
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Set operations:</strong> Union (∪), difference (−), and intersection (∩) correspond to UNION, EXCEPT, and INTERSECT.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Aggregation:</strong> Use GROUP BY and HAVING to mirror grouping operators.</span></p>
               </div>
             </Collapsible>
           </div>

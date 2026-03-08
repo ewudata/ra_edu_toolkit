@@ -28,7 +28,7 @@ export default function Layout() {
                 </div>
                 <div>
                   <h1 className="font-display text-3xl leading-none text-[#374151]">RALT</h1>
-                  <p className="mt-1 text-sm font-semibold text-[#8b95a7]">Relational Algebra Learning Tools</p>
+                  <p className="mt-1 text-sm font-semibold text-[#667085]">Relational Algebra Learning Tools</p>
                 </div>
               </div>
 
@@ -49,7 +49,7 @@ export default function Layout() {
                 <div className="flex items-center justify-end gap-3 lg:min-w-[240px]">
                   <div className="min-w-0 text-right">
                     {loading ? (
-                      <p className="text-sm text-[#8b95a7]">Loading session...</p>
+                      <p className="text-sm text-[#667085]">Loading session...</p>
                     ) : null}
                   </div>
                   {loading ? (

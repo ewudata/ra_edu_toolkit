@@ -177,20 +177,20 @@ export default function RAExercises() {
   const selectedDbInfo = databases.find((d) => d.name === selectedDb);
   const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
   const blockCardSoft = 'rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.9)] p-5 shadow-[0_8px_22px_rgba(123,128,173,0.06)]';
-  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#7d77ad]';
+  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#615a96]';
   const sectionTitle = 'text-xl font-semibold text-[#3f4761]';
-  const primaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#7b75c2] bg-[#7f78c7] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#6e68b1] disabled:opacity-50 cursor-pointer';
-  const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d8dded] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-sm font-semibold text-[#55607d] transition-colors duration-200 hover:bg-[#f3f4fd] cursor-pointer';
+  const primaryButton = 'app-primary-btn disabled:opacity-50';
+  const secondaryButton = 'app-secondary-btn';
 
   return (
     <div className="space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6">
         <section className="rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]">
           <div className="space-y-3">
             <div className="space-y-3">
-              <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#7d77ad]">Academic Practice Studio</p>
+              <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Exercises</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#68718c] sm:text-base">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f6b7a] sm:text-base">
                   Work through database-backed prompts in clear study blocks: choose a schema, filter the catalog, and compare your algebra against the expected result.
                 </p>
               </div>
@@ -204,15 +204,15 @@ export default function RAExercises() {
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-[#d8d4fb] bg-[#f1f0ff]">
-                  <DatabaseIcon className="h-5 w-5 text-[#6e68b1]" />
+                <div className="app-icon-tile flex h-12 w-12 items-center justify-center rounded-[18px]">
+                  <DatabaseIcon className="app-icon-glyph h-5 w-5" />
                 </div>
                 <div>
                   <p className={sectionLabel}>Study Setup</p>
                   <h2 className={sectionTitle}>Choose a database workspace</h2>
                 </div>
               </div>
-              <p className="max-w-2xl text-sm leading-6 text-[#68718c]">
+              <p className="max-w-2xl text-sm leading-6 text-[#5f6b7a]">
                 Pick the dataset you want to practice against. Once selected, the page opens the schema, query catalog, and custom-expression tools for that database.
               </p>
             </div>
@@ -221,7 +221,7 @@ export default function RAExercises() {
               <select
                 value={selectedDb}
                 onChange={(e) => { setSelectedDb(e.target.value); setMode(null); }}
-                className="w-full rounded-2xl border border-[#d8dded] bg-white/92 px-4 py-3 text-sm text-[#3f4761] focus:border-[#9791e0] focus:outline-none focus:ring-4 focus:ring-[rgba(199,195,242,0.5)] transition-colors cursor-pointer"
+                className="app-input w-full rounded-2xl bg-white/92 px-4 py-3 text-sm cursor-pointer"
               >
                 <option value="">- Select a database -</option>
                 {databases.map((db) => (
@@ -237,15 +237,15 @@ export default function RAExercises() {
             <section className="grid gap-5 xl:grid-cols-[1.05fr_1.3fr]">
               <div className={`${blockCard} space-y-4`}>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[#dbe7e1] bg-[#eef7f4]">
-                    <DatabaseIcon className="h-5 w-5 text-[#6e9d8b]" />
+                  <div className="app-icon-tile-soft flex h-11 w-11 items-center justify-center rounded-[16px]">
+                    <DatabaseIcon className="app-icon-glyph-soft h-5 w-5" />
                   </div>
                   <div>
                     <p className={sectionLabel}>Reference Block</p>
                     <h2 className={sectionTitle}>Active database: {selectedDb}</h2>
                   </div>
                 </div>
-                <p className="text-sm leading-6 text-[#68718c]">
+                <p className="text-sm leading-6 text-[#5f6b7a]">
                   Review available relations before solving. This keeps the schema visible as a study aid instead of burying it below the exercise workflow.
                 </p>
                 <Collapsible title={`Browse tables in ${selectedDb}`}>
@@ -261,19 +261,19 @@ export default function RAExercises() {
                 <div className="space-y-2">
                   <p className={sectionLabel}>Practice Mode</p>
                   <h2 className={sectionTitle}>Choose how you want to work</h2>
-                  <p className="text-sm leading-6 text-[#68718c]">
+                  <p className="text-sm leading-6 text-[#5f6b7a]">
                     Use structured catalog practice when you want targeted prompts, or switch to open writing mode to test an expression directly.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-[#d8d4fb] bg-[#f1f0ff]">
-                        <LayoutList className="h-4 w-4 text-[#6e68b1]" />
+                      <div className="app-icon-tile flex h-10 w-10 items-center justify-center rounded-[14px]">
+                        <LayoutList className="app-icon-glyph h-4 w-4" />
                       </div>
                       <h3 className="font-semibold text-[#3f4761]">Operator-Based Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#68718c]">Browse the full catalog or narrow it by operator families, difficulty, and mastery progress.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#5f6b7a]">Browse the full catalog or narrow it by operator families, difficulty, and mastery progress.</p>
                     {queries.length > 0 ? (
                       <button
                         onClick={() => setMode('operators')}
@@ -287,12 +287,12 @@ export default function RAExercises() {
                   </div>
                   <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-[#dbe7e1] bg-[#eef7f4]">
-                        <Pencil className="h-4 w-4 text-[#6e9d8b]" />
+                      <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
+                        <Pencil className="app-icon-glyph-soft h-4 w-4" />
                       </div>
                       <h3 className="font-semibold text-[#3f4761]">Custom Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#68718c]">Practice by writing your own relational algebra expressions without selecting a catalog prompt first.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#5f6b7a]">Practice by writing your own relational algebra expressions without selecting a catalog prompt first.</p>
                     <button
                       onClick={() => setMode('custom')}
                       className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
@@ -309,8 +309,8 @@ export default function RAExercises() {
         {mode === 'operators' && (
           <section className={`${blockCard} space-y-5`}>
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-[16px] border-2 border-[#cf875e] bg-[#ffd19a] shadow-[0_4px_0_0_#f7e1be]">
-                <Filter className="h-5 w-5 text-[#7a4526]" />
+              <div className="app-icon-tile flex h-11 w-11 items-center justify-center rounded-[16px] shadow-[0_4px_0_0_rgba(203,234,227,0.9)]">
+                <Filter className="app-icon-glyph h-5 w-5" />
               </div>
               <div>
                 <p className={sectionLabel}>Catalog Filters</p>
@@ -320,8 +320,8 @@ export default function RAExercises() {
 
             <div className={`${blockCardSoft} space-y-4`}>
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#8f5f36]">Operator group</h3>
-                <p className="mt-1 text-sm text-[#7b5a42]">Select one or more operator families to create a focused practice set.</p>
+                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Operator group</h3>
+                <p className="mt-1 text-sm text-[#5f6b7a]">Select one or more operator families to create a focused practice set.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {OPERATOR_OPTIONS.map(([key, label]) => (
@@ -329,7 +329,7 @@ export default function RAExercises() {
                     key={key}
                     onClick={() => toggleOp(key)}
                     className={`rounded-2xl border-2 px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                      selectedOps.has(key) ? 'border-[#c66c44] bg-[#d97745] text-white' : 'border-[#d8c1a2] bg-[#fff8eb] text-[#7b5a42] hover:bg-[#fff0d1]'
+                      selectedOps.has(key) ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#cbeae3] bg-[#f7fcfa] text-[#3d6f67] hover:bg-[#edf8f6]'
                     }`}
                   >
                     {label}
@@ -341,13 +341,13 @@ export default function RAExercises() {
             <div className={`${blockCardSoft} space-y-4`}>
               <div className="flex flex-wrap items-center gap-4">
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#8f5f36]">Progress view</h3>
-                  <p className="mt-1 text-sm text-[#7b5a42]">Switch between new practice, complete view, or mastered prompts.</p>
+                  <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Progress view</h3>
+                  <p className="mt-1 text-sm text-[#5f6b7a]">Switch between new practice, complete view, or mastered prompts.</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {(['unmastered', 'all', 'mastered'] as const).map((f) => (
-                    <label key={f} className="flex items-center gap-2 rounded-2xl border-2 border-[#dcc5a8] bg-[#fff9ef] px-3 py-2 text-sm font-medium cursor-pointer text-[#6a4930]">
-                      <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-[#d97745]" />
+                    <label key={f} className="flex items-center gap-2 rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] px-3 py-2 text-sm font-medium cursor-pointer text-[#3d6f67]">
+                      <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-[#74c8b8]" />
                       {f.charAt(0).toUpperCase() + f.slice(1)}
                     </label>
                   ))}
@@ -366,11 +366,11 @@ export default function RAExercises() {
             ) : (
               <>
                 <div className={blockCardSoft}>
-                  <label className="mb-2 block text-sm font-semibold text-[#6c482c]">Choose a prompt from the filtered catalog</label>
+                  <label className="mb-2 block text-sm font-semibold text-[#3d6f67]">Choose a prompt from the filtered catalog</label>
                   <select
                     value={selectedQueryId}
                     onChange={(e) => setSelectedQueryId(e.target.value)}
-                    className="w-full rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 text-sm text-[#5c3b1f] focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5] cursor-pointer"
+                    className="app-input w-full rounded-2xl bg-white px-4 py-3 text-sm cursor-pointer"
                   >
                     <option value="">- Select a query -</option>
                     {filteredQueries.map((q) => {
@@ -394,7 +394,7 @@ export default function RAExercises() {
 
                       <form onSubmit={handleExecute} className="rounded-[26px] border-2 border-[#d7b79f] bg-[#fbe7df] p-5 shadow-[0_6px_0_0_#f2d2c4] space-y-3">
                         <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
-                          <Pencil className="w-4 h-4 text-[#c86239]" />
+                          <Pencil className="app-icon-glyph h-4 w-4" />
                           Your Solution
                         </h3>
                         <p className="text-sm text-[#7b5a42]">Write the relational algebra expression for this query:</p>
@@ -420,7 +420,7 @@ export default function RAExercises() {
                     {result && (
                       <div className={`${blockCardSoft} space-y-6`}>
                         <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
-                          <BarChart3 className="w-4 h-4 text-[#c86239]" />
+                          <BarChart3 className="app-icon-glyph h-4 w-4" />
                           Results Comparison
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -445,7 +445,7 @@ export default function RAExercises() {
 
                     <div className={`${blockCardSoft} space-y-4`}>
                       <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
-                        <Lightbulb className="w-4 h-4 text-[#d98d24]" />
+                        <Lightbulb className="app-icon-glyph h-4 w-4" />
                         Need Help?
                       </h3>
                       <button
@@ -490,8 +490,8 @@ export default function RAExercises() {
         {mode === 'custom' && (
           <section className={`${blockCard} space-y-4`}>
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-[16px] border-2 border-[#d27e63] bg-[#f7b59d] shadow-[0_4px_0_0_#f0d1c4]">
-                <Pencil className="w-5 h-5 text-[#7a3526]" />
+              <div className="app-icon-tile flex h-11 w-11 items-center justify-center rounded-[16px] shadow-[0_4px_0_0_rgba(203,234,227,0.9)]">
+                <Pencil className="app-icon-glyph h-5 w-5" />
               </div>
               <div>
                 <p className={sectionLabel}>Free Writing</p>
@@ -499,7 +499,7 @@ export default function RAExercises() {
               </div>
             </div>
             <form onSubmit={handleCustomExecute} className={`${blockCardSoft} space-y-3`}>
-              <label className="text-sm font-medium text-[#6d4b31]">Enter your own relational algebra expression:</label>
+              <label className="text-sm font-medium text-[#3d6f67]">Enter your own relational algebra expression:</label>
               <textarea
                 value={customExpr}
                 onChange={(e) => setCustomExpr(e.target.value)}
@@ -521,7 +521,7 @@ export default function RAExercises() {
             {customResult && (
               <div className={`${blockCardSoft} space-y-4`}>
                 <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
-                  <BarChart3 className="w-4 h-4 text-[#c86239]" />
+                  <BarChart3 className="app-icon-glyph h-4 w-4" />
                   Query Results
                 </h3>
                 {customResult.rows.length > 0 ? (

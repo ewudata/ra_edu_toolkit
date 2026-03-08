@@ -15,13 +15,13 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     return (
-      <div className="mx-auto mt-20 max-w-md space-y-6 rounded-[30px] border-2 border-[#d9bf96] bg-[#fffaf1] p-8 text-center shadow-[0_10px_0_0_#ecd9b8]">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] border-2 border-[#efb37e] bg-[#f78b43] shadow-[0_6px_0_0_#f4d8b7]">
-          <GraduationCap className="h-8 w-8 text-white" />
+      <div className="mx-auto mt-20 max-w-md space-y-6 rounded-[30px] border border-[#cbeae3] bg-[#f7fcfa] p-8 text-center shadow-[0_16px_30px_rgba(116,200,184,0.12)]">
+        <div className="mx-auto app-icon-tile flex h-16 w-16 items-center justify-center rounded-[24px] shadow-[0_10px_22px_rgba(116,200,184,0.16)]">
+          <GraduationCap className="app-icon-glyph h-8 w-8" />
         </div>
         <div>
-          <h2 className="font-display text-3xl font-semibold text-[#5c3b1f]">Welcome Back</h2>
-          <p className="mt-1 text-sm text-[#7b5a42]">Sign in to access your relational algebra workspace.</p>
+          <h2 className="font-display text-3xl font-semibold text-[#3f4761]">Welcome Back</h2>
+          <p className="mt-1 text-sm text-[#5f6b7a]">Sign in to access your relational algebra workspace.</p>
         </div>
         <button
           onClick={login}

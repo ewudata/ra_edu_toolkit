@@ -2,19 +2,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #22c55e;
-  --color-primary-dark: #16a34a;
-  --color-primary-light: #b7efc9;
-  --color-primary-50: #eefbf2;
-  --color-primary-100: #daf5e3;
-  --color-success: #22c55e;
-  --color-success-light: #eefbf2;
+  --color-primary: #74c8b8;
+  --color-primary-dark: #5cb5a5;
+  --color-primary-light: #dff5ef;
+  --color-primary-50: #f3fbf8;
+  --color-primary-100: #e7f7f2;
+  --color-success: #74c8b8;
+  --color-success-light: #f3fbf8;
   --color-warning: #d0aa67;
   --color-warning-light: #faf3e4;
   --color-danger: #c88f8f;
   --color-danger-light: #fbefef;
   --color-surface: #f3f3f3;
-  --color-op: #22c55e;
+  --color-op: #74c8b8;
   --color-attr: #7fc8e8;
   --color-rel: #22c55e;
   --color-cond: #7986a3;
@@ -54,7 +54,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 3px solid rgba(34, 197, 94, 0.28);
+  outline: 3px solid rgba(116, 200, 184, 0.3);
   outline-offset: 2px;
 }
 
@@ -70,7 +70,7 @@ textarea {
 }
 
 .app-kicker {
-  color: #8d98ad;
+  color: #615a96;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.24em;
@@ -85,7 +85,7 @@ textarea {
 }
 
 .app-subheading {
-  color: #7b879c;
+  color: #667085;
   font-size: 0.98rem;
   line-height: 1.7;
 }
@@ -114,8 +114,8 @@ textarea {
 }
 
 .app-input:focus {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+  border-color: #74c8b8;
+  box-shadow: 0 0 0 4px rgba(116, 200, 184, 0.16);
   outline: none;
 }
 
@@ -124,18 +124,18 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid #22c55e;
+  border: 1px solid #87d7c8;
   border-radius: 1rem;
-  background: #22c55e;
-  color: #fff;
+  background: linear-gradient(135deg, #8ddfd2 0%, #8ee0a2 100%);
+  color: #214c45;
   cursor: pointer;
   font-weight: 700;
   padding: 0.7rem 1.15rem;
-  box-shadow: 0 12px 26px rgba(34, 197, 94, 0.22);
+  box-shadow: 0 12px 26px rgba(116, 200, 184, 0.24);
 }
 
 .app-primary-btn:hover {
-  background: #16a34a;
+  background: linear-gradient(135deg, #7fd4c7 0%, #7fd695 100%);
   transform: translateY(-1px);
 }
 
@@ -144,22 +144,22 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid #ececec;
+  border: 1px solid #cbeae3;
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.88);
-  color: #4b5563;
+  background: rgba(243, 251, 248, 0.94);
+  color: #3d6f67;
   cursor: pointer;
   font-weight: 700;
   padding: 0.7rem 1.15rem;
 }
 
 .app-secondary-btn:hover {
-  background: #f8f8f8;
+  background: #e7f7f2;
 }
 
 .app-nav-link {
   display: inline-block;
-  color: #7b879c;
+  color: #5f6b7a;
   cursor: pointer;
   font-weight: 700;
   padding: 0.2rem 0;
@@ -170,7 +170,25 @@ textarea {
 }
 
 .app-nav-link-active {
-  color: #16a34a;
+  color: #2f7f72;
+}
+
+.app-icon-tile {
+  border: 1px solid #cbeae3;
+  background: linear-gradient(135deg, #effaf7 0%, #e7f7ef 100%);
+}
+
+.app-icon-tile-soft {
+  border: 1px solid #d7eee7;
+  background: #f3fbf8;
+}
+
+.app-icon-glyph {
+  color: #3f8f81;
+}
+
+.app-icon-glyph-soft {
+  color: #4b9b8d;
 }
 
 .app-code {

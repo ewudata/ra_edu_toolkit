@@ -11,17 +11,17 @@ export default function Collapsible({ title, defaultOpen = false, children }: Pr
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="overflow-hidden rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] shadow-[0_6px_0_0_#f3e3c9]">
+    <div className="overflow-hidden rounded-[22px] border-2 border-[#cbeae3] bg-[#f7fcfa] shadow-[0_6px_0_0_#deefe9]">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full cursor-pointer text-left text-sm font-semibold text-[#6d4b31] transition-colors hover:bg-[#fff3dc] flex items-center justify-between px-4 py-3 bg-[#fff8eb]"
+        className="flex w-full cursor-pointer items-center justify-between bg-[#f3fbf8] px-4 py-3 text-left text-sm font-semibold text-[#3d6f67] transition-colors hover:bg-[#edf8f6]"
       >
         <span>{title}</span>
         <ChevronDown
-          className={`w-4 h-4 text-[#b98d67] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          className={`h-4 w-4 text-[#4b9b8d] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      {open && <div className="border-t-2 border-[#efddc2] px-4 py-3">{children}</div>}
+      {open && <div className="border-t-2 border-[#deefe9] px-4 py-3">{children}</div>}
     </div>
   );
 }

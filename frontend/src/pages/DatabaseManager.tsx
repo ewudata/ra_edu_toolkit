@@ -97,21 +97,21 @@ export default function DatabaseManager() {
   const hero = 'rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]';
   const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
   const softCard = 'rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.9)] p-5 shadow-[0_8px_22px_rgba(123,128,173,0.06)]';
-  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#7d77ad]';
+  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#615a96]';
   const sectionTitle = 'text-xl font-semibold text-[#3f4761]';
-  const iconTile = 'flex h-12 w-12 items-center justify-center rounded-[18px] border border-[#d8d4fb] bg-[#f1f0ff]';
-  const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d8dded] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-sm font-semibold text-[#55607d] transition-colors duration-200 hover:bg-[#f3f4fd] cursor-pointer';
-  const primaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#7b75c2] bg-[#7f78c7] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#6e68b1] disabled:opacity-50 cursor-pointer';
-  const textInput = 'block w-full rounded-2xl border border-[#d8dded] bg-white/92 px-4 py-3 text-sm text-[#3f4761] focus:border-[#9791e0] focus:outline-none focus:ring-4 focus:ring-[rgba(199,195,242,0.5)] transition-colors';
+  const iconTile = 'app-icon-tile flex h-12 w-12 items-center justify-center rounded-[18px]';
+  const secondaryButton = 'app-secondary-btn';
+  const primaryButton = 'app-primary-btn disabled:opacity-50';
+  const textInput = 'app-input block w-full rounded-2xl bg-white/92 px-4 py-3 text-sm';
 
   return (
     <div className={shell}>
       <section className={hero}>
         <div className="space-y-3">
-          <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#7d77ad]">Academic Practice Studio</p>
+          <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Database Manager</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#68718c] sm:text-base">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f6b7a] sm:text-base">
               Import, browse, and manage your learning databases in the same study-ready workspace used across the toolkit.
             </p>
           </div>
@@ -128,19 +128,19 @@ export default function DatabaseManager() {
       <section className={blockCard}>
         <div className="mb-4 flex items-center gap-3">
           <div className={iconTile}>
-            <HardDrive className="h-5 w-5 text-[#6e68b1]" />
+            <HardDrive className="app-icon-glyph h-5 w-5" />
           </div>
           <div>
             <p className={sectionLabel}>Catalog</p>
             <h2 className={sectionTitle}>Existing databases</h2>
           </div>
         </div>
-        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#68718c]">
+        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#5f6b7a]">
           Review available datasets, inspect their relations, and remove non-protected collections when they are no longer needed.
         </p>
         {loading ? (
-          <div className={`${softCard} flex items-center gap-2.5 py-4 text-[#68718c]`}>
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#7f78c7] border-t-transparent" />
+          <div className={`${softCard} flex items-center gap-2.5 py-4 text-[#5f6b7a]`}>
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#74c8b8] border-t-transparent" />
             <span className="text-sm">Loading databases...</span>
           </div>
         ) : databases.length === 0 ? (
@@ -176,7 +176,7 @@ export default function DatabaseManager() {
                   </div>
                   <div className={`${softCard} space-y-2 text-sm`}>
                     <h4 className="font-medium text-[#55607d]">Statistics</h4>
-                    <div className="space-y-1 text-[#68718c]">
+                    <div className="space-y-1 text-[#5f6b7a]">
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Table count: {db.table_count}</p>
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Database name: {db.name}</p>
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Default dataset: {db.is_default ? 'Yes' : 'No'}</p>
@@ -201,31 +201,31 @@ export default function DatabaseManager() {
       <section className={blockCard}>
         <div className="mb-4 flex items-center gap-3">
           <div className={iconTile}>
-            <Upload className="h-5 w-5 text-[#6e68b1]" />
+            <Upload className="app-icon-glyph h-5 w-5" />
           </div>
           <div>
             <p className={sectionLabel}>Import</p>
             <h2 className={sectionTitle}>Import new database</h2>
           </div>
         </div>
-        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#68718c]">
+        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#5f6b7a]">
           Add new practice datasets from ZIP or SQL sources without leaving the same page-level study layout.
         </p>
 
         <div className="space-y-4">
           <div className={softCard}>
             <div className="mb-3 flex items-center gap-2">
-              <FileArchive className="h-4 w-4 text-[#6e68b1]" />
+              <FileArchive className="app-icon-glyph h-4 w-4" />
               <h3 className="font-display text-xl text-[#3f4761]">Import from ZIP File</h3>
             </div>
             <Collapsible title="ZIP Import Help">
-              <div className="space-y-2 text-sm text-[#68718c]">
+              <div className="space-y-2 text-sm text-[#5f6b7a]">
                 <p>ZIP file should contain multiple CSV files. Each CSV file represents a table. File name (without extension) will be used as table name.</p>
                 <pre className="app-code p-3 text-xs text-[#55607d]">{`database.zip\n├── students.csv\n├── courses.csv\n└── enrollments.csv`}</pre>
               </div>
             </Collapsible>
             <form onSubmit={handleZipImport} className="mt-3 space-y-3">
-              <input ref={zipFileRef} type="file" accept=".zip" className="block w-full text-sm text-[#68718c] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#d8dded] file:bg-[#f6f5ff] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#55607d]" />
+              <input ref={zipFileRef} type="file" accept=".zip" className="block w-full text-sm text-[#5f6b7a] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
               <input name="zipName" type="text" defaultValue="NewDatabase" className={`${textInput} sm:w-64`} placeholder="Database name" />
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />
@@ -236,16 +236,16 @@ export default function DatabaseManager() {
 
           <div className={softCard}>
             <div className="mb-3 flex items-center gap-2">
-              <FileCode className="h-4 w-4 text-[#6e68b1]" />
+              <FileCode className="app-icon-glyph h-4 w-4" />
               <h3 className="font-display text-xl text-[#3f4761]">Import from SQL File</h3>
             </div>
             <Collapsible title="SQL Import Help">
-              <div className="space-y-1 text-sm text-[#68718c]">
+              <div className="space-y-1 text-sm text-[#5f6b7a]">
                 <p>File must be UTF-8 encoded. Should contain CREATE TABLE statements. May contain INSERT statements to insert data. Supports standard SQLite syntax.</p>
               </div>
             </Collapsible>
             <form onSubmit={handleSqlImport} className="mt-3 space-y-3">
-              <input ref={sqlFileRef} type="file" accept=".sql" className="block w-full text-sm text-[#68718c] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#d8dded] file:bg-[#f6f5ff] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#55607d]" />
+              <input ref={sqlFileRef} type="file" accept=".sql" className="block w-full text-sm text-[#5f6b7a] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
               <input name="sqlName" type="text" defaultValue="SQLDatabase" className={`${textInput} sm:w-64`} placeholder="Database name" />
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />
