@@ -216,3 +216,7 @@ coverage/
 
 # Local git worktrees
 .worktrees/
+
+# Local Codex caches
+.codex/**/__pycache__/
+.codex/**/*.pyc
