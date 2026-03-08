@@ -8,30 +8,30 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin h-8 w-8 border-[3px] border-primary border-t-transparent rounded-full" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="max-w-sm mx-auto mt-20 text-center space-y-6">
-        <div className="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto">
-          <GraduationCap className="w-7 h-7 text-primary" />
+      <div className="mx-auto mt-20 max-w-md space-y-6 rounded-[30px] border-2 border-[#d9bf96] bg-[#fffaf1] p-8 text-center shadow-[0_10px_0_0_#ecd9b8]">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] border-2 border-[#efb37e] bg-[#f78b43] shadow-[0_6px_0_0_#f4d8b7]">
+          <GraduationCap className="h-8 w-8 text-white" />
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-slate-800">Welcome Back</h2>
-          <p className="mt-1 text-sm text-slate-500">Sign in to access your relational algebra workspace.</p>
+          <h2 className="font-display text-3xl font-semibold text-[#5c3b1f]">Welcome Back</h2>
+          <p className="mt-1 text-sm text-[#7b5a42]">Sign in to access your relational algebra workspace.</p>
         </div>
         <button
           onClick={login}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-semibold cursor-pointer"
+          className="app-primary-btn"
         >
           <LogIn className="w-4 h-4" />
           Log in with Google
         </button>
         {error && (
-          <div className="bg-danger-light border border-red-200 text-red-700 rounded-lg p-3 text-sm">
+          <div className="rounded-[18px] border-2 border-[#d9a08f] bg-[#fde7df] p-3 text-sm text-[#86483d]">
             Authentication failed: {error}
           </div>
         )}

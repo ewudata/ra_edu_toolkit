@@ -1,29 +1,190 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&family=Lora:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #4F46E5;
-  --color-primary-dark: #4338CA;
-  --color-primary-light: #818CF8;
-  --color-primary-50: #EEF2FF;
-  --color-primary-100: #E0E7FF;
-  --color-success: #10B981;
-  --color-success-light: #D1FAE5;
-  --color-warning: #F59E0B;
-  --color-warning-light: #FEF3C7;
-  --color-danger: #EF4444;
-  --color-danger-light: #FEE2E2;
-  --color-surface: #F8FAFC;
-  --color-op: #7C3AED;
-  --color-attr: #DC2626;
-  --color-rel: #2563EB;
-  --color-cond: #D97706;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-primary: #22c55e;
+  --color-primary-dark: #16a34a;
+  --color-primary-light: #b7efc9;
+  --color-primary-50: #eefbf2;
+  --color-primary-100: #daf5e3;
+  --color-success: #22c55e;
+  --color-success-light: #eefbf2;
+  --color-warning: #d0aa67;
+  --color-warning-light: #faf3e4;
+  --color-danger: #c88f8f;
+  --color-danger-light: #fbefef;
+  --color-surface: #f3f3f3;
+  --color-op: #22c55e;
+  --color-attr: #7fc8e8;
+  --color-rel: #22c55e;
+  --color-cond: #7986a3;
+  --font-sans: 'Nunito Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Lora', 'Nunito Sans', system-ui, sans-serif;
+}
+
+html {
+  background: #f3f3f3;
 }
 
 body {
-  @apply bg-surface text-slate-800 antialiased;
+  @apply text-slate-800 antialiased;
   font-family: var(--font-sans);
+  background: #f3f3f3;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(34, 197, 94, 0.28);
+  outline-offset: 2px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: #f3f3f3;
+}
+
+.app-container {
+  margin: 0 auto;
+  max-width: 1220px;
+  padding: 0 1.25rem;
+}
+
+.app-kicker {
+  color: #8d98ad;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.app-heading {
+  color: #374151;
+  font-size: clamp(1.75rem, 2.6vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.02;
+}
+
+.app-subheading {
+  color: #7b879c;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.app-block {
+  border: 1px solid #efefef;
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 16px 34px rgba(24, 39, 75, 0.08);
+}
+
+.app-soft-block {
+  border: 1px solid #f0f0f0;
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(24, 39, 75, 0.06);
+}
+
+.app-input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: #ffffff;
+  color: #374151;
+  padding: 0.8rem 1rem;
+}
+
+.app-input:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+  outline: none;
+}
+
+.app-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid #22c55e;
+  border-radius: 1rem;
+  background: #22c55e;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.7rem 1.15rem;
+  box-shadow: 0 12px 26px rgba(34, 197, 94, 0.22);
+}
+
+.app-primary-btn:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+.app-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid #ececec;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.88);
+  color: #4b5563;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.7rem 1.15rem;
+}
+
+.app-secondary-btn:hover {
+  background: #f8f8f8;
+}
+
+.app-nav-link {
+  display: inline-block;
+  color: #7b879c;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.2rem 0;
+}
+
+.app-nav-link:hover {
+  color: #4b5563;
+}
+
+.app-nav-link-active {
+  color: #16a34a;
+}
+
+.app-code {
+  border: 1px solid #ececec;
+  border-radius: 1rem;
+  background: #ffffff;
+  color: #374151;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0 0.9rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

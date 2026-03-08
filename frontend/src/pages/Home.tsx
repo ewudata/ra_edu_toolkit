@@ -1,16 +1,8 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../lib/api';
-import StatusBadge from '../components/StatusBadge';
-import Collapsible from '../components/Collapsible';
-import SyntaxHelp from '../components/SyntaxHelp';
 import {
   Database,
   FunctionSquare,
-  BrainCircuit,
   ArrowLeftRight,
-  Activity,
-  HardDrive,
   BookOpen,
 } from 'lucide-react';
 
@@ -19,165 +11,104 @@ const FEATURES = [
     icon: Database,
     title: 'Database Manager',
     to: '/databases',
-    color: 'text-blue-600 bg-blue-50',
     items: ['CSV/ZIP file import', 'SQL script import', 'Database browsing', 'Table structure viewing'],
   },
   {
     icon: FunctionSquare,
     title: 'RA Exercises',
     to: '/ra-exercises',
-    color: 'text-violet-600 bg-violet-50',
     items: ['Guided 3-step workflow', 'Pre-defined practice catalog', 'Custom expression workspace', 'Execution trace visualization'],
-  },
-  {
-    icon: BrainCircuit,
-    title: 'SQL Exercises',
-    to: '/sql-exercises',
-    color: 'text-amber-600 bg-amber-50',
-    items: ['Curated practice problems', 'Automated RA checking', 'SQL solution references', 'Expected result walkthroughs'],
   },
   {
     icon: ArrowLeftRight,
     title: 'RA ↔ SQL Reference',
     to: '/ra-sql-reference',
-    color: 'text-emerald-600 bg-emerald-50',
     items: ['Side-by-side solution explorer', 'Expected schema and data previews', 'Translation tips and heuristics', 'Database-scoped exercise catalog'],
   },
 ];
 
 export default function Home() {
-  const [health, setHealth] = useState<string | null>(null);
-  const [healthError, setHealthError] = useState<string | null>(null);
-  const [dbNames, setDbNames] = useState<string[]>([]);
-  const [dbError, setDbError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.healthCheck()
-      .then((h) => setHealth(h.status))
-      .catch((e) => setHealthError(String(e)));
-    api.getDatabases()
-      .then((dbs) => setDbNames(dbs.map((d) => d.name)))
-      .catch((e) => setDbError(String(e)));
-  }, []);
+  const shell = 'space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6';
+  const hero = 'rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]';
+  const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
+  const softCard = 'rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.9)] p-5 shadow-[0_8px_22px_rgba(123,128,173,0.06)]';
+  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#7d77ad]';
+  const sectionTitle = 'text-xl font-semibold text-[#3f4761]';
 
   return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Relational Algebra Education Toolkit</h1>
-          <p className="mt-1.5 text-slate-500">
-            Master relational algebra and SQL through hands-on practice, guided exercises, and side-by-side references.
-          </p>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <BookOpen className="w-4 h-4 text-primary" />
-            <h2 className="font-semibold text-slate-700">Quick Start</h2>
-          </div>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600">
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-              <span><strong>Manage databases</strong> to import and organize learning data</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-1.5 shrink-0" />
-              <span><strong>Practice relational algebra</strong> with guided exercises</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-              <span><strong>Build SQL skills</strong> alongside RA understanding</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-              <span><strong>Translate</strong> between RA and SQL with references</span>
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Activity className="w-4 h-4 text-primary" />
-            <h2 className="font-semibold text-slate-700">System Status</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              {healthError ? (
-                <StatusBadge variant="error">Backend service connection failed: {healthError}</StatusBadge>
-              ) : health ? (
-                <StatusBadge variant="success">Backend service is running — Status: {health}</StatusBadge>
-              ) : (
-                <StatusBadge variant="info">Checking backend...</StatusBadge>
-              )}
-            </div>
-            <div>
-              {dbError ? (
-                <StatusBadge variant="warning">Unable to get database list: {dbError}</StatusBadge>
-              ) : dbNames.length > 0 ? (
-                <StatusBadge variant="success">
-                  <span className="flex items-center gap-1.5">
-                    <HardDrive className="w-3.5 h-3.5" />
-                    Found {dbNames.length} databases: {dbNames.join(', ')}
-                  </span>
-                </StatusBadge>
-              ) : (
-                <StatusBadge variant="info">Loading databases...</StatusBadge>
-              )}
-            </div>
+    <div className={shell}>
+      <section className={hero}>
+        <div className="space-y-3">
+          <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#7d77ad]">Academic Practice Studio</p>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-5xl">Relational Algebra Education Toolkit</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-[#68718c] sm:text-base">
+              Study relational algebra through guided exercises, schema exploration, and side-by-side translation references.
+            </p>
           </div>
         </div>
+      </section>
 
-        <div>
-          <h2 className="font-semibold text-slate-700 mb-4">Feature Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FEATURES.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <Link
-                  key={feature.title}
-                  to={feature.to}
-                  className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${feature.color}`}>
-                      <Icon className="w-[18px] h-[18px]" />
-                    </div>
-                    <h3 className="font-semibold text-slate-800 group-hover:text-primary transition-colors">{feature.title}</h3>
+      <section className={blockCard}>
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-[#d8d4fb] bg-[#f1f0ff]">
+            <BookOpen className="h-5 w-5 text-[#6e68b1]" />
+          </div>
+          <div>
+            <p className={sectionLabel}>Quick Start</p>
+            <h2 className={sectionTitle}>Begin with a simple study flow</h2>
+          </div>
+        </div>
+        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#68718c]">
+          Move through the toolkit as a sequence of study blocks: prepare a schema, practice queries, then compare algebra with SQL references.
+        </p>
+        <ul className="grid grid-cols-1 gap-3 text-sm text-[#68718c] sm:grid-cols-2">
+          <li className={`${softCard} flex items-start gap-3`}>
+            <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#7f78c7]" />
+            <span><strong className="text-[#3f4761]">Manage databases</strong> to import and organize learning data.</span>
+          </li>
+          <li className={`${softCard} flex items-start gap-3`}>
+            <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#8cb7aa]" />
+            <span><strong className="text-[#3f4761]">Practice relational algebra</strong> with guided exercises and result comparison.</span>
+          </li>
+          <li className={`${softCard} flex items-start gap-3`}>
+            <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#7f78c7]" />
+            <span><strong className="text-[#3f4761]">Review worked examples</strong> to strengthen translation intuition.</span>
+          </li>
+          <li className={`${softCard} flex items-start gap-3`}>
+            <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#8cb7aa]" />
+            <span><strong className="text-[#3f4761]">Translate between RA and SQL</strong> with side-by-side references.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section className={blockCard}>
+        <p className={sectionLabel}>Feature Overview</p>
+        <h2 className={`mt-1 ${sectionTitle}`}>Choose your workspace</h2>
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {FEATURES.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <Link
+                key={feature.title}
+                to={feature.to}
+                className="group rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.9)] p-6 shadow-[0_8px_22px_rgba(123,128,173,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d6daf0]"
+              >
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-[#d8d4fb] bg-[#f1f0ff]">
+                    <Icon className="h-[18px] w-[18px] text-[#6e68b1]" />
                   </div>
-                  <ul className="text-sm text-slate-500 space-y-1">
-                    {feature.items.map((item) => (
-                      <li key={item} className="flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-slate-300" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </Link>
-              );
-            })}
-          </div>
+                </div>
+                <p className={sectionLabel}>Workspace</p>
+                <h3 className="mt-1 font-display text-2xl text-[#3f4761] group-hover:text-[#5d6491]">{feature.title}</h3>
+                <p className="mt-4 text-sm leading-7 text-[#68718c]">
+                  {feature.items[0]}. {feature.items[1]}. {feature.items[2]}.
+                </p>
+              </Link>
+            );
+          })}
         </div>
-
-        <Collapsible title="Detailed Usage Instructions">
-          <div className="space-y-4 text-sm text-slate-600">
-            <div>
-              <h4 className="font-semibold text-slate-700 mb-1">Startup Guide</h4>
-              <ol className="list-decimal list-inside space-y-1">
-                <li><strong>Start Backend Service:</strong> <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">uvicorn backend.main:app --reload</code></li>
-                <li><strong>Start Frontend Application:</strong> <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">npm run dev</code> in frontend-react/</li>
-                <li><strong>Access Application:</strong> Open <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">http://localhost:5173</code> in your browser</li>
-              </ol>
-            </div>
-            <SyntaxHelp database={dbNames[0]} />
-            <div>
-              <h4 className="font-semibold text-slate-700 mb-1">Troubleshooting</h4>
-              <ul className="list-disc list-inside space-y-1">
-                <li><strong>Backend connection failed:</strong> Ensure backend service is running</li>
-                <li><strong>Query execution error:</strong> Check syntax and table names</li>
-                <li><strong>Import failed:</strong> Ensure file format is correct and UTF-8 encoded</li>
-              </ul>
-            </div>
-          </div>
-        </Collapsible>
-      </div>
+      </section>
+    </div>
   );
 }

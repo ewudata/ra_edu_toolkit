@@ -49,18 +49,18 @@ export default function SyntaxHelp({ database }: Props) {
 
   return (
     <div className="space-y-4">
-      <h4 className="font-semibold text-slate-700">Relational Algebra Operators</h4>
+      <h4 className="font-display text-lg font-semibold text-[#5c3b1f]">Relational Algebra Operators</h4>
       <ul className="space-y-1.5 text-sm">
         {ops.map((op) => (
           <li key={op.symbol}>
             <span className="font-bold text-[var(--color-op)]">{op.symbol}</span>{' '}
-            <span className="font-semibold text-slate-700">{op.name}</span>:{' '}
-            <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">{op.usage}</code>{' '}
-            <span className="text-slate-400 text-xs">— aliases: {op.aliases}</span>
+            <span className="font-semibold text-[#5c3b1f]">{op.name}</span>:{' '}
+            <code className="rounded-lg border border-[#ead7b8] bg-[#fff7eb] px-1.5 py-0.5 text-xs font-mono">{op.usage}</code>{' '}
+            <span className="text-xs text-[#9b8167]">- aliases: {op.aliases}</span>
           </li>
         ))}
       </ul>
-      <h4 className="font-semibold text-slate-700">Example Queries</h4>
+      <h4 className="font-display text-lg font-semibold text-[#5c3b1f]">Example Queries</h4>
       <Example database={database} />
     </div>
   );

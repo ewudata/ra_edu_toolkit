@@ -24,7 +24,6 @@ export default function RASQLReference() {
   useEffect(() => {
     if (selectedDb) {
       api.getQueries(selectedDb).then((qs) => setQueries(sortQueries(qs))).catch(() => setQueries([]));
-      setDetails({});
     }
   }, [selectedDb]);
 
@@ -40,123 +39,158 @@ export default function RASQLReference() {
     return <StatusBadge variant="error">Backend service connection failed</StatusBadge>;
   }
 
+  const shell = 'space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6';
+  const hero = 'rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]';
+  const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
+  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#7d77ad]';
+  const sectionTitle = 'text-xl font-semibold text-[#3f4761]';
+  const iconTile = 'flex h-12 w-12 items-center justify-center rounded-[18px] border border-[#d8d4fb] bg-[#f1f0ff]';
+  const textInput = 'w-full rounded-2xl border border-[#d8dded] bg-white/92 px-4 py-3 text-sm text-[#3f4761] focus:border-[#9791e0] focus:outline-none focus:ring-4 focus:ring-[rgba(199,195,242,0.5)] transition-colors cursor-pointer';
+  const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d8dded] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-sm font-semibold text-[#55607d] transition-colors duration-200 hover:bg-[#f3f4fd] cursor-pointer';
+
   return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">RA ↔ SQL Reference</h1>
-          <p className="mt-1 text-sm text-slate-500">Explore side-by-side relational algebra and SQL solutions to build intuition for translating between both representations.</p>
+    <div className={shell}>
+      <section className={hero}>
+        <div className="space-y-3">
+          <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#7d77ad]">Academic Practice Studio</p>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">RA ↔ SQL Reference</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#68718c] sm:text-base">
+              Explore side-by-side relational algebra and SQL solutions to build intuition for translating between both representations.
+            </p>
+          </div>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <aside className="space-y-4">
-            <div className="flex items-center gap-2">
-              <DatabaseIcon className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Select Database</h2>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className={`${blockCard} space-y-4`}>
+          <div className="flex items-center gap-3">
+            <div className={iconTile}>
+              <DatabaseIcon className="h-5 w-5 text-[#6e68b1]" />
             </div>
-            <select
-              value={selectedDb}
-              onChange={(e) => setSelectedDb(e.target.value)}
-              className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-            >
-              <option value="">- Select -</option>
-              {databases.map((db) => (
-                <option key={db.name} value={db.name}>{db.name}</option>
-              ))}
-            </select>
-          </aside>
+            <div>
+              <p className={sectionLabel}>Setup</p>
+              <h2 className={sectionTitle}>Select Database</h2>
+            </div>
+          </div>
+          <p className="text-sm leading-6 text-[#68718c]">
+            Choose a dataset to load cataloged exercises, expected results, and paired reference solutions.
+          </p>
+          <select
+            value={selectedDb}
+            onChange={(e) => {
+              setSelectedDb(e.target.value);
+              setDetails({});
+            }}
+            className={textInput}
+          >
+            <option value="">- Select -</option>
+            {databases.map((db) => (
+              <option key={db.name} value={db.name}>{db.name}</option>
+            ))}
+          </select>
+        </aside>
 
-          <div className="md:col-span-3 space-y-4">
-            {!selectedDb ? (
-              <StatusBadge variant="info">Select a database from the sidebar to continue.</StatusBadge>
-            ) : queries.length === 0 ? (
-              <StatusBadge variant="info">This database does not have any cataloged exercises yet.</StatusBadge>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-primary" />
-                  <h2 className="text-lg font-semibold text-slate-700">
-                    Exercises for <code className="bg-slate-100 px-1.5 py-0.5 rounded text-sm font-mono">{selectedDb}</code>
-                  </h2>
+        <div className="space-y-4">
+          {!selectedDb ? (
+            <StatusBadge variant="info">Select a database from the setup panel to continue.</StatusBadge>
+          ) : queries.length === 0 ? (
+            <StatusBadge variant="info">This database does not have any cataloged exercises yet.</StatusBadge>
+          ) : (
+            <>
+              <div className={blockCard}>
+                <div className="flex items-center gap-3">
+                  <div className={iconTile}>
+                    <BookOpen className="h-5 w-5 text-[#6e68b1]" />
+                  </div>
+                  <div>
+                    <p className={sectionLabel}>Reference Catalog</p>
+                    <h2 className={sectionTitle}>
+                      Exercises for <code className="rounded-xl border border-[#d8dded] bg-[#f6f5ff] px-2 py-1 text-sm font-mono text-[#55607d]">{selectedDb}</code>
+                    </h2>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {queries.map((q) => {
-                    const prompt = (q.prompt ?? q.id ?? '').length > 80 ? (q.prompt ?? '').slice(0, 77) + '...' : q.prompt;
-                    const detail = details[q.id];
-                    return (
-                      <Collapsible key={q.id} title={`${prompt} · ${difficultyLabel(q.difficulty)}`}>
-                        <div className="space-y-4" onMouseEnter={() => loadDetail(q.id)}>
-                          <p className="text-sm text-slate-600"><span className="font-semibold text-slate-700">Prompt:</span> {q.prompt ?? 'No prompt provided.'}</p>
-                          {q.hints?.length ? (
-                            <div className="text-sm">
-                              <span className="font-semibold text-slate-700">Hints:</span>
-                              <ul className="list-disc list-inside ml-2 text-slate-500">
-                                {q.hints.map((h, i) => <li key={i}>{h}</li>)}
-                              </ul>
-                            </div>
-                          ) : null}
+              </div>
+              <div className="space-y-3">
+                {queries.map((q) => {
+                  const prompt = (q.prompt ?? q.id ?? '').length > 80 ? `${(q.prompt ?? '').slice(0, 77)}...` : q.prompt;
+                  const detail = details[q.id];
+                  return (
+                    <Collapsible key={q.id} title={`${prompt} · ${difficultyLabel(q.difficulty)}`}>
+                      <div className="space-y-4" onMouseEnter={() => loadDetail(q.id)}>
+                        <p className="text-sm text-[#68718c]"><span className="font-semibold text-[#55607d]">Prompt:</span> {q.prompt ?? 'No prompt provided.'}</p>
+                        {q.hints?.length ? (
+                          <div className="text-sm">
+                            <span className="font-semibold text-[#55607d]">Hints:</span>
+                            <ul className="ml-2 list-disc list-inside text-[#68718c]">
+                              {q.hints.map((h, i) => <li key={i}>{h}</li>)}
+                            </ul>
+                          </div>
+                        ) : null}
 
-                          {!detail ? (
-                            <button
-                              onClick={() => loadDetail(q.id)}
-                              className="text-sm text-primary hover:underline cursor-pointer"
-                            >
-                              Load solutions...
-                            </button>
-                          ) : (
-                            <>
-                              {(detail.expected_schema || detail.expected_rows) && (
-                                <Collapsible title="Expected Result">
-                                  {detail.expected_schema && (
-                                    <p className="text-sm mb-2"><span className="font-semibold text-slate-600">Schema:</span> <span className="text-slate-500 font-mono text-xs">{detail.expected_schema.join(', ')}</span></p>
-                                  )}
-                                  {detail.expected_rows?.length ? <DataTable rows={detail.expected_rows} /> : null}
-                                </Collapsible>
-                              )}
+                        {!detail ? (
+                          <button
+                            onClick={() => loadDetail(q.id)}
+                            className={secondaryButton}
+                          >
+                            Load solutions...
+                          </button>
+                        ) : (
+                          <>
+                            {(detail.expected_schema || detail.expected_rows) && (
+                              <Collapsible title="Expected Result">
+                                {detail.expected_schema && (
+                                  <p className="mb-2 text-sm"><span className="font-semibold text-[#55607d]">Schema:</span> <span className="font-mono text-xs text-[#68718c]">{detail.expected_schema.join(', ')}</span></p>
+                                )}
+                                {detail.expected_rows?.length ? <DataTable rows={detail.expected_rows} /> : null}
+                              </Collapsible>
+                            )}
 
-                              {detail.solution ? (
-                                <div className="space-y-3">
-                                  {detail.solution.relational_algebra && (
-                                    <div>
-                                      <p className="font-semibold text-sm text-slate-600 mb-1">Relational algebra expression:</p>
-                                      <pre className="bg-slate-50 p-3 rounded-lg text-sm font-mono overflow-x-auto text-slate-700">{detail.solution.relational_algebra}</pre>
-                                    </div>
-                                  )}
-                                  {detail.solution.sql && (
-                                    <div>
-                                      <p className="font-semibold text-sm text-slate-600 mb-1">SQL query:</p>
-                                      <pre className="bg-slate-50 p-3 rounded-lg text-sm font-mono overflow-x-auto text-slate-700">{detail.solution.sql}</pre>
-                                    </div>
-                                  )}
-                                  {!detail.solution.relational_algebra && !detail.solution.sql && (
-                                    <StatusBadge variant="info">Reference entries are empty for this exercise.</StatusBadge>
-                                  )}
-                                </div>
-                              ) : (
-                                <StatusBadge variant="info">No reference solutions available for this exercise yet.</StatusBadge>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </Collapsible>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+                            {detail.solution ? (
+                              <div className="space-y-3">
+                                {detail.solution.relational_algebra && (
+                                  <div>
+                                    <p className="mb-1 text-sm font-semibold text-[#55607d]">Relational algebra expression:</p>
+                                    <pre className="app-code overflow-x-auto p-3 text-sm text-[#55607d]">{detail.solution.relational_algebra}</pre>
+                                  </div>
+                                )}
+                                {detail.solution.sql && (
+                                  <div>
+                                    <p className="mb-1 text-sm font-semibold text-[#55607d]">SQL query:</p>
+                                    <pre className="app-code overflow-x-auto p-3 text-sm text-[#55607d]">{detail.solution.sql}</pre>
+                                  </div>
+                                )}
+                                {!detail.solution.relational_algebra && !detail.solution.sql && (
+                                  <StatusBadge variant="info">Reference entries are empty for this exercise.</StatusBadge>
+                                )}
+                              </div>
+                            ) : (
+                              <StatusBadge variant="info">No reference solutions available for this exercise yet.</StatusBadge>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </Collapsible>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
-            <hr className="border-slate-200" />
+          <div className={blockCard}>
             <Collapsible title="Translation Tips">
-              <div className="text-sm text-slate-600 space-y-1.5">
-                <p className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-primary mt-2 shrink-0" /> <span><strong>Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
-                <p className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-primary mt-2 shrink-0" /> <span><strong>Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
-                <p className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-primary mt-2 shrink-0" /> <span><strong>Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
-                <p className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-primary mt-2 shrink-0" /> <span><strong>Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
-                <p className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-primary mt-2 shrink-0" /> <span><strong>Set operations:</strong> Union (∪), difference (−), and intersection (∩) correspond to UNION, EXCEPT, and INTERSECT.</span></p>
-                <p className="flex items-start gap-2"><span className="w-1 h-1 rounded-full bg-primary mt-2 shrink-0" /> <span><strong>Aggregation:</strong> Use GROUP BY and HAVING to mirror grouping operators.</span></p>
+              <div className="space-y-1.5 text-sm text-[#68718c]">
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Set operations:</strong> Union (∪), difference (−), and intersection (∩) correspond to UNION, EXCEPT, and INTERSECT.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7f78c7]" /> <span><strong className="text-[#55607d]">Aggregation:</strong> Use GROUP BY and HAVING to mirror grouping operators.</span></p>
               </div>
             </Collapsible>
           </div>
         </div>
       </div>
+    </div>
   );
 }

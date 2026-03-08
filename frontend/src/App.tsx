@@ -5,7 +5,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import DatabaseManager from './pages/DatabaseManager';
 import RAExercises from './pages/RAExercises';
-import SQLExercises from './pages/SQLExercises';
 import RASQLReference from './pages/RASQLReference';
 
 export default function App() {
@@ -17,7 +16,6 @@ export default function App() {
             <Route index element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="databases" element={<ProtectedRoute><DatabaseManager /></ProtectedRoute>} />
             <Route path="ra-exercises" element={<ProtectedRoute><RAExercises /></ProtectedRoute>} />
-            <Route path="sql-exercises" element={<ProtectedRoute><SQLExercises /></ProtectedRoute>} />
             <Route path="ra-sql-reference" element={<ProtectedRoute><RASQLReference /></ProtectedRoute>} />
           </Route>
         </Routes>

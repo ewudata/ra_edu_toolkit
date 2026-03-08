@@ -66,28 +66,28 @@ export default function TraceViewer({ trace, title = 'Execution Trace' }: Props)
 
   return (
     <div className="space-y-4">
-      <h3 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+      <h3 className="flex items-center gap-2 font-display text-2xl text-[#5c3b1f]">
         <ListOrdered className="w-4 h-4 text-primary" />
         {title}
       </h3>
 
-      <div className="overflow-auto border border-slate-200 rounded-lg">
-        <table className="min-w-full text-sm divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+      <div className="overflow-auto rounded-[20px] border-2 border-[#e1c8aa] bg-[#fffaf1]">
+        <table className="min-w-full divide-y divide-[#ead7b8] text-sm">
+          <thead className="bg-[#fff1d8]">
             <tr>
-              <th className="px-3 py-2 text-left font-semibold text-slate-600 w-14">Step</th>
-              <th className="px-3 py-2 text-left font-semibold text-slate-600">Operation</th>
-              <th className="px-3 py-2 text-left font-semibold text-slate-600">Output Schema</th>
-              <th className="px-3 py-2 text-left font-semibold text-slate-600 w-16">Rows</th>
+              <th className="w-14 px-3 py-2 text-left font-semibold text-[#6d4b31]">Step</th>
+              <th className="px-3 py-2 text-left font-semibold text-[#6d4b31]">Operation</th>
+              <th className="px-3 py-2 text-left font-semibold text-[#6d4b31]">Output Schema</th>
+              <th className="w-16 px-3 py-2 text-left font-semibold text-[#6d4b31]">Rows</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-[#f2e1c7] bg-white/95">
             {trace.map((step, i) => (
-              <tr key={i} className="hover:bg-primary-50/40 transition-colors">
-                <td className="px-3 py-2 text-slate-500 font-medium">{i + 1}</td>
-                <td className="px-3 py-2 text-slate-700 font-medium">{formatOpLabel(step)}</td>
-                <td className="px-3 py-2 text-slate-600 font-mono text-xs">{formatSchema(step.output_schema)}</td>
-                <td className="px-3 py-2 text-slate-600">{extractRowCount(step) ?? '—'}</td>
+              <tr key={i} className="transition-colors hover:bg-[#fff4df]">
+                <td className="px-3 py-2 font-medium text-[#8b6a50]">{i + 1}</td>
+                <td className="px-3 py-2 font-medium text-[#5c3b1f]">{formatOpLabel(step)}</td>
+                <td className="px-3 py-2 font-mono text-xs text-[#6d4b31]">{formatSchema(step.output_schema)}</td>
+                <td className="px-3 py-2 text-[#6d4b31]">{extractRowCount(step) ?? '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -101,35 +101,35 @@ export default function TraceViewer({ trace, title = 'Execution Trace' }: Props)
               <div className="grid grid-cols-2 gap-4">
                 {step.input_schema && (
                   <div>
-                    <span className="font-medium text-slate-500">Input Schema:</span>{' '}
-                    <span className="text-slate-700 font-mono text-xs">{formatSchema(step.input_schema)}</span>
+                    <span className="font-medium text-[#8b6a50]">Input Schema:</span>{' '}
+                    <span className="font-mono text-xs text-[#5c3b1f]">{formatSchema(step.input_schema)}</span>
                   </div>
                 )}
                 {step.output_schema && (
                   <div>
-                    <span className="font-medium text-slate-500">Output Schema:</span>{' '}
-                    <span className="text-slate-700 font-mono text-xs">{formatSchema(step.output_schema)}</span>
+                    <span className="font-medium text-[#8b6a50]">Output Schema:</span>{' '}
+                    <span className="font-mono text-xs text-[#5c3b1f]">{formatSchema(step.output_schema)}</span>
                   </div>
                 )}
               </div>
               {formatDetail(step.detail) && (
                 <div>
-                  <span className="font-medium text-slate-500">Detail:</span>{' '}
-                  <span className="text-slate-700">{formatDetail(step.detail)}</span>
+                  <span className="font-medium text-[#8b6a50]">Detail:</span>{' '}
+                  <span className="text-[#5c3b1f]">{formatDetail(step.detail)}</span>
                 </div>
               )}
               {extractRowCount(step) != null && (
                 <div>
-                  <span className="font-medium text-slate-500">Rows:</span>{' '}
-                  <span className="text-slate-700">{extractRowCount(step)}</span>
+                  <span className="font-medium text-[#8b6a50]">Rows:</span>{' '}
+                  <span className="text-[#5c3b1f]">{extractRowCount(step)}</span>
                 </div>
               )}
               <div>
-                <p className="font-medium text-slate-500 mb-1">Output (up to 10 records):</p>
+                <p className="mb-1 font-medium text-[#8b6a50]">Output (up to 10 records):</p>
                 {step.preview?.length ? (
                   <DataTable rows={step.preview} compact />
                 ) : (
-                  <p className="text-slate-400 italic text-xs">No preview rows for this step.</p>
+                  <p className="text-xs italic text-[#9b8167]">No preview rows for this step.</p>
                 )}
               </div>
             </div>

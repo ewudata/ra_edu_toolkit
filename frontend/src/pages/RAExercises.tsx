@@ -175,233 +175,311 @@ export default function RAExercises() {
   }
 
   const selectedDbInfo = databases.find((d) => d.name === selectedDb);
+  const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
+  const blockCardSoft = 'rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.9)] p-5 shadow-[0_8px_22px_rgba(123,128,173,0.06)]';
+  const sectionLabel = 'text-xs font-semibold uppercase tracking-[0.22em] text-[#7d77ad]';
+  const sectionTitle = 'text-xl font-semibold text-[#3f4761]';
+  const primaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#7b75c2] bg-[#7f78c7] px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#6e68b1] disabled:opacity-50 cursor-pointer';
+  const secondaryButton = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d8dded] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-sm font-semibold text-[#55607d] transition-colors duration-200 hover:bg-[#f3f4fd] cursor-pointer';
 
   return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Relational Algebra Exercises</h1>
-          <p className="mt-1 text-sm text-slate-500">Explore datasets, review available practice material, and choose how you want to work with RA expressions.</p>
-        </div>
+    <div className="space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6">
+        <section className="rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]">
+          <div className="space-y-3">
+            <div className="space-y-3">
+              <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#7d77ad]">Academic Practice Studio</p>
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Exercises</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#68718c] sm:text-base">
+                  Work through database-backed prompts in clear study blocks: choose a schema, filter the catalog, and compare your algebra against the expected result.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {backendOk && <StatusBadge variant="success">Backend service connected successfully</StatusBadge>}
 
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <DatabaseIcon className="w-4 h-4 text-primary" />
-            <h2 className="text-lg font-semibold text-slate-700">Choose a Database</h2>
+        <section className={blockCard}>
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-[#d8d4fb] bg-[#f1f0ff]">
+                  <DatabaseIcon className="h-5 w-5 text-[#6e68b1]" />
+                </div>
+                <div>
+                  <p className={sectionLabel}>Study Setup</p>
+                  <h2 className={sectionTitle}>Choose a database workspace</h2>
+                </div>
+              </div>
+              <p className="max-w-2xl text-sm leading-6 text-[#68718c]">
+                Pick the dataset you want to practice against. Once selected, the page opens the schema, query catalog, and custom-expression tools for that database.
+              </p>
+            </div>
+            <div className="rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.82)] p-4 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
+              <label className="mb-2 block text-sm font-semibold text-[#55607d]">Database collection</label>
+              <select
+                value={selectedDb}
+                onChange={(e) => { setSelectedDb(e.target.value); setMode(null); }}
+                className="w-full rounded-2xl border border-[#d8dded] bg-white/92 px-4 py-3 text-sm text-[#3f4761] focus:border-[#9791e0] focus:outline-none focus:ring-4 focus:ring-[rgba(199,195,242,0.5)] transition-colors cursor-pointer"
+              >
+                <option value="">- Select a database -</option>
+                {databases.map((db) => (
+                  <option key={db.name} value={db.name}>{db.name} ({db.table_count} tables)</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <select
-            value={selectedDb}
-            onChange={(e) => { setSelectedDb(e.target.value); setMode(null); }}
-            className="w-full sm:w-80 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors cursor-pointer"
-          >
-            <option value="">- Select a database -</option>
-            {databases.map((db) => (
-              <option key={db.name} value={db.name}>{db.name} ({db.table_count} tables)</option>
-            ))}
-          </select>
         </section>
 
         {selectedDb && selectedDbInfo && (
           <>
-            <Collapsible title={`Active database: ${selectedDb}`}>
-              <div className="space-y-0.5">
-                {selectedDbInfo.tables.map((t) => (
-                  <TablePreview key={t} tableName={t} metadata={schemaMap[t]} />
-                ))}
+            <section className="grid gap-5 xl:grid-cols-[1.05fr_1.3fr]">
+              <div className={`${blockCard} space-y-4`}>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[#dbe7e1] bg-[#eef7f4]">
+                    <DatabaseIcon className="h-5 w-5 text-[#6e9d8b]" />
+                  </div>
+                  <div>
+                    <p className={sectionLabel}>Reference Block</p>
+                    <h2 className={sectionTitle}>Active database: {selectedDb}</h2>
+                  </div>
+                </div>
+                <p className="text-sm leading-6 text-[#68718c]">
+                  Review available relations before solving. This keeps the schema visible as a study aid instead of burying it below the exercise workflow.
+                </p>
+                <Collapsible title={`Browse tables in ${selectedDb}`}>
+                  <div className="space-y-0.5">
+                    {selectedDbInfo.tables.map((t) => (
+                      <TablePreview key={t} tableName={t} metadata={schemaMap[t]} />
+                    ))}
+                  </div>
+                </Collapsible>
               </div>
-            </Collapsible>
 
-            <hr className="border-slate-200" />
-            <h2 className="text-lg font-semibold text-slate-700">Choose How You Want to Practice</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-                    <LayoutList className="w-4 h-4 text-violet-600" />
-                  </div>
-                  <h3 className="font-semibold text-slate-700">Operator-Based Queries</h3>
+              <div className={`${blockCard} space-y-4`}>
+                <div className="space-y-2">
+                  <p className={sectionLabel}>Practice Mode</p>
+                  <h2 className={sectionTitle}>Choose how you want to work</h2>
+                  <p className="text-sm leading-6 text-[#68718c]">
+                    Use structured catalog practice when you want targeted prompts, or switch to open writing mode to test an expression directly.
+                  </p>
                 </div>
-                <p className="text-sm text-slate-500">Browse the full query catalog or narrow it by operators like joins or set operations.</p>
-                {queries.length > 0 ? (
-                  <button
-                    onClick={() => setMode('operators')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${mode === 'operators' ? 'bg-primary-50 text-primary border border-primary-100' : 'bg-primary text-white hover:bg-primary-dark'}`}
-                  >
-                    Browse Queries
-                  </button>
-                ) : (
-                  <p className="text-sm text-slate-400 italic">This database does not provide a query catalog to browse.</p>
-                )}
-              </div>
-              <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                    <Pencil className="w-4 h-4 text-amber-600" />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-[#d8d4fb] bg-[#f1f0ff]">
+                        <LayoutList className="h-4 w-4 text-[#6e68b1]" />
+                      </div>
+                      <h3 className="font-semibold text-[#3f4761]">Operator-Based Queries</h3>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[#68718c]">Browse the full catalog or narrow it by operator families, difficulty, and mastery progress.</p>
+                    {queries.length > 0 ? (
+                      <button
+                        onClick={() => setMode('operators')}
+                        className={`mt-4 ${mode === 'operators' ? secondaryButton : primaryButton}`}
+                      >
+                        Browse Queries
+                      </button>
+                    ) : (
+                      <p className="mt-4 text-sm italic text-[#8b92a8]">This database does not provide a query catalog to browse.</p>
+                    )}
                   </div>
-                  <h3 className="font-semibold text-slate-700">Custom Queries</h3>
+                  <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-[#dbe7e1] bg-[#eef7f4]">
+                        <Pencil className="h-4 w-4 text-[#6e9d8b]" />
+                      </div>
+                      <h3 className="font-semibold text-[#3f4761]">Custom Queries</h3>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[#68718c]">Practice by writing your own relational algebra expressions without selecting a catalog prompt first.</p>
+                    <button
+                      onClick={() => setMode('custom')}
+                      className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
+                    >
+                      Practice with Custom Queries
+                    </button>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-500">Practice by writing your own relational algebra expressions.</p>
-                <button
-                  onClick={() => setMode('custom')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${mode === 'custom' ? 'bg-primary-50 text-primary border border-primary-100' : 'bg-primary text-white hover:bg-primary-dark'}`}
-                >
-                  Practice with Custom Queries
-                </button>
               </div>
-            </div>
+            </section>
           </>
         )}
 
         {mode === 'operators' && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-primary" />
-              <h2 className="text-lg font-semibold text-slate-700">Operator-Based Queries</h2>
+          <section className={`${blockCard} space-y-5`}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[16px] border-2 border-[#cf875e] bg-[#ffd19a] shadow-[0_4px_0_0_#f7e1be]">
+                <Filter className="h-5 w-5 text-[#7a4526]" />
+              </div>
+              <div>
+                <p className={sectionLabel}>Catalog Filters</p>
+                <h2 className={sectionTitle}>Operator-Based Queries</h2>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {OPERATOR_OPTIONS.map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => toggleOp(key)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-                    selectedOps.has(key) ? 'bg-primary-50 border-primary-100 text-primary' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className={`${blockCardSoft} space-y-4`}>
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#8f5f36]">Operator group</h3>
+                <p className="mt-1 text-sm text-[#7b5a42]">Select one or more operator families to create a focused practice set.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {OPERATOR_OPTIONS.map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => toggleOp(key)}
+                    className={`rounded-2xl border-2 px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                      selectedOps.has(key) ? 'border-[#c66c44] bg-[#d97745] text-white' : 'border-[#d8c1a2] bg-[#fff8eb] text-[#7b5a42] hover:bg-[#fff0d1]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex gap-4">
-              {(['unmastered', 'all', 'mastered'] as const).map((f) => (
-                <label key={f} className="flex items-center gap-1.5 text-sm cursor-pointer text-slate-600">
-                  <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-primary" />
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </label>
-              ))}
-            </div>
+            <div className={`${blockCardSoft} space-y-4`}>
+              <div className="flex flex-wrap items-center gap-4">
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#8f5f36]">Progress view</h3>
+                  <p className="mt-1 text-sm text-[#7b5a42]">Switch between new practice, complete view, or mastered prompts.</p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {(['unmastered', 'all', 'mastered'] as const).map((f) => (
+                    <label key={f} className="flex items-center gap-2 rounded-2xl border-2 border-[#dcc5a8] bg-[#fff9ef] px-3 py-2 text-sm font-medium cursor-pointer text-[#6a4930]">
+                      <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-[#d97745]" />
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-            <div className="flex gap-4 text-xs text-slate-400">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> beginner</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> intermediate</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> difficult</span>
+              <div className="flex flex-wrap gap-4 text-xs font-semibold text-[#8b6a50]">
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> beginner</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> intermediate</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> difficult</span>
+              </div>
             </div>
 
             {filteredQueries.length === 0 ? (
               <StatusBadge variant="info">No queries match the selected filters. Try another operator, switch progress, or clear the filter.</StatusBadge>
             ) : (
               <>
-                <select
-                  value={selectedQueryId}
-                  onChange={(e) => setSelectedQueryId(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-                >
-                  <option value="">- Select a query -</option>
-                  {filteredQueries.map((q) => {
-                    const mastered = masteredIds.has(q.id);
-                    const prompt = (q.prompt ?? '').length > 80 ? q.prompt!.slice(0, 77) + '...' : q.prompt;
-                    return <option key={q.id} value={q.id}>{mastered ? '✓ ' : ''}{difficultyIcon(q.difficulty)} {prompt}</option>;
-                  })}
-                </select>
+                <div className={blockCardSoft}>
+                  <label className="mb-2 block text-sm font-semibold text-[#6c482c]">Choose a prompt from the filtered catalog</label>
+                  <select
+                    value={selectedQueryId}
+                    onChange={(e) => setSelectedQueryId(e.target.value)}
+                    className="w-full rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 text-sm text-[#5c3b1f] focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5] cursor-pointer"
+                  >
+                    <option value="">- Select a query -</option>
+                    {filteredQueries.map((q) => {
+                      const mastered = masteredIds.has(q.id);
+                      const prompt = (q.prompt ?? '').length > 80 ? q.prompt!.slice(0, 77) + '...' : q.prompt;
+                      return <option key={q.id} value={q.id}>{mastered ? '✓ ' : ''}{difficultyIcon(q.difficulty)} {prompt}</option>;
+                    })}
+                  </select>
+                </div>
 
                 {queryDetail && (
                   <div className="space-y-4">
-                    <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-2">
-                      <p className="text-sm text-slate-600"><span className="font-semibold text-slate-700">Query Description:</span> {queryDetail.prompt}</p>
-                      <p className="text-sm text-slate-600"><span className="font-semibold text-slate-700">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
-                      {queryDetail.hints?.length ? (
-                        <p className="text-sm text-slate-600"><span className="font-semibold text-slate-700">Hint:</span> {queryDetail.hints.join(', ')}</p>
-                      ) : null}
-                    </div>
-
-                    <form onSubmit={handleExecute} className="space-y-3">
-                      <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-                        <Pencil className="w-4 h-4 text-primary" />
-                        Your Solution
-                      </h3>
-                      <p className="text-sm text-slate-500">Write the relational algebra expression for this query:</p>
-                      <textarea
-                        value={solution}
-                        onChange={(e) => setSolution(e.target.value)}
-                        className="w-full h-24 px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y transition-colors"
-                      />
-                      <div className="flex justify-center">
-                        <button type="submit" disabled={executing} className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 cursor-pointer">
-                          <Play className="w-4 h-4" />
-                          {executing ? 'Executing...' : 'Execute My Solution'}
-                        </button>
+                    <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+                      <div className="rounded-[26px] border-2 border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_6px_0_0_#f4e4c7] space-y-2">
+                        <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Query Description:</span> {queryDetail.prompt}</p>
+                        <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
+                        {queryDetail.hints?.length ? (
+                          <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Hint:</span> {queryDetail.hints.join(', ')}</p>
+                        ) : null}
                       </div>
-                      <Collapsible title="Query Syntax Help">
-                        <SyntaxHelp database={selectedDb} />
-                      </Collapsible>
-                    </form>
+
+                      <form onSubmit={handleExecute} className="rounded-[26px] border-2 border-[#d7b79f] bg-[#fbe7df] p-5 shadow-[0_6px_0_0_#f2d2c4] space-y-3">
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
+                          <Pencil className="w-4 h-4 text-[#c86239]" />
+                          Your Solution
+                        </h3>
+                        <p className="text-sm text-[#7b5a42]">Write the relational algebra expression for this query:</p>
+                        <textarea
+                          value={solution}
+                          onChange={(e) => setSolution(e.target.value)}
+                          className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
+                        />
+                        <div className="flex justify-center">
+                          <button type="submit" disabled={executing} className={primaryButton}>
+                            <Play className="w-4 h-4" />
+                            {executing ? 'Executing...' : 'Execute My Solution'}
+                          </button>
+                        </div>
+                        <Collapsible title="Query Syntax Help">
+                          <SyntaxHelp database={selectedDb} />
+                        </Collapsible>
+                      </form>
+                    </div>
 
                     {resultError && <StatusBadge variant="error">Error executing your solution: {resultError}</StatusBadge>}
 
                     {result && (
-                      <div className="space-y-6">
-                        <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-                          <BarChart3 className="w-4 h-4 text-primary" />
+                      <div className={`${blockCardSoft} space-y-6`}>
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
+                          <BarChart3 className="w-4 h-4 text-[#c86239]" />
                           Results Comparison
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-slate-600 text-sm">Your Solution Output</h4>
-                            <p className="text-sm text-slate-500">Rows returned: {result.row_count}</p>
-                            {result.rows.length > 0 ? <DataTable rows={result.rows} /> : <p className="text-sm text-slate-400 italic">No rows returned.</p>}
+                          <div className="rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-4 space-y-2">
+                            <h4 className="font-semibold text-[#6d4b31] text-sm">Your Solution Output</h4>
+                            <p className="text-sm text-[#8b6a50]">Rows returned: {result.row_count}</p>
+                            {result.rows.length > 0 ? <DataTable rows={result.rows} /> : <p className="text-sm text-[#9f856d] italic">No rows returned.</p>}
                           </div>
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-slate-600 text-sm">Expected Output</h4>
+                          <div className="rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-4 space-y-2">
+                            <h4 className="font-semibold text-[#6d4b31] text-sm">Expected Output</h4>
                             {result.expected_rows ? (
                               <>
-                                <p className="text-sm text-slate-500">Rows expected: {result.expected_rows.length}</p>
-                                {result.expected_rows.length > 0 ? <DataTable rows={result.expected_rows} /> : <p className="text-sm text-slate-400 italic">No rows expected.</p>}
+                                <p className="text-sm text-[#8b6a50]">Rows expected: {result.expected_rows.length}</p>
+                                {result.expected_rows.length > 0 ? <DataTable rows={result.expected_rows} /> : <p className="text-sm text-[#9f856d] italic">No rows expected.</p>}
                               </>
-                            ) : <p className="text-sm text-slate-400 italic">Expected result not available for this query.</p>}
+                            ) : <p className="text-sm text-[#9f856d] italic">Expected result not available for this query.</p>}
                           </div>
                         </div>
                         <TraceViewer trace={result.trace} title="Execution Trace of Your Solution" />
                       </div>
                     )}
 
-                    <hr className="border-slate-200" />
-                    <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-                      <Lightbulb className="w-4 h-4 text-amber-500" />
-                      Need Help?
-                    </h3>
-                    <button
-                      onClick={handleViewSolution}
-                      className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm hover:bg-slate-50 transition-colors cursor-pointer text-slate-600"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View Expected Solution & Results
-                    </button>
+                    <div className={`${blockCardSoft} space-y-4`}>
+                      <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
+                        <Lightbulb className="w-4 h-4 text-[#d98d24]" />
+                        Need Help?
+                      </h3>
+                      <button
+                        onClick={handleViewSolution}
+                        className={secondaryButton}
+                      >
+                        <Eye className="w-4 h-4" />
+                        View Expected Solution & Results
+                      </button>
 
-                    {showSolution && queryDetail.solution && (
-                      <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-5">
-                        {queryDetail.solution.relational_algebra && (
-                          <div>
-                            <p className="font-semibold text-sm text-slate-600 mb-1">Expected Relational Algebra Expression:</p>
-                            <pre className="bg-slate-50 p-3 rounded-lg text-sm font-mono overflow-x-auto text-slate-700">{queryDetail.solution.relational_algebra}</pre>
-                          </div>
-                        )}
-                        {queryDetail.solution.sql && (
-                          <div>
-                            <p className="font-semibold text-sm text-slate-600 mb-1">Equivalent SQL:</p>
-                            <pre className="bg-slate-50 p-3 rounded-lg text-sm font-mono overflow-x-auto text-slate-700">{queryDetail.solution.sql}</pre>
-                          </div>
-                        )}
-                        {solutionResult && (
-                          <>
-                            <h4 className="font-semibold text-slate-700">Expected Query Results</h4>
-                            {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-slate-400 italic">Expected result returns no rows.</p>}
-                            <TraceViewer trace={solutionResult.trace} title="Execution Trace of Expected Solution" />
-                          </>
-                        )}
-                      </div>
-                    )}
+                      {showSolution && queryDetail.solution && (
+                        <div className="space-y-3 rounded-[24px] border-2 border-[#d9c4a5] bg-[#fff9ef] p-5">
+                          {queryDetail.solution.relational_algebra && (
+                            <div>
+                              <p className="mb-1 text-sm font-semibold text-[#6d4b31]">Expected Relational Algebra Expression:</p>
+                              <pre className="overflow-x-auto rounded-2xl border-2 border-[#ead7b8] bg-white p-3 text-sm font-mono text-[#5c3b1f]">{queryDetail.solution.relational_algebra}</pre>
+                            </div>
+                          )}
+                          {queryDetail.solution.sql && (
+                            <div>
+                              <p className="mb-1 text-sm font-semibold text-[#6d4b31]">Equivalent SQL:</p>
+                              <pre className="overflow-x-auto rounded-2xl border-2 border-[#ead7b8] bg-white p-3 text-sm font-mono text-[#5c3b1f]">{queryDetail.solution.sql}</pre>
+                            </div>
+                          )}
+                          {solutionResult && (
+                            <>
+                              <h4 className="font-semibold text-[#5c3b1f]">Expected Query Results</h4>
+                              {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-[#9f856d] italic">Expected result returns no rows.</p>}
+                              <TraceViewer trace={solutionResult.trace} title="Execution Trace of Expected Solution" />
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </>
@@ -410,20 +488,25 @@ export default function RAExercises() {
         )}
 
         {mode === 'custom' && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Pencil className="w-4 h-4 text-primary" />
-              <h2 className="text-lg font-semibold text-slate-700">Custom Query Practice</h2>
+          <section className={`${blockCard} space-y-4`}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[16px] border-2 border-[#d27e63] bg-[#f7b59d] shadow-[0_4px_0_0_#f0d1c4]">
+                <Pencil className="w-5 h-5 text-[#7a3526]" />
+              </div>
+              <div>
+                <p className={sectionLabel}>Free Writing</p>
+                <h2 className={sectionTitle}>Custom Query Practice</h2>
+              </div>
             </div>
-            <form onSubmit={handleCustomExecute} className="space-y-3">
-              <label className="text-sm font-medium text-slate-600">Enter your own relational algebra expression:</label>
+            <form onSubmit={handleCustomExecute} className={`${blockCardSoft} space-y-3`}>
+              <label className="text-sm font-medium text-[#6d4b31]">Enter your own relational algebra expression:</label>
               <textarea
                 value={customExpr}
                 onChange={(e) => setCustomExpr(e.target.value)}
-                className="w-full h-24 px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y transition-colors"
+                className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
               />
               <div className="flex justify-center">
-                <button type="submit" disabled={customExecuting} className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={customExecuting} className={primaryButton}>
                   <Play className="w-4 h-4" />
                   {customExecuting ? 'Executing...' : 'Execute Custom Query'}
                 </button>
@@ -436,21 +519,21 @@ export default function RAExercises() {
             {customError && <StatusBadge variant="error">Query execution failed: {customError}</StatusBadge>}
 
             {customResult && (
-              <div className="space-y-4">
-                <h3 className="flex items-center gap-2 text-base font-semibold text-slate-700">
-                  <BarChart3 className="w-4 h-4 text-primary" />
+              <div className={`${blockCardSoft} space-y-4`}>
+                <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
+                  <BarChart3 className="w-4 h-4 text-[#c86239]" />
                   Query Results
                 </h3>
                 {customResult.rows.length > 0 ? (
                   <DataTable rows={customResult.rows} />
                 ) : (
-                  <p className="text-sm text-slate-400 italic">Query returned no rows.</p>
+                  <p className="text-sm text-[#9f856d] italic">Query returned no rows.</p>
                 )}
                 <TraceViewer trace={customResult.trace} />
               </div>
             )}
           </section>
         )}
-      </div>
+    </div>
   );
 }

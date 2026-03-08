@@ -31,41 +31,41 @@ export default function ResultViewer({ result }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {[
           { icon: Rows3, value: result.row_count ?? rows.length, label: 'Rows' },
           { icon: Columns3, value: schema.length, label: 'Columns' },
           { icon: Database, value: result.database ?? 'Unknown', label: 'Database' },
         ].map(({ icon: Icon, value, label }) => (
-          <div key={label} className="bg-white border border-slate-200 rounded-lg p-4 text-center">
-            <Icon className="w-4 h-4 text-primary mx-auto mb-1.5" />
-            <p className="text-xl font-bold text-slate-800">{value}</p>
-            <p className="text-[11px] text-slate-400 uppercase tracking-wide">{label}</p>
+          <div key={label} className="app-soft-block p-4 text-center">
+            <Icon className="mx-auto mb-1.5 h-4 w-4 text-primary" />
+            <p className="text-xl font-bold text-[#5c3b1f]">{value}</p>
+            <p className="text-[11px] uppercase tracking-wide text-[#9b8167]">{label}</p>
           </div>
         ))}
       </div>
 
       {schema.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-slate-600 mb-1">Result Schema</h4>
-          <p className="text-sm text-slate-500 font-mono">{schema.join(', ')}</p>
+          <h4 className="mb-1 text-sm font-semibold text-[#6d4b31]">Result Schema</h4>
+          <p className="font-mono text-sm text-[#7b5a42]">{schema.join(', ')}</p>
         </div>
       )}
 
       {rows.length > 0 ? (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-slate-600">Query Results</h4>
+          <h4 className="text-sm font-semibold text-[#6d4b31]">Query Results</h4>
           <DataTable rows={rows} columns={schema.length ? schema : undefined} />
           <button
             onClick={downloadCsv}
-            className="inline-flex items-center gap-1.5 text-sm px-4 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer text-slate-600"
+            className="app-secondary-btn text-sm"
           >
             <Download className="w-3.5 h-3.5" />
             Download CSV
           </button>
         </div>
       ) : (
-        <div className="bg-sky-50 border border-sky-200 text-sky-700 rounded-lg p-3 text-sm">
+        <div className="rounded-[18px] border-2 border-[#e4c49a] bg-[#fff5e7] p-3 text-sm text-[#7c5433]">
           Query result is empty
         </div>
       )}
