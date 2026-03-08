@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './lib/auth';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import DatabaseManager from './pages/DatabaseManager';
 import RAExercises from './pages/RAExercises';
@@ -13,11 +14,11 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route element={<Layout />}>
-            <Route index element={<Home />} />
-            <Route path="databases" element={<DatabaseManager />} />
-            <Route path="ra-exercises" element={<RAExercises />} />
-            <Route path="sql-exercises" element={<SQLExercises />} />
-            <Route path="ra-sql-reference" element={<RASQLReference />} />
+            <Route index element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="databases" element={<ProtectedRoute><DatabaseManager /></ProtectedRoute>} />
+            <Route path="ra-exercises" element={<ProtectedRoute><RAExercises /></ProtectedRoute>} />
+            <Route path="sql-exercises" element={<ProtectedRoute><SQLExercises /></ProtectedRoute>} />
+            <Route path="ra-sql-reference" element={<ProtectedRoute><RASQLReference /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>

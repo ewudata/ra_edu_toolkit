@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, type ReactNode } from 'react';
 import Cookies from 'js-cookie';
-import { api, setAuthToken } from './api';
+import { api, setAuthToken, setUnauthorizedHandler } from './api';
 
 const AUTH_COOKIE = 'ra_edu_auth';
 
@@ -22,11 +22,19 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ token: null, email: null, error: null, loading: true });
 
-  const applyToken = useCallback((token: string | null) => {
+  function applyAuthenticatedSession(token: string, email: string) {
     setAuthToken(token);
-  }, []);
+    Cookies.set(AUTH_COOKIE, JSON.stringify({ token, email }), { expires: 30, sameSite: 'lax' });
+    setState({ token, email, error: null, loading: false });
+  }
 
-  useEffect(() => {
+  function clearAuthState(message: string | null = null) {
+    Cookies.remove(AUTH_COOKIE);
+    setAuthToken(null);
+    setState({ token: null, email: null, error: message, loading: false });
+  }
+
+  useLayoutEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const authToken = params.get('auth_token');
     const authEmail = params.get('auth_email');
@@ -34,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const returnPage = params.get('return_page');
 
     if (authError) {
-      setState({ token: null, email: null, error: authError, loading: false });
+      clearAuthState(authError);
       const url = new URL(window.location.href);
       ['auth_token', 'auth_email', 'auth_error', 'return_page'].forEach((k) => url.searchParams.delete(k));
       window.history.replaceState({}, '', url.toString());
@@ -43,9 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (authToken) {
       const email = authEmail || 'Google User';
-      setAuthToken(authToken);
-      Cookies.set(AUTH_COOKIE, JSON.stringify({ token: authToken, email }), { expires: 30, sameSite: 'lax' });
-      setState({ token: authToken, email, error: null, loading: false });
+      applyAuthenticatedSession(authToken, email);
 
       const url = new URL(window.location.href);
       ['auth_token', 'auth_email', 'auth_error', 'return_page'].forEach((k) => url.searchParams.delete(k));
@@ -61,8 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { token, email } = JSON.parse(raw);
         if (token) {
-          applyToken(token);
-          setState({ token, email: email || 'Google User', error: null, loading: false });
+          applyAuthenticatedSession(token, email || 'Google User');
           return;
         }
       } catch {
@@ -70,7 +75,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     setState({ token: null, email: null, error: null, loading: false });
-  }, [applyToken]);
+  }, []);
+
+  useEffect(() => {
+    setUnauthorizedHandler((message) => {
+      clearAuthState(message);
+    });
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, []);
 
   const login = useCallback(async () => {
     try {
@@ -83,9 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    Cookies.remove(AUTH_COOKIE);
-    setAuthToken(null);
-    setState({ token: null, email: null, error: null, loading: false });
+    clearAuthState(null);
   }, []);
 
   const value: AuthContextValue = {

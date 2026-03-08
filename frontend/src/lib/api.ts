@@ -1,9 +1,14 @@
 const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? '/api';
 
 let _authToken: string | null = null;
+let _onUnauthorized: ((message: string) => void) | null = null;
 
 export function setAuthToken(token: string | null) {
   _authToken = token?.trim() || null;
+}
+
+export function setUnauthorizedHandler(handler: ((message: string) => void) | null) {
+  _onUnauthorized = handler;
 }
 
 export function getAuthToken() {
@@ -56,6 +61,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
     } catch {
       /* ignore */
     }
+    if (res.status === 401) _onUnauthorized?.(message);
     throw new ApiError(message, res.status, detail);
   }
   if (res.status === 204) return {} as T;
@@ -130,7 +136,7 @@ export interface MasteryResponse {
 export const api = {
   healthCheck: () => request<{ status: string }>('GET', '/health'),
 
-  getDatabases: () => request<Database[]>('GET', '/databases'),
+  getDatabases: () => request<Database[]>('GET', '/databases/'),
 
   getDatabaseSchema: (database: string, sampleRows = 5) =>
     request<SchemaResponse>('GET', `/databases/${database}/schema`, { params: { sample_rows: sampleRows } }),
@@ -153,7 +159,7 @@ export const api = {
     request('DELETE', `/databases/${database}`),
 
   getQueries: (database: string) =>
-    request<Query[]>('GET', `/databases/${database}/queries`),
+    request<Query[]>('GET', `/databases/${database}/queries/`),
 
   getQueryDetail: (database: string, queryId: string) =>
     request<Query>('GET', `/databases/${database}/queries/${queryId}`),

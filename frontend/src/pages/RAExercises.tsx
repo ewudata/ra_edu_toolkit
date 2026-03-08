@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import { api, type Database, type Query, type EvaluationResult, type TableInfo } from '../lib/api';
-import AuthGate from '../components/AuthGate';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import TablePreview from '../components/TablePreview';
@@ -9,7 +8,6 @@ import TraceViewer from '../components/TraceViewer';
 import SyntaxHelp from '../components/SyntaxHelp';
 import { sortQueries, difficultyIcon, difficultyLabel } from '../lib/difficulty';
 import {
-  FunctionSquare,
   Database as DatabaseIcon,
   LayoutList,
   Pencil,
@@ -173,13 +171,12 @@ export default function RAExercises() {
   }
 
   if (backendOk === false) {
-    return <AuthGate><StatusBadge variant="error">Backend service connection failed</StatusBadge></AuthGate>;
+    return <StatusBadge variant="error">Backend service connection failed</StatusBadge>;
   }
 
   const selectedDbInfo = databases.find((d) => d.name === selectedDb);
 
   return (
-    <AuthGate>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Relational Algebra Exercises</h1>
@@ -455,6 +452,5 @@ export default function RAExercises() {
           </section>
         )}
       </div>
-    </AuthGate>
   );
 }

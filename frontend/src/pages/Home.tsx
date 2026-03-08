@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import AuthGate from '../components/AuthGate';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import SyntaxHelp from '../components/SyntaxHelp';
@@ -62,7 +61,6 @@ export default function Home() {
   }, []);
 
   return (
-    <AuthGate>
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Relational Algebra Education Toolkit</h1>
@@ -181,6 +179,5 @@ export default function Home() {
           </div>
         </Collapsible>
       </div>
-    </AuthGate>
   );
 }

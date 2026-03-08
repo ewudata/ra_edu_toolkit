@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api, type Database, type Query } from '../lib/api';
-import AuthGate from '../components/AuthGate';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import DataTable from '../components/DataTable';
 import { sortQueries, difficultyLabel } from '../lib/difficulty';
 import {
-  ArrowLeftRight,
   Database as DatabaseIcon,
   BookOpen,
-  Target,
-  Compass,
 } from 'lucide-react';
 
 export default function RASQLReference() {
@@ -41,11 +37,10 @@ export default function RASQLReference() {
   }
 
   if (backendOk === false) {
-    return <AuthGate><StatusBadge variant="error">Backend service connection failed</StatusBadge></AuthGate>;
+    return <StatusBadge variant="error">Backend service connection failed</StatusBadge>;
   }
 
   return (
-    <AuthGate>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">RA ↔ SQL Reference</h1>
@@ -163,6 +158,5 @@ export default function RASQLReference() {
           </div>
         </div>
       </div>
-    </AuthGate>
   );
 }

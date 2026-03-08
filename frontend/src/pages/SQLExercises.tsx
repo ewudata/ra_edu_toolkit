@@ -1,19 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, type Database, type Query, type EvaluationResult } from '../lib/api';
-import AuthGate from '../components/AuthGate';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import ResultViewer from '../components/ResultViewer';
 import DataTable from '../components/DataTable';
 import { sortQueries, difficultyLabel } from '../lib/difficulty';
 import {
-  BrainCircuit,
   Database as DatabaseIcon,
   ClipboardList,
   Pencil,
   Send,
-  BookOpen,
-  Target,
   FileText,
 } from 'lucide-react';
 
@@ -74,11 +70,10 @@ export default function SQLExercises() {
   }
 
   if (backendOk === false) {
-    return <AuthGate><StatusBadge variant="error">Backend service connection failed</StatusBadge></AuthGate>;
+    return <StatusBadge variant="error">Backend service connection failed</StatusBadge>;
   }
 
   return (
-    <AuthGate>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">SQL Exercises</h1>
@@ -275,6 +270,5 @@ export default function SQLExercises() {
           </div>
         </div>
       </div>
-    </AuthGate>
   );
 }

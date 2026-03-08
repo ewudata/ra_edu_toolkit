@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback, useRef, type FormEvent } from 'react';
 import { api, type Database, type TableInfo } from '../lib/api';
-import AuthGate from '../components/AuthGate';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import TablePreview from '../components/TablePreview';
-import { HardDrive, Upload, FileArchive, FileCode, Trash2, RefreshCw, Info } from 'lucide-react';
+import { HardDrive, Upload, FileArchive, FileCode, Trash2, RefreshCw } from 'lucide-react';
 
 const PROTECTED = new Set(['sales', 'university', 'testdb']);
 
@@ -91,7 +90,6 @@ export default function DatabaseManager() {
   }
 
   return (
-    <AuthGate>
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Database Manager</h1>
@@ -222,6 +220,5 @@ export default function DatabaseManager() {
           </div>
         </section>
       </div>
-    </AuthGate>
   );
 }
