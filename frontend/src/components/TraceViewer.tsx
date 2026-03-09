@@ -129,7 +129,7 @@ export default function TraceViewer({ trace, title = 'Execution Trace' }: Props)
                 {step.preview?.length ? (
                   <DataTable rows={step.preview} compact />
                 ) : (
-                  <p className="text-xs italic text-[#9b8167]">No preview rows for this step.</p>
+                  <p className="text-xs italic text-[#7c5433]">No preview rows for this step.</p>
                 )}
               </div>
             </div>

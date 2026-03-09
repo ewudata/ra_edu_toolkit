@@ -55,7 +55,7 @@ export default function RASQLReference() {
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">RA ↔ SQL Reference</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5f6b7a] sm:text-base">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#475467] sm:text-base">
               Explore side-by-side relational algebra and SQL solutions to build intuition for translating between both representations.
             </p>
           </div>
@@ -73,7 +73,7 @@ export default function RASQLReference() {
               <h2 className={sectionTitle}>Select Database</h2>
             </div>
           </div>
-          <p className="text-sm leading-6 text-[#5f6b7a]">
+          <p className="text-sm leading-6 text-[#475467]">
             Choose a dataset to load cataloged exercises, expected results, and paired reference solutions.
           </p>
           <select
@@ -118,11 +118,11 @@ export default function RASQLReference() {
                   return (
                     <Collapsible key={q.id} title={`${prompt} · ${difficultyLabel(q.difficulty)}`}>
                       <div className="space-y-4" onMouseEnter={() => loadDetail(q.id)}>
-                        <p className="text-sm text-[#5f6b7a]"><span className="font-semibold text-[#55607d]">Prompt:</span> {q.prompt ?? 'No prompt provided.'}</p>
+                        <p className="text-sm text-[#475467]"><span className="font-semibold text-[#344054]">Prompt:</span> {q.prompt ?? 'No prompt provided.'}</p>
                         {q.hints?.length ? (
                           <div className="text-sm">
-                            <span className="font-semibold text-[#55607d]">Hints:</span>
-                            <ul className="ml-2 list-disc list-inside text-[#5f6b7a]">
+                            <span className="font-semibold text-[#344054]">Hints:</span>
+                            <ul className="ml-2 list-disc list-inside text-[#475467]">
                               {q.hints.map((h, i) => <li key={i}>{h}</li>)}
                             </ul>
                           </div>
@@ -140,7 +140,7 @@ export default function RASQLReference() {
                             {(detail.expected_schema || detail.expected_rows) && (
                               <Collapsible title="Expected Result">
                                 {detail.expected_schema && (
-                                  <p className="mb-2 text-sm"><span className="font-semibold text-[#55607d]">Schema:</span> <span className="font-mono text-xs text-[#5f6b7a]">{detail.expected_schema.join(', ')}</span></p>
+                                  <p className="mb-2 text-sm"><span className="font-semibold text-[#344054]">Schema:</span> <span className="font-mono text-xs text-[#475467]">{detail.expected_schema.join(', ')}</span></p>
                                 )}
                                 {detail.expected_rows?.length ? <DataTable rows={detail.expected_rows} /> : null}
                               </Collapsible>
@@ -150,14 +150,14 @@ export default function RASQLReference() {
                               <div className="space-y-3">
                                 {detail.solution.relational_algebra && (
                                   <div>
-                                    <p className="mb-1 text-sm font-semibold text-[#55607d]">Relational algebra expression:</p>
-                                    <pre className="app-code overflow-x-auto p-3 text-sm text-[#55607d]">{detail.solution.relational_algebra}</pre>
+                                    <p className="mb-1 text-sm font-semibold text-[#344054]">Relational algebra expression:</p>
+                                    <pre className="app-code overflow-x-auto p-3 text-sm text-[#344054]">{detail.solution.relational_algebra}</pre>
                                   </div>
                                 )}
                                 {detail.solution.sql && (
                                   <div>
-                                    <p className="mb-1 text-sm font-semibold text-[#55607d]">SQL query:</p>
-                                    <pre className="app-code overflow-x-auto p-3 text-sm text-[#55607d]">{detail.solution.sql}</pre>
+                                    <p className="mb-1 text-sm font-semibold text-[#344054]">SQL query:</p>
+                                    <pre className="app-code overflow-x-auto p-3 text-sm text-[#344054]">{detail.solution.sql}</pre>
                                   </div>
                                 )}
                                 {!detail.solution.relational_algebra && !detail.solution.sql && (
@@ -179,13 +179,13 @@ export default function RASQLReference() {
 
           <div className={blockCard}>
             <Collapsible title="Translation Tips">
-              <div className="space-y-1.5 text-sm text-[#5f6b7a]">
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Set operations:</strong> Union (∪), difference (−), and intersection (∩) correspond to UNION, EXCEPT, and INTERSECT.</span></p>
-                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#55607d]">Aggregation:</strong> Use GROUP BY and HAVING to mirror grouping operators.</span></p>
+              <div className="space-y-1.5 text-sm text-[#475467]">
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Set operations:</strong> Union (∪), difference (−), and intersection (∩) correspond to UNION, EXCEPT, and INTERSECT.</span></p>
+                <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Aggregation:</strong> Use GROUP BY and HAVING to mirror grouping operators.</span></p>
               </div>
             </Collapsible>
           </div>

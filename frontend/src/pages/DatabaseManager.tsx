@@ -111,7 +111,7 @@ export default function DatabaseManager() {
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Database Manager</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f6b7a] sm:text-base">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475467] sm:text-base">
               Import, browse, and manage your learning databases in the same study-ready workspace used across the toolkit.
             </p>
           </div>
@@ -135,11 +135,11 @@ export default function DatabaseManager() {
             <h2 className={sectionTitle}>Existing databases</h2>
           </div>
         </div>
-        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#5f6b7a]">
+        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#475467]">
           Review available datasets, inspect their relations, and remove non-protected collections when they are no longer needed.
         </p>
         {loading ? (
-          <div className={`${softCard} flex items-center gap-2.5 py-4 text-[#5f6b7a]`}>
+          <div className={`${softCard} flex items-center gap-2.5 py-4 text-[#475467]`}>
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#74c8b8] border-t-transparent" />
             <span className="text-sm">Loading databases...</span>
           </div>
@@ -152,7 +152,7 @@ export default function DatabaseManager() {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
                     <div className="mb-3 flex items-center gap-2">
-                      <h4 className="text-sm font-medium text-[#55607d]">Table list</h4>
+                      <h4 className="text-sm font-medium text-[#344054]">Table list</h4>
                       <button
                         onClick={() => loadSchema(db.name)}
                         className={`${secondaryButton} !rounded-xl !px-2.5 !py-1 text-xs`}
@@ -175,8 +175,8 @@ export default function DatabaseManager() {
                     </div>
                   </div>
                   <div className={`${softCard} space-y-2 text-sm`}>
-                    <h4 className="font-medium text-[#55607d]">Statistics</h4>
-                    <div className="space-y-1 text-[#5f6b7a]">
+                    <h4 className="font-medium text-[#344054]">Statistics</h4>
+                    <div className="space-y-1 text-[#475467]">
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Table count: {db.table_count}</p>
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Database name: {db.name}</p>
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Default dataset: {db.is_default ? 'Yes' : 'No'}</p>
@@ -208,7 +208,7 @@ export default function DatabaseManager() {
             <h2 className={sectionTitle}>Import new database</h2>
           </div>
         </div>
-        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#5f6b7a]">
+        <p className="mb-4 max-w-3xl text-sm leading-6 text-[#475467]">
           Add new practice datasets from ZIP or SQL sources without leaving the same page-level study layout.
         </p>
 
@@ -219,13 +219,13 @@ export default function DatabaseManager() {
               <h3 className="font-display text-xl text-[#3f4761]">Import from ZIP File</h3>
             </div>
             <Collapsible title="ZIP Import Help">
-              <div className="space-y-2 text-sm text-[#5f6b7a]">
+              <div className="space-y-2 text-sm text-[#475467]">
                 <p>ZIP file should contain multiple CSV files. Each CSV file represents a table. File name (without extension) will be used as table name.</p>
-                <pre className="app-code p-3 text-xs text-[#55607d]">{`database.zip\n├── students.csv\n├── courses.csv\n└── enrollments.csv`}</pre>
+                <pre className="app-code p-3 text-xs text-[#344054]">{`database.zip\n├── students.csv\n├── courses.csv\n└── enrollments.csv`}</pre>
               </div>
             </Collapsible>
             <form onSubmit={handleZipImport} className="mt-3 space-y-3">
-              <input ref={zipFileRef} type="file" accept=".zip" className="block w-full text-sm text-[#5f6b7a] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
+              <input ref={zipFileRef} type="file" accept=".zip" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
               <input name="zipName" type="text" defaultValue="NewDatabase" className={`${textInput} sm:w-64`} placeholder="Database name" />
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />
@@ -240,12 +240,12 @@ export default function DatabaseManager() {
               <h3 className="font-display text-xl text-[#3f4761]">Import from SQL File</h3>
             </div>
             <Collapsible title="SQL Import Help">
-              <div className="space-y-1 text-sm text-[#5f6b7a]">
+              <div className="space-y-1 text-sm text-[#475467]">
                 <p>File must be UTF-8 encoded. Should contain CREATE TABLE statements. May contain INSERT statements to insert data. Supports standard SQLite syntax.</p>
               </div>
             </Collapsible>
             <form onSubmit={handleSqlImport} className="mt-3 space-y-3">
-              <input ref={sqlFileRef} type="file" accept=".sql" className="block w-full text-sm text-[#5f6b7a] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
+              <input ref={sqlFileRef} type="file" accept=".sql" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
               <input name="sqlName" type="text" defaultValue="SQLDatabase" className={`${textInput} sm:w-64`} placeholder="Database name" />
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />

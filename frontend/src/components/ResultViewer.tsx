@@ -40,7 +40,7 @@ export default function ResultViewer({ result }: Props) {
           <div key={label} className="app-soft-block p-4 text-center">
             <Icon className="mx-auto mb-1.5 h-4 w-4 text-primary" />
             <p className="text-xl font-bold text-[#5c3b1f]">{value}</p>
-            <p className="text-[11px] uppercase tracking-wide text-[#9b8167]">{label}</p>
+            <p className="text-[11px] uppercase tracking-wide text-[#7c5433]">{label}</p>
           </div>
         ))}
       </div>

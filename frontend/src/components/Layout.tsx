@@ -28,7 +28,7 @@ export default function Layout() {
                 </div>
                 <div>
                   <h1 className="font-display text-3xl leading-none text-[#374151]">RALT</h1>
-                  <p className="mt-1 text-sm font-semibold text-[#667085]">Relational Algebra Learning Tools</p>
+                  <p className="mt-1 text-sm font-semibold text-[#475467]">Relational Algebra Learning Tools</p>
                 </div>
               </div>
 
@@ -49,14 +49,14 @@ export default function Layout() {
                 <div className="flex items-center justify-end gap-3 lg:min-w-[240px]">
                   <div className="min-w-0 text-right">
                     {loading ? (
-                      <p className="text-sm text-[#667085]">Loading session...</p>
+                      <p className="text-sm text-[#475467]">Loading session...</p>
                     ) : null}
                   </div>
                   {loading ? (
                     <div className="h-10 w-10 rounded-[18px] bg-[#f7f7f7] shadow-[0_10px_18px_rgba(24,39,75,0.08)]" />
                   ) : isAuthenticated ? (
                     <div className="flex flex-col items-end gap-2">
-                      <p className="max-w-[220px] truncate text-sm font-semibold text-[#6b7280]">{email}</p>
+                      <p className="max-w-[220px] truncate text-sm font-semibold text-[#4b5563]">{email}</p>
                       <button
                         onClick={logout}
                         className="app-primary-btn shrink-0 !rounded-[20px] !px-5 !py-3"

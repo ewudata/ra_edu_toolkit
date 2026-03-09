@@ -190,15 +190,13 @@ export default function RAExercises() {
               <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Exercises</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f6b7a] sm:text-base">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475467] sm:text-base">
                   Work through database-backed prompts in clear study blocks: choose a schema, filter the catalog, and compare your algebra against the expected result.
                 </p>
               </div>
             </div>
           </div>
         </section>
-
-        {backendOk && <StatusBadge variant="success">Backend service connected successfully</StatusBadge>}
 
         <section className={blockCard}>
           <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
@@ -212,12 +210,12 @@ export default function RAExercises() {
                   <h2 className={sectionTitle}>Choose a database workspace</h2>
                 </div>
               </div>
-              <p className="max-w-2xl text-sm leading-6 text-[#5f6b7a]">
+              <p className="max-w-2xl text-sm leading-6 text-[#475467]">
                 Pick the dataset you want to practice against. Once selected, the page opens the schema, query catalog, and custom-expression tools for that database.
               </p>
             </div>
             <div className="rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.82)] p-4 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
-              <label className="mb-2 block text-sm font-semibold text-[#55607d]">Database collection</label>
+              <label className="mb-2 block text-sm font-semibold text-[#344054]">Database collection</label>
               <select
                 value={selectedDb}
                 onChange={(e) => { setSelectedDb(e.target.value); setMode(null); }}
@@ -245,7 +243,7 @@ export default function RAExercises() {
                     <h2 className={sectionTitle}>Active database: {selectedDb}</h2>
                   </div>
                 </div>
-                <p className="text-sm leading-6 text-[#5f6b7a]">
+                <p className="text-sm leading-6 text-[#475467]">
                   Review available relations before solving. This keeps the schema visible as a study aid instead of burying it below the exercise workflow.
                 </p>
                 <Collapsible title={`Browse tables in ${selectedDb}`}>
@@ -261,7 +259,7 @@ export default function RAExercises() {
                 <div className="space-y-2">
                   <p className={sectionLabel}>Practice Mode</p>
                   <h2 className={sectionTitle}>Choose how you want to work</h2>
-                  <p className="text-sm leading-6 text-[#5f6b7a]">
+                  <p className="text-sm leading-6 text-[#475467]">
                     Use structured catalog practice when you want targeted prompts, or switch to open writing mode to test an expression directly.
                   </p>
                 </div>
@@ -273,7 +271,7 @@ export default function RAExercises() {
                       </div>
                       <h3 className="font-semibold text-[#3f4761]">Operator-Based Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#5f6b7a]">Browse the full catalog or narrow it by operator families, difficulty, and mastery progress.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#475467]">Browse the full catalog or narrow it by operator families, difficulty, and mastery progress.</p>
                     {queries.length > 0 ? (
                       <button
                         onClick={() => setMode('operators')}
@@ -282,7 +280,7 @@ export default function RAExercises() {
                         Browse Queries
                       </button>
                     ) : (
-                      <p className="mt-4 text-sm italic text-[#8b92a8]">This database does not provide a query catalog to browse.</p>
+                      <p className="mt-4 text-sm italic text-[#667085]">This database does not provide a query catalog to browse.</p>
                     )}
                   </div>
                   <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
@@ -292,7 +290,7 @@ export default function RAExercises() {
                       </div>
                       <h3 className="font-semibold text-[#3f4761]">Custom Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#5f6b7a]">Practice by writing your own relational algebra expressions without selecting a catalog prompt first.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#475467]">Practice by writing your own relational algebra expressions without selecting a catalog prompt first.</p>
                     <button
                       onClick={() => setMode('custom')}
                       className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
@@ -321,7 +319,7 @@ export default function RAExercises() {
             <div className={`${blockCardSoft} space-y-4`}>
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Operator group</h3>
-                <p className="mt-1 text-sm text-[#5f6b7a]">Select one or more operator families to create a focused practice set.</p>
+                <p className="mt-1 text-sm text-[#475467]">Select one or more operator families to create a focused practice set.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {OPERATOR_OPTIONS.map(([key, label]) => (
@@ -342,7 +340,7 @@ export default function RAExercises() {
               <div className="flex flex-wrap items-center gap-4">
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Progress view</h3>
-                  <p className="mt-1 text-sm text-[#5f6b7a]">Switch between new practice, complete view, or mastered prompts.</p>
+                  <p className="mt-1 text-sm text-[#475467]">Switch between new practice, complete view, or mastered prompts.</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {(['unmastered', 'all', 'mastered'] as const).map((f) => (
@@ -427,16 +425,16 @@ export default function RAExercises() {
                           <div className="rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-4 space-y-2">
                             <h4 className="font-semibold text-[#6d4b31] text-sm">Your Solution Output</h4>
                             <p className="text-sm text-[#8b6a50]">Rows returned: {result.row_count}</p>
-                            {result.rows.length > 0 ? <DataTable rows={result.rows} /> : <p className="text-sm text-[#9f856d] italic">No rows returned.</p>}
+                            {result.rows.length > 0 ? <DataTable rows={result.rows} /> : <p className="text-sm text-[#7c5433] italic">No rows returned.</p>}
                           </div>
                           <div className="rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-4 space-y-2">
                             <h4 className="font-semibold text-[#6d4b31] text-sm">Expected Output</h4>
                             {result.expected_rows ? (
                               <>
                                 <p className="text-sm text-[#8b6a50]">Rows expected: {result.expected_rows.length}</p>
-                                {result.expected_rows.length > 0 ? <DataTable rows={result.expected_rows} /> : <p className="text-sm text-[#9f856d] italic">No rows expected.</p>}
+                                {result.expected_rows.length > 0 ? <DataTable rows={result.expected_rows} /> : <p className="text-sm text-[#7c5433] italic">No rows expected.</p>}
                               </>
-                            ) : <p className="text-sm text-[#9f856d] italic">Expected result not available for this query.</p>}
+                            ) : <p className="text-sm text-[#7c5433] italic">Expected result not available for this query.</p>}
                           </div>
                         </div>
                         <TraceViewer trace={result.trace} title="Execution Trace of Your Solution" />
@@ -473,7 +471,7 @@ export default function RAExercises() {
                           {solutionResult && (
                             <>
                               <h4 className="font-semibold text-[#5c3b1f]">Expected Query Results</h4>
-                              {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-[#9f856d] italic">Expected result returns no rows.</p>}
+                              {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-[#7c5433] italic">Expected result returns no rows.</p>}
                               <TraceViewer trace={solutionResult.trace} title="Execution Trace of Expected Solution" />
                             </>
                           )}
@@ -527,7 +525,7 @@ export default function RAExercises() {
                 {customResult.rows.length > 0 ? (
                   <DataTable rows={customResult.rows} />
                 ) : (
-                  <p className="text-sm text-[#9f856d] italic">Query returned no rows.</p>
+                  <p className="text-sm text-[#7c5433] italic">Query returned no rows.</p>
                 )}
                 <TraceViewer trace={customResult.trace} />
               </div>

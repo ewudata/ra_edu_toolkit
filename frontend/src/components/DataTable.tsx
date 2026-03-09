@@ -6,7 +6,7 @@ interface Props {
 }
 
 export default function DataTable({ rows, columns, compact, maxHeight }: Props) {
-  if (!rows.length) return <p className="text-sm italic text-[#9b8167]">No data.</p>;
+  if (!rows.length) return <p className="text-sm italic text-[#7c5433]">No data.</p>;
 
   const cols = columns ?? Object.keys(rows[0]);
 
@@ -27,7 +27,7 @@ export default function DataTable({ rows, columns, compact, maxHeight }: Props) 
             <tr key={i} className="transition-colors hover:bg-[#fff4df]">
               {cols.map((col) => (
                 <td key={col} className="whitespace-nowrap px-3 py-1.5 text-[#5c3b1f]">
-                  {row[col] == null ? <span className="italic text-[#c6b39b]">NULL</span> : String(row[col])}
+                  {row[col] == null ? <span className="italic text-[#8b6a50]">NULL</span> : String(row[col])}
                 </td>
               ))}
             </tr>

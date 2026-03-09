@@ -21,7 +21,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         </div>
         <div>
           <h2 className="font-display text-3xl font-semibold text-[#3f4761]">Welcome Back</h2>
-          <p className="mt-1 text-sm text-[#5f6b7a]">Sign in to access your relational algebra workspace.</p>
+          <p className="mt-1 text-sm text-[#475467]">Sign in to access your relational algebra workspace.</p>
         </div>
         <button
           onClick={login}

@@ -40,7 +40,7 @@ export default function Home() {
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
           <div>
             <h1 className="font-display text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Education Toolkit</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f6b7a] sm:text-base">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475467] sm:text-base">
               Study relational algebra through guided exercises, schema exploration, and side-by-side translation references.
             </p>
           </div>
@@ -66,7 +66,7 @@ export default function Home() {
                 </div>
                 <p className={sectionLabel}>Workspace</p>
                 <h3 className="mt-1 font-display text-2xl text-[#3f4761] group-hover:text-[#5d6491]">{feature.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-[#5f6b7a]">
+                <p className="mt-4 text-sm leading-7 text-[#475467]">
                   {feature.items[0]}. {feature.items[1]}. {feature.items[2]}.
                 </p>
               </Link>
