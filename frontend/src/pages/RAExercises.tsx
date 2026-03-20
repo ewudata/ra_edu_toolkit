@@ -211,7 +211,7 @@ export default function RAExercises() {
                 </div>
               </div>
               <p className="max-w-2xl text-sm leading-6 text-[#475467]">
-                Pick the dataset you want to practice against. Once selected, the page opens the schema, query catalog, and custom-expression tools for that database.
+                Pick the database you want to practice against. Once selected, the page opens the schema, query catalog, and custom-expression tools for that database.
               </p>
             </div>
             <div className="rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.82)] p-4 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
@@ -269,15 +269,15 @@ export default function RAExercises() {
                       <div className="app-icon-tile flex h-10 w-10 items-center justify-center rounded-[14px]">
                         <LayoutList className="app-icon-glyph h-4 w-4" />
                       </div>
-                      <h3 className="font-semibold text-[#3f4761]">Operator-Based Queries</h3>
+                      <h3 className="font-semibold text-[#3f4761]">Pre-defined Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#475467]">Browse the full catalog or narrow it by operator families, difficulty, and mastery progress.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#475467]">Browse the pre-defined query catalog or narrow it by operator families and mastery progress.</p>
                     {queries.length > 0 ? (
                       <button
                         onClick={() => setMode('operators')}
                         className={`mt-4 ${mode === 'operators' ? secondaryButton : primaryButton}`}
                       >
-                        Browse Queries
+                        Practice Pre-defined Queries
                       </button>
                     ) : (
                       <p className="mt-4 text-sm italic text-[#667085]">This database does not provide a query catalog to browse.</p>
@@ -288,14 +288,14 @@ export default function RAExercises() {
                       <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
                         <Pencil className="app-icon-glyph-soft h-4 w-4" />
                       </div>
-                      <h3 className="font-semibold text-[#3f4761]">Custom Queries</h3>
+                      <h3 className="font-semibold text-[#3f4761]">User-defined Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#475467]">Practice by writing your own relational algebra expressions without selecting a catalog prompt first.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#475467]">Practice by writing your own relational algebra expressions without selecting from query catalog.</p>
                     <button
                       onClick={() => setMode('custom')}
                       className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
                     >
-                      Practice with Custom Queries
+                      Practice User-defined Queries
                     </button>
                   </div>
                 </div>
@@ -312,7 +312,7 @@ export default function RAExercises() {
               </div>
               <div>
                 <p className={sectionLabel}>Catalog Filters</p>
-                <h2 className={sectionTitle}>Operator-Based Queries</h2>
+                <h2 className={sectionTitle}>Pre-defined Queries</h2>
               </div>
             </div>
 
@@ -343,7 +343,7 @@ export default function RAExercises() {
                   <p className="mt-1 text-sm text-[#475467]">Switch between new practice, complete view, or mastered prompts.</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {(['unmastered', 'all', 'mastered'] as const).map((f) => (
+                  {(['all', 'unmastered', 'mastered'] as const).map((f) => (
                     <label key={f} className="flex items-center gap-2 rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] px-3 py-2 text-sm font-medium cursor-pointer text-[#3d6f67]">
                       <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-[#74c8b8]" />
                       {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -351,20 +351,21 @@ export default function RAExercises() {
                   ))}
                 </div>
               </div>
-
-              <div className="flex flex-wrap gap-4 text-xs font-semibold text-[#8b6a50]">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> beginner</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> intermediate</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> difficult</span>
-              </div>
             </div>
 
             {filteredQueries.length === 0 ? (
               <StatusBadge variant="info">No queries match the selected filters. Try another operator, switch progress, or clear the filter.</StatusBadge>
             ) : (
               <>
-                <div className={blockCardSoft}>
-                  <label className="mb-2 block text-sm font-semibold text-[#3d6f67]">Choose a prompt from the filtered catalog</label>
+                <div className={`${blockCardSoft} space-y-3`}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <label className="block text-sm font-semibold text-[#3d6f67]">Choose a prompt from the filtered catalog</label>
+                    <div className="flex flex-wrap gap-4 text-xs font-semibold text-[#8b6a50]">
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> beginner</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> intermediate</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> difficult</span>
+                    </div>
+                  </div>
                   <select
                     value={selectedQueryId}
                     onChange={(e) => setSelectedQueryId(e.target.value)}

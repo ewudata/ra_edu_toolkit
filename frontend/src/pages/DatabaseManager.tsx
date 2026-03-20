@@ -179,7 +179,7 @@ export default function DatabaseManager() {
                     <div className="space-y-1 text-[#475467]">
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Table count: {db.table_count}</p>
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Database name: {db.name}</p>
-                      <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Default dataset: {db.is_default ? 'Yes' : 'No'}</p>
+                      <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> System provided dataset: {db.is_default ? 'Yes' : 'No'}</p>
                     </div>
                     {!(db.is_default && PROTECTED.has(db.name.toLowerCase())) && (
                       <button
@@ -226,7 +226,7 @@ export default function DatabaseManager() {
             </Collapsible>
             <form onSubmit={handleZipImport} className="mt-3 space-y-3">
               <input ref={zipFileRef} type="file" accept=".zip" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
-              <input name="zipName" type="text" defaultValue="NewDatabase" className={`${textInput} sm:w-64`} placeholder="Database name" />
+              <input name="zipName" type="text" defaultValue="" className={`${textInput} sm:w-64`} placeholder="Database name" />
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />
                 Import ZIP Database
@@ -246,7 +246,7 @@ export default function DatabaseManager() {
             </Collapsible>
             <form onSubmit={handleSqlImport} className="mt-3 space-y-3">
               <input ref={sqlFileRef} type="file" accept=".sql" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
-              <input name="sqlName" type="text" defaultValue="SQLDatabase" className={`${textInput} sm:w-64`} placeholder="Database name" />
+              <input name="sqlName" type="text" defaultValue="" className={`${textInput} sm:w-64`} placeholder="Database name" />
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />
                 Import SQL Database

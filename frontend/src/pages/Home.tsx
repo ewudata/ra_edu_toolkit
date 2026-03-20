@@ -39,7 +39,7 @@ export default function Home() {
         <div className="space-y-3">
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
           <div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Education Toolkit</h1>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Learning Tools</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475467] sm:text-base">
               Study relational algebra through guided exercises, schema exploration, and side-by-side translation references.
             </p>
