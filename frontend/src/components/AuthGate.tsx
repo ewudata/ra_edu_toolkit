@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../lib/useAuth';
 import { GraduationCap, LogIn } from 'lucide-react';
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const { isAuthenticated, login, error, loading } = useAuth();
+  const authMessage = error ?? null;
 
   if (loading) {
     return (
@@ -30,9 +31,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <LogIn className="w-4 h-4" />
           Log in with Google
         </button>
-        {error && (
+        {authMessage && (
           <div className="rounded-[18px] border-2 border-[#d9a08f] bg-[#fde7df] p-3 text-sm text-[#86483d]">
-            Authentication failed: {error}
+            {authMessage}
           </div>
         )}
       </div>

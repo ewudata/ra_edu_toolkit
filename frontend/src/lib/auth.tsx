@@ -1,26 +1,30 @@
-import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, type ReactNode } from 'react';
 import Cookies from 'js-cookie';
 import { api, setAuthToken, setUnauthorizedHandler } from './api';
+import { AuthContext, type AuthContextValue } from './auth-context';
 
 const AUTH_COOKIE = 'ra_edu_auth';
 
-interface AuthState {
-  token: string | null;
-  email: string | null;
-  error: string | null;
-  loading: boolean;
+function formatAuthError(message: string | null): string | null {
+  if (!message) return null;
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('token is expired') ||
+    normalized.includes('bad_jwt') ||
+    normalized.includes('invalid jwt')
+  ) {
+    return 'Your session expired. Log in again to continue.';
+  }
+  return message;
 }
-
-interface AuthContextValue extends AuthState {
-  login: () => Promise<void>;
-  logout: () => void;
-  isAuthenticated: boolean;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ token: null, email: null, error: null, loading: true });
+  const [state, setState] = useState<Pick<AuthContextValue, 'token' | 'email' | 'error' | 'loading'>>({
+    token: null,
+    email: null,
+    error: null,
+    loading: true,
+  });
 
   function applyAuthenticatedSession(token: string, email: string) {
     setAuthToken(token);
@@ -31,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function clearAuthState(message: string | null = null) {
     Cookies.remove(AUTH_COOKIE);
     setAuthToken(null);
-    setState({ token: null, email: null, error: message, loading: false });
+    setState({ token: null, email: null, error: formatAuthError(message), loading: false });
   }
 
   useLayoutEffect(() => {
@@ -92,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const oauthUrl = await api.getGoogleLoginUrl(redirectUrl);
       window.location.href = oauthUrl;
     } catch (err) {
-      setState((s) => ({ ...s, error: String(err) }));
+      setState((s) => ({ ...s, error: formatAuthError(String(err)) }));
     }
   }, []);
 
@@ -108,10 +112,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-  return ctx;
 }

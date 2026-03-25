@@ -16,6 +16,7 @@ import {
   Lightbulb,
   BarChart3,
   Filter,
+  Rows3,
 } from 'lucide-react';
 
 const OPERATOR_OPTIONS = [
@@ -64,6 +65,7 @@ export default function RAExercises() {
   const [executing, setExecuting] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [solutionResult, setSolutionResult] = useState<EvaluationResult | null>(null);
+  const [expectedComparisonResult, setExpectedComparisonResult] = useState<EvaluationResult | null>(null);
 
   const [customExpr, setCustomExpr] = useState('');
   const [customResult, setCustomResult] = useState<EvaluationResult | null>(null);
@@ -101,6 +103,7 @@ export default function RAExercises() {
       setCustomError(null);
       setShowSolution(false);
       setSolutionResult(null);
+      setExpectedComparisonResult(null);
     }
   }, [selectedDb, loadDbData]);
 
@@ -112,6 +115,7 @@ export default function RAExercises() {
     setSolution('');
     setShowSolution(false);
     setSolutionResult(null);
+    setExpectedComparisonResult(null);
   }, [selectedQueryId, selectedDb]);
 
   const filteredQueries = (() => {
@@ -127,9 +131,14 @@ export default function RAExercises() {
     if (!solution.trim() || !selectedQueryId) return;
     setExecuting(true);
     setResultError(null);
+    setExpectedComparisonResult(null);
     try {
       const res = await api.evaluateQuery(selectedDb, selectedQueryId, solution.trim());
       setResult(res);
+      if (res.expected_rows == null && queryDetail?.solution?.relational_algebra) {
+        const expectedRes = await api.evaluateCustomQuery(selectedDb, queryDetail.solution.relational_algebra);
+        setExpectedComparisonResult(expectedRes);
+      }
     } catch (err) {
       setResultError(String(err));
     } finally {
@@ -181,6 +190,9 @@ export default function RAExercises() {
   const sectionTitle = 'text-xl font-semibold text-[#3f4761]';
   const primaryButton = 'app-primary-btn disabled:opacity-50';
   const secondaryButton = 'app-secondary-btn';
+  const resultHeader = 'mb-1 flex items-center gap-2 font-display text-base font-semibold text-[#6d4b31]';
+  const expectedComparisonRows = result?.expected_rows ?? queryDetail?.expected_rows ?? expectedComparisonResult?.rows;
+  const expectedComparisonSchema = result?.expected_schema ?? queryDetail?.expected_schema ?? expectedComparisonResult?.schema_eval;
 
   return (
     <div className="space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6">
@@ -280,7 +292,7 @@ export default function RAExercises() {
                         Practice Pre-defined Queries
                       </button>
                     ) : (
-                      <p className="mt-4 text-sm italic text-[#667085]">This database does not provide a query catalog to browse.</p>
+                      <p className="mt-4 text-sm italic text-[#667085]">This is a user database, so the system does not provide a pre-defined query catalog to browse.</p>
                     )}
                   </div>
                   <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
@@ -382,7 +394,7 @@ export default function RAExercises() {
 
                 {queryDetail && (
                   <div className="space-y-4">
-                    <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+                    <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
                       <div className="rounded-[26px] border-2 border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_6px_0_0_#f4e4c7] space-y-2">
                         <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Query Description:</span> {queryDetail.prompt}</p>
                         <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
@@ -430,10 +442,10 @@ export default function RAExercises() {
                           </div>
                           <div className="rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-4 space-y-2">
                             <h4 className="font-semibold text-[#6d4b31] text-sm">Expected Output</h4>
-                            {result.expected_rows ? (
+                            {expectedComparisonRows != null ? (
                               <>
-                                <p className="text-sm text-[#8b6a50]">Rows expected: {result.expected_rows.length}</p>
-                                {result.expected_rows.length > 0 ? <DataTable rows={result.expected_rows} /> : <p className="text-sm text-[#7c5433] italic">No rows expected.</p>}
+                                <p className="text-sm text-[#8b6a50]">Rows expected: {expectedComparisonRows.length}</p>
+                                {expectedComparisonRows.length > 0 ? <DataTable rows={expectedComparisonRows} columns={expectedComparisonSchema} /> : <p className="text-sm text-[#7c5433] italic">No rows expected.</p>}
                               </>
                             ) : <p className="text-sm text-[#7c5433] italic">Expected result not available for this query.</p>}
                           </div>
@@ -459,19 +471,28 @@ export default function RAExercises() {
                         <div className="space-y-3 rounded-[24px] border-2 border-[#d9c4a5] bg-[#fff9ef] p-5">
                           {queryDetail.solution.relational_algebra && (
                             <div>
-                              <p className="mb-1 text-sm font-semibold text-[#6d4b31]">Expected Relational Algebra Expression:</p>
+                              <h3 className={resultHeader}>
+                                <Pencil className="h-4 w-4 text-primary" />
+                                Expected Relational Algebra Expression
+                              </h3>
                               <pre className="overflow-x-auto rounded-2xl border-2 border-[#ead7b8] bg-white p-3 text-sm font-mono text-[#5c3b1f]">{queryDetail.solution.relational_algebra}</pre>
                             </div>
                           )}
                           {queryDetail.solution.sql && (
                             <div>
-                              <p className="mb-1 text-sm font-semibold text-[#6d4b31]">Equivalent SQL:</p>
+                              <h3 className={resultHeader}>
+                                <DatabaseIcon className="h-4 w-4 text-primary" />
+                                Equivalent SQL
+                              </h3>
                               <pre className="overflow-x-auto rounded-2xl border-2 border-[#ead7b8] bg-white p-3 text-sm font-mono text-[#5c3b1f]">{queryDetail.solution.sql}</pre>
                             </div>
                           )}
                           {solutionResult && (
                             <>
-                              <h4 className="font-semibold text-[#5c3b1f]">Expected Query Results</h4>
+                              <h3 className={resultHeader}>
+                                <Rows3 className="h-4 w-4 text-primary" />
+                                Expected Query Results
+                              </h3>
                               {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-[#7c5433] italic">Expected result returns no rows.</p>}
                               <TraceViewer trace={solutionResult.trace} title="Execution Trace of Expected Solution" />
                             </>

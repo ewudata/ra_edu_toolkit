@@ -25,6 +25,20 @@ export class ApiError extends Error {
   }
 }
 
+function isAuthFailure(status: number, detail: unknown, message: string): boolean {
+  if (status === 401) return true;
+  if (status !== 403) return false;
+
+  if (typeof detail === 'object' && detail) {
+    const errorCode = 'error_code' in detail ? (detail as Record<string, unknown>).error_code : null;
+    const msg = 'msg' in detail ? (detail as Record<string, unknown>).msg : null;
+    if (errorCode === 'bad_jwt') return true;
+    if (typeof msg === 'string' && msg.toLowerCase().includes('token is expired')) return true;
+  }
+
+  return message.toLowerCase().includes('token is expired');
+}
+
 async function request<T = unknown>(method: string, endpoint: string, opts?: {
   params?: Record<string, string | number>;
   body?: unknown;
@@ -61,7 +75,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
     } catch {
       /* ignore */
     }
-    if (res.status === 401) _onUnauthorized?.(message);
+    if (isAuthFailure(res.status, detail, message)) _onUnauthorized?.(message);
     throw new ApiError(message, res.status, detail);
   }
   if (res.status === 204) return {} as T;

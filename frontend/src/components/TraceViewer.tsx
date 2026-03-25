@@ -66,7 +66,7 @@ export default function TraceViewer({ trace, title = 'Execution Trace' }: Props)
 
   return (
     <div className="space-y-4">
-      <h3 className="flex items-center gap-2 font-display text-2xl text-[#5c3b1f]">
+      <h3 className="flex items-center gap-2 text-base font-semibold text-[#6d4b31]">
         <ListOrdered className="w-4 h-4 text-primary" />
         {title}
       </h3>

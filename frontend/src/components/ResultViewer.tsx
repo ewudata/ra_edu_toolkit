@@ -54,7 +54,7 @@ export default function ResultViewer({ result }: Props) {
 
       {rows.length > 0 ? (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-[#6d4b31]">Query Results</h4>
+          <h4 className="text-base font-semibold text-[#6d4b31]">Query Results</h4>
           <DataTable rows={rows} columns={schema.length ? schema : undefined} />
           <button
             onClick={downloadCsv}

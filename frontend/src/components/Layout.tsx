@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../lib/useAuth';
 import {
   GraduationCap,
   LogOut,
