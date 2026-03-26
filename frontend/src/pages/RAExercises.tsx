@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { api, type Database, type Query, type EvaluationResult, type TableInfo } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
