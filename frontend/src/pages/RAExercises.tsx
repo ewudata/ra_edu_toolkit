@@ -50,6 +50,7 @@ export default function RAExercises() {
   const [selectedDb, setSelectedDb] = useState('');
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [queries, setQueries] = useState<Query[]>([]);
+  const [queriesLoaded, setQueriesLoaded] = useState(false);
   const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
   const [schemaMap, setSchemaMap] = useState<Record<string, TableInfo>>({});
 
@@ -77,24 +78,12 @@ export default function RAExercises() {
     api.getDatabases().then(setDatabases).catch(() => {});
   }, []);
 
-  const loadDbData = useCallback(async (db: string) => {
-    try {
-      const [qs, mastery, schema] = await Promise.all([
-        api.getQueries(db),
-        api.getQueryMastery(db).catch(() => ({ query_ids: [] })),
-        api.getDatabaseSchema(db, 3),
-      ]);
-      setQueries(sortQueries(qs));
-      setMasteredIds(new Set(mastery.query_ids.map(String)));
-      setSchemaMap(Object.fromEntries(schema.tables.map((t) => [t.name, t])));
-    } catch {
-      setQueries([]);
-    }
-  }, []);
-
   useEffect(() => {
     if (selectedDb) {
-      loadDbData(selectedDb);
+      setQueries([]);
+      setQueriesLoaded(false);
+      setMasteredIds(new Set());
+      setSchemaMap({});
       setSelectedQueryId('');
       setQueryDetail(null);
       setResult(null);
@@ -105,7 +94,72 @@ export default function RAExercises() {
       setSolutionResult(null);
       setExpectedComparisonResult(null);
     }
-  }, [selectedDb, loadDbData]);
+  }, [selectedDb]);
+
+  useEffect(() => {
+    if (!selectedDb) return;
+
+    let cancelled = false;
+    setQueriesLoaded(false);
+
+    api.getQueries(selectedDb)
+      .then((qs) => {
+        if (cancelled) return;
+        setQueries(sortQueries(qs));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setQueries([]);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setQueriesLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDb]);
+
+  useEffect(() => {
+    if (!selectedDb) return;
+
+    let cancelled = false;
+
+    api.getQueryMastery(selectedDb)
+      .then((mastery) => {
+        if (cancelled) return;
+        setMasteredIds(new Set(mastery.query_ids.map(String)));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMasteredIds(new Set());
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDb]);
+
+  useEffect(() => {
+    if (!selectedDb) return;
+
+    let cancelled = false;
+
+    api.getDatabaseSchema(selectedDb, 3)
+      .then((schema) => {
+        if (cancelled) return;
+        setSchemaMap(Object.fromEntries(schema.tables.map((t) => [t.name, t])));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSchemaMap({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDb]);
 
   useEffect(() => {
     if (!selectedQueryId || !selectedDb) { setQueryDetail(null); return; }
@@ -284,7 +338,9 @@ export default function RAExercises() {
                       <h3 className="font-semibold text-[#3f4761]">Pre-defined Queries</h3>
                     </div>
                     <p className="mt-3 text-sm leading-6 text-[#475467]">Browse the pre-defined query catalog or narrow it by operator families and mastery progress.</p>
-                    {queries.length > 0 ? (
+                    {!queriesLoaded ? (
+                      <p className="mt-4 text-sm italic text-[#667085]">Loading query catalog...</p>
+                    ) : queries.length > 0 ? (
                       <button
                         onClick={() => setMode('operators')}
                         className={`mt-4 ${mode === 'operators' ? secondaryButton : primaryButton}`}
@@ -352,7 +408,7 @@ export default function RAExercises() {
               <div className="flex flex-wrap items-center gap-4">
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Progress view</h3>
-                  <p className="mt-1 text-sm text-[#475467]">Switch between new practice, complete view, or mastered prompts.</p>
+                  <p className="mt-1 text-sm text-[#475467]">Switch between complete view, new practice, or mastered query prompts.</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {(['all', 'unmastered', 'mastered'] as const).map((f) => (
