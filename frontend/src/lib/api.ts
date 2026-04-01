@@ -143,6 +143,19 @@ export interface EvaluationResult {
   solution_sql?: string;
 }
 
+export interface TranslationCheckResult {
+  database: string;
+  query_id: string;
+  direction: 'ra-to-sql' | 'sql-to-ra';
+  answer: string;
+  is_correct: boolean;
+  schema_equal: boolean;
+  student_schema: string[];
+  expected_schema: string[];
+  missing_rows: Record<string, unknown>[];
+  extra_rows: Record<string, unknown>[];
+}
+
 export interface MasteryResponse {
   query_ids: string[];
 }
@@ -183,6 +196,11 @@ export const api = {
 
   evaluateQuery: (database: string, queryId: string, expression: string) =>
     request<EvaluationResult>('POST', `/databases/${database}/queries/${queryId}/evaluate`, { body: { expression } }),
+
+  checkTranslation: (database: string, queryId: string, direction: 'ra-to-sql' | 'sql-to-ra', answer: string) =>
+    request<TranslationCheckResult>('POST', `/databases/${database}/queries/${queryId}/check-translation`, {
+      body: { direction, answer },
+    }),
 
   evaluateCustomQuery: (database: string, expression: string) =>
     request<EvaluationResult>('POST', `/databases/${database}/evaluate`, { body: { expression } }),

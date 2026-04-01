@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ..services import grading as grading_service, queries as queries_service, relalg as relalg_service
+from ..services import (
+    grading as grading_service,
+    queries as queries_service,
+    relalg as relalg_service,
+    sql as sql_service,
+)
 from ..services.auth import require_current_user
 from ..services.exceptions import (
     DatabaseNotFound,
@@ -39,6 +46,24 @@ class QueryEvaluationResponse(BaseModel):
     expected_rows: Optional[List[Dict[str, Any]]] = None
     solution_relational_algebra: Optional[str] = None
     solution_sql: Optional[str] = None
+
+
+class TranslationCheckRequest(BaseModel):
+    direction: Literal["ra-to-sql", "sql-to-ra"]
+    answer: str = Field(..., min_length=1, strip_whitespace=True)
+
+
+class TranslationCheckResponse(BaseModel):
+    database: str
+    query_id: str
+    direction: Literal["ra-to-sql", "sql-to-ra"]
+    answer: str
+    is_correct: bool
+    schema_equal: bool
+    student_schema: List[str]
+    expected_schema: List[str]
+    missing_rows: List[Dict[str, Any]]
+    extra_rows: List[Dict[str, Any]]
 
 
 @router.post("/evaluate", response_model=QueryEvaluationResponse)
@@ -107,6 +132,96 @@ def evaluate_query_expression(
         expected_rows=detail.expected_rows,
         solution_relational_algebra=detail.solution.relational_algebra,
         solution_sql=detail.solution.sql,
+    )
+
+
+@router.post("/check-translation", response_model=TranslationCheckResponse)
+def check_query_translation(
+    database: str,
+    query_id: str,
+    payload: TranslationCheckRequest,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> TranslationCheckResponse:
+    try:
+        detail = queries_service.get_query(database, query_id, user_id=user["id"])
+    except DatabaseNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except QueryNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        if payload.direction == "ra-to-sql":
+            if not detail.solution.sql:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This query does not have a canonical SQL solution.",
+                )
+            student_result = sql_service.evaluate_sql(
+                payload.answer,
+                database,
+                user_id=user["id"],
+            )
+            expected_result = sql_service.evaluate_sql(
+                detail.solution.sql,
+                database,
+                user_id=user["id"],
+            )
+        else:
+            if not detail.solution.relational_algebra:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This query does not have a canonical relational algebra solution.",
+                )
+            if not detail.solution.sql:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This query does not have a canonical SQL solution.",
+                )
+            student_result = relalg_service.evaluate_expression(
+                payload.answer,
+                database,
+                user_id=user["id"],
+            )
+            expected_result = sql_service.evaluate_sql(
+                detail.solution.sql,
+                database,
+                user_id=user["id"],
+            )
+
+        comparison = grading_service.compare_results(
+            SimpleNamespace(dataframe=student_result.dataframe),
+            SimpleNamespace(dataframe=expected_result.dataframe),
+        )
+    except ParseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": exc.message,
+                "line": exc.line,
+                "column": exc.column,
+                "context": exc.context,
+            },
+        ) from exc
+    except EvaluationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    return TranslationCheckResponse(
+        database=database,
+        query_id=query_id,
+        direction=payload.direction,
+        answer=payload.answer,
+        is_correct=comparison.matches,
+        schema_equal=comparison.schema_equal,
+        student_schema=comparison.student_schema,
+        expected_schema=comparison.solution_schema,
+        missing_rows=comparison.missing_rows,
+        extra_rows=comparison.extra_rows,
     )
 
 

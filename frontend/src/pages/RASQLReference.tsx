@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type Database, type EvaluationResult, type Query, type TableInfo } from '../lib/api';
+import { ApiError, api, type Database, type EvaluationResult, type Query, type TableInfo, type TranslationCheckResult } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import DataTable from '../components/DataTable';
@@ -31,14 +31,62 @@ type SqlClauseGroup = {
 };
 
 function normalizeComparison(value: string): string {
-  return value.replace(/\s+/g, ' ').trim().replace(/;$/, '').toLowerCase();
+  return value
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/;$/, '')
+    .toLowerCase()
+    .replace(/\s*(<=|>=|<>|!=)\s*/g, '$1')
+    .replace(/\s*([=<>(),])\s*/g, '$1');
 }
 
-function normalizeRaComparison(value: string): string {
-  return normalizeComparison(value)
-    .replace(/σ/g, 'sigma')
-    .replace(/π/g, 'pi')
-    .replace(/ρ/g, 'rho');
+function splitTopLevelCommaList(value: string): string[] {
+  const items: string[] = [];
+  let current = '';
+  let depth = 0;
+
+  for (const char of value) {
+    if (char === '(') depth += 1;
+    if (char === ')') depth = Math.max(0, depth - 1);
+
+    if (char === ',' && depth === 0) {
+      const item = normalizeComparison(current);
+      if (item) items.push(item);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  const tail = normalizeComparison(current);
+  if (tail) items.push(tail);
+  return items;
+}
+
+function haveSameItemsIgnoringOrder(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+
+  const counts = new Map<string, number>();
+  for (const item of left) counts.set(item, (counts.get(item) ?? 0) + 1);
+  for (const item of right) {
+    const count = counts.get(item) ?? 0;
+    if (count === 0) return false;
+    if (count === 1) counts.delete(item);
+    else counts.set(item, count - 1);
+  }
+  return counts.size === 0;
+}
+
+function clauseMatchesCatalogClause(clause: SqlClause, userValue: string): boolean {
+  if (clause.keyword === 'SELECT' || clause.keyword === 'GROUP BY') {
+    return haveSameItemsIgnoringOrder(
+      splitTopLevelCommaList(userValue),
+      splitTopLevelCommaList(clause.expectedBody),
+    );
+  }
+
+  return normalizeComparison(userValue) === normalizeComparison(clause.expectedBody);
 }
 
 function formatRaExpression(expression: string | undefined): string {
@@ -177,8 +225,44 @@ function extractExpectedRows(result: EvaluationResult | null, fallback: Query | 
   return result?.expected_rows ?? fallback?.expected_rows ?? null;
 }
 
+function formatCheckError(error: unknown): string {
+  const humanize = (message: string): string => {
+    const missingColumnsMatch = message.match(/^\[(.+)\] not in index$/i);
+    if (missingColumnsMatch) {
+      const rawColumns = missingColumnsMatch[1]
+        .split(',')
+        .map((part) => part.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean);
+
+      if (rawColumns.length === 1) {
+        return `Attribute "${rawColumns[0]}" is not available in the current relation, so it cannot be used in the projection list.`;
+      }
+
+      return `Some attributes in your projection list are not available in the current relation: ${rawColumns.join(', ')}.`;
+    }
+
+    return message;
+  };
+
+  if (error instanceof ApiError) {
+    if (typeof error.detail === 'string') return humanize(error.detail);
+    if (error.detail && typeof error.detail === 'object' && 'message' in error.detail) {
+      const detail = error.detail as { message?: string; line?: number; column?: number };
+      if (typeof detail.message === 'string' && detail.line && detail.column) {
+        return `${humanize(detail.message)} (line ${detail.line}, column ${detail.column})`;
+      }
+      if (typeof detail.message === 'string') return humanize(detail.message);
+    }
+    return humanize(error.message);
+  }
+
+  if (error instanceof Error) return humanize(error.message);
+  return 'Unable to check the answer.';
+}
+
 export default function RASQLReference() {
   const raInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const raCheckRequestIdRef = useRef(0);
   const [databases, setDatabases] = useState<Database[]>([]);
   const [selectedDb, setSelectedDb] = useState('');
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
@@ -199,6 +283,9 @@ export default function RASQLReference() {
   const [raStartedEditing, setRaStartedEditing] = useState(false);
   const [traceResult, setTraceResult] = useState<EvaluationResult | null>(null);
   const [traceLoading, setTraceLoading] = useState(false);
+  const [raCheckResult, setRaCheckResult] = useState<TranslationCheckResult | null>(null);
+  const [raCheckLoading, setRaCheckLoading] = useState(false);
+  const [raCheckError, setRaCheckError] = useState<string | null>(null);
 
   useEffect(() => {
     api.healthCheck().then(() => setBackendOk(true)).catch(() => setBackendOk(false));
@@ -239,6 +326,9 @@ export default function RASQLReference() {
     setRaStartedEditing(false);
     setTraceResult(null);
     setStudentRa('');
+    setRaCheckResult(null);
+    setRaCheckError(null);
+    setRaCheckLoading(false);
   }, [selectedDb]);
 
   const queryDetail = selectedQueryId ? details[selectedQueryId] ?? null : null;
@@ -274,6 +364,9 @@ export default function RASQLReference() {
     setRaStartedEditing(false);
     setTraceResult(null);
     setStudentRa('');
+    setRaCheckResult(null);
+    setRaCheckError(null);
+    setRaCheckLoading(false);
   }, [selectedQueryId, practiceDirection]);
 
   useEffect(() => {
@@ -313,6 +406,8 @@ export default function RASQLReference() {
 
   function updateStudentRa(value: string) {
     setRaChecked(false);
+    setRaCheckResult(null);
+    setRaCheckError(null);
     if (!raStartedEditing) {
       const input = raInputRef.current;
       const selectionStart = input?.selectionStart ?? value.length;
@@ -334,6 +429,35 @@ export default function RASQLReference() {
     setStudentRa(value);
   }
 
+  async function checkRaAnswer() {
+    if (!selectedDb || !selectedQueryId) return;
+    if (!studentRa.trim()) {
+      setRaChecked(true);
+      setRaCheckResult(null);
+      setRaCheckError('Enter a relational algebra expression before checking it.');
+      return;
+    }
+
+    const requestId = raCheckRequestIdRef.current + 1;
+    raCheckRequestIdRef.current = requestId;
+    setRaChecked(true);
+    setRaCheckLoading(true);
+    setRaCheckError(null);
+
+    try {
+      const result = await api.checkTranslation(selectedDb, selectedQueryId, 'sql-to-ra', studentRa.trim());
+      if (raCheckRequestIdRef.current !== requestId) return;
+      setRaCheckResult(result);
+    } catch (error) {
+      if (raCheckRequestIdRef.current !== requestId) return;
+      setRaCheckResult(null);
+      setRaCheckError(formatCheckError(error));
+    } finally {
+      if (raCheckRequestIdRef.current !== requestId) return;
+      setRaCheckLoading(false);
+    }
+  }
+
   if (backendOk === false) {
     return <StatusBadge variant="error">Backend service connection failed</StatusBadge>;
   }
@@ -347,10 +471,7 @@ export default function RASQLReference() {
   const primaryButton = 'app-primary-btn disabled:opacity-50';
   const secondaryButton = 'app-secondary-btn';
   const activeQueryRows = extractExpectedRows(traceResult, queryDetail);
-  const raMatchesSolution = queryDetail?.solution?.relational_algebra
-    ? normalizeRaComparison(studentRa) === normalizeRaComparison(queryDetail.solution.relational_algebra)
-    : false;
-
+  const raMatchesSolution = raCheckResult?.is_correct ?? false;
   return (
     <div className={shell}>
       <section className={hero}>
@@ -639,7 +760,7 @@ export default function RASQLReference() {
                                   <div className={`mt-2.5 space-y-2 ${isOperatorOnly ? '' : 'rounded-2xl border border-[#d7deef] bg-white p-3'}`}>
                                     {group.clauses.map((clause) => {
                                       const userValue = sqlClauseAnswers[clause.id] ?? '';
-                                      const clauseCorrect = normalizeComparison(userValue) === normalizeComparison(clause.expectedBody);
+                                      const clauseCorrect = clauseMatchesCatalogClause(clause, userValue);
                                       const clauseAnswered = userValue.trim().length > 0;
                                       return (
                                         <div key={clause.id} className="flex items-start gap-2.5">
@@ -683,12 +804,15 @@ export default function RASQLReference() {
 
                           <div className="flex flex-wrap gap-3">
                             <button type="button" onClick={() => setSqlChecked(true)} className={primaryButton}>
-                              Check SQL Clauses
+                              Check SQL Answer
                             </button>
                             <button type="button" onClick={() => setRevealSqlAnswers((value) => !value)} className={secondaryButton}>
                               {revealSqlAnswers ? 'Hide Expected SQL' : 'Reveal Expected SQL'}
                             </button>
                           </div>
+                          <p className="text-xs leading-5 text-[#667085]">
+                            Clause checkmarks reflect match against the catalog clause only.
+                          </p>
                         </>
                       ) : (
                         <>
@@ -709,8 +833,22 @@ export default function RASQLReference() {
                                   className="min-h-[72px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
                                 />
                                 {raChecked ? (
-                                  <span className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${raMatchesSolution ? 'bg-[#e8faf4] text-[#166534]' : studentRa.trim() ? 'bg-[#fff1f2] text-[#be123c]' : 'bg-[#f4f5f7] text-[#667085]'}`}>
-                                    {raMatchesSolution ? <Check className="h-4 w-4" /> : studentRa.trim() ? <X className="h-4 w-4" /> : null}
+                                  <span className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                                    raCheckLoading
+                                      ? 'bg-[#f4f5f7] text-[#667085]'
+                                      : raMatchesSolution
+                                      ? 'bg-[#e8faf4] text-[#166534]'
+                                      : studentRa.trim()
+                                        ? 'bg-[#fff1f2] text-[#be123c]'
+                                        : 'bg-[#f4f5f7] text-[#667085]'
+                                  }`}>
+                                    {raCheckLoading
+                                      ? null
+                                      : raMatchesSolution
+                                      ? <Check className="h-4 w-4" />
+                                      : studentRa.trim()
+                                        ? <X className="h-4 w-4" />
+                                        : null}
                                   </span>
                                 ) : null}
                               </div>
@@ -727,8 +865,8 @@ export default function RASQLReference() {
                           </div>
 
                           <div className="flex flex-wrap gap-3">
-                            <button type="button" onClick={() => setRaChecked(true)} className={primaryButton}>
-                              Check RA Answer
+                            <button type="button" onClick={() => { void checkRaAnswer(); }} className={primaryButton} disabled={raCheckLoading}>
+                              {raCheckLoading ? 'Checking RA...' : 'Check RA Answer'}
                             </button>
                             <button type="button" onClick={() => setRevealRaAnswer((value) => !value)} className={secondaryButton}>
                               {revealRaAnswer ? 'Hide Expected RA' : 'Reveal Expected RA'}
@@ -736,6 +874,18 @@ export default function RASQLReference() {
                           </div>
                         </>
                       )}
+
+                      {practiceDirection === 'sql-to-ra' && raCheckError ? (
+                        <StatusBadge variant="error">{raCheckError}</StatusBadge>
+                      ) : null}
+
+                      {practiceDirection === 'sql-to-ra' && raCheckResult ? (
+                        <StatusBadge variant={raCheckResult.is_correct ? 'success' : 'warning'}>
+                          {raCheckResult.is_correct
+                            ? 'Correct answer: your relational algebra expression returns the same relation as the SQL query.'
+                            : 'Incorrect answer on the current dataset: the relational algebra result differs from the SQL query result.'}
+                        </StatusBadge>
+                      ) : null}
 
                     </div>
                   </div>

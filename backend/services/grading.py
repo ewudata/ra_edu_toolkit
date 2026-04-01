@@ -44,15 +44,36 @@ def _rows_set(df: pd.DataFrame, schema: List[str]) -> set[tuple]:
     return set(tuples)
 
 
+def _align_schema(
+    student_df: pd.DataFrame, solution_df: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame, bool, List[str], List[str]]:
+    student_schema = list(student_df.columns)
+    solution_schema = list(solution_df.columns)
+
+    if student_schema == solution_schema:
+        return student_df, solution_df, True, student_schema, solution_schema
+
+    if set(student_schema) != set(solution_schema):
+        return student_df, solution_df, False, student_schema, solution_schema
+
+    # Equivalent answers may project the same attributes in a different order.
+    aligned_student = student_df[solution_schema].copy()
+    return aligned_student, solution_df, True, list(aligned_student.columns), solution_schema
+
+
 def compare_results(
     student: relalg.EvaluationResult, solution: relalg.EvaluationResult
 ) -> ComparisonDiff:
     student_df = _normalize(student.dataframe)
     solution_df = _normalize(solution.dataframe)
 
-    student_schema = list(student_df.columns)
-    solution_schema = list(solution_df.columns)
-    schema_equal = student_schema == solution_schema
+    (
+        student_df,
+        solution_df,
+        schema_equal,
+        student_schema,
+        solution_schema,
+    ) = _align_schema(student_df, solution_df)
 
     if not schema_equal:
         return ComparisonDiff(
