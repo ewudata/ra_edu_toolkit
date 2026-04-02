@@ -10,19 +10,19 @@ const FEATURES = [
     icon: Database,
     title: 'Database Manager',
     to: '/databases',
-    items: ['CSV/ZIP file import', 'SQL script import', 'Database browsing', 'Table structure viewing'],
+    items: ['CSV and ZIP imports', 'SQL script imports', 'Table previews', 'Dataset management'],
   },
   {
     icon: FunctionSquare,
     title: 'RA Exercises',
     to: '/ra-exercises',
-    items: ['Guided 3-step workflow', 'Pre-defined practice catalog', 'Custom expression workspace', 'Execution trace visualization'],
+    items: ['Catalog-based practice', 'Operator filters', 'Custom RA evaluation', 'Trace and result comparison'],
   },
   {
     icon: ArrowLeftRight,
-    title: 'RA ↔ SQL Reference',
+    title: 'RA ↔ SQL Translation',
     to: '/ra-sql-reference',
-    items: ['Side-by-side solution explorer', 'Expected schema and data previews', 'Translation tips and heuristics', 'Database-scoped exercise catalog'],
+    items: ['Catalog translation drills', 'Live custom translation', 'Result previews', 'Schema-aware reference panel'],
   },
 ];
 
@@ -41,15 +41,15 @@ export default function Home() {
           <div>
             <h1 className="font-display text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Learning Tools</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475467] sm:text-base">
-              Study relational algebra through guided exercises, schema exploration, and side-by-side translation references.
+              Practice relational algebra with database-backed exercises, schema browsing, and RA/SQL translation tools.
             </p>
           </div>
         </div>
       </section>
 
       <section className={blockCard}>
-        <p className={sectionLabel}>Feature Overview</p>
-        <h2 className={`mt-1 ${sectionTitle}`}>Choose Your Workspace</h2>
+        <p className={sectionLabel}>Workspaces</p>
+        <h2 className={`mt-1 ${sectionTitle}`}>Choose where to work</h2>
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {FEATURES.map((feature) => {
             const Icon = feature.icon;

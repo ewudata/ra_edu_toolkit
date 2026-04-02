@@ -6,7 +6,7 @@ interface Props {
 }
 
 export default function DataTable({ rows, columns, compact, maxHeight }: Props) {
-  if (!rows.length) return <p className="text-sm italic text-[#7c5433]">No data.</p>;
+  if (!rows.length) return <p className="text-sm italic text-[#7c5433]">No rows to display.</p>;
 
   const cols = columns ?? Object.keys(rows[0]);
 

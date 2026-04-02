@@ -1,7 +1,7 @@
 {
   "database": "University",
   "title": "University Relational Algebra Practice",
-  "description": "Thirty practice queries that cover the major relational algebra operators on the university schema.",
+  "description": "Thirty-seven practice queries that cover the major relational algebra operators on the university schema.",
   "questions": [
     {
       "id": "q01",
@@ -582,6 +582,139 @@
       },
       "hints": [
         "difference",
+        "projection"
+      ]
+    },
+    {
+      "id": "q31",
+      "prompt": "Find all courses taught in the Fall 2017 semester, or in the Spring 2018 semester, or in both.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{course_id}(sigma{semester = 'Fall' AND year = 2017}(teaches)) UNION pi{course_id}(sigma{semester = 'Spring' AND year = 2018}(teaches))",
+        "sql": "SELECT course_id FROM teaches WHERE semester = 'Fall' AND year = 2017\nUNION\nSELECT course_id FROM teaches WHERE semester = 'Spring' AND year = 2018;"
+      },
+      "expected_result": {
+        "schema": [
+          "course_id"
+        ]
+      },
+      "hints": [
+        "union",
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q32",
+      "prompt": "Find all courses taught in the Fall 2017 semester, but not in the Spring 2018 semester.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{course_id}(sigma{semester = 'Fall' AND year = 2017}(teaches)) - pi{course_id}(sigma{semester = 'Spring' AND year = 2018}(teaches))",
+        "sql": "SELECT course_id FROM teaches WHERE semester = 'Fall' AND year = 2017\nEXCEPT\nSELECT course_id FROM teaches WHERE semester = 'Spring' AND year = 2018;"
+      },
+      "expected_result": {
+        "schema": [
+          "course_id"
+        ]
+      },
+      "hints": [
+        "difference",
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q33",
+      "prompt": "Find the names of all instructors in the Physics department, along with the course_id of all courses they have taught.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{instructor_name, course_id}(rho{name->instructor_name}(sigma{dept_name = 'Physics'}(instructor)) \u22c8 teaches)",
+        "sql": "SELECT DISTINCT inst.name AS instructor_name, te.course_id\nFROM instructor AS inst\nJOIN teaches AS te ON inst.id = te.id\nWHERE inst.dept_name = 'Physics';"
+      },
+      "expected_result": {
+        "schema": [
+          "instructor_name",
+          "course_id"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "rename",
+        "selection"
+      ]
+    },
+    {
+      "id": "q34",
+      "prompt": "Find the largest salary value in the university.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "gamma{MAX(salary)->largest_salary}(instructor)",
+        "sql": "SELECT MAX(salary) AS largest_salary FROM instructor;"
+      },
+      "expected_result": {
+        "schema": [
+          "largest_salary"
+        ]
+      },
+      "hints": [
+        "aggregation"
+      ]
+    },
+    {
+      "id": "q35",
+      "prompt": "Find all courses taught in the Fall 2017 semester and also in the Spring 2018 semester.",
+      "difficulty": "intermediate",
+      "solution": {
+        "relational_algebra": "pi{course_id}(sigma{semester = 'Fall' AND year = 2017}(teaches)) INTERSECT pi{course_id}(sigma{semester = 'Spring' AND year = 2018}(teaches))",
+        "sql": "SELECT course_id FROM teaches WHERE semester = 'Fall' AND year = 2017\nINTERSECT\nSELECT course_id FROM teaches WHERE semester = 'Spring' AND year = 2018;"
+      },
+      "expected_result": {
+        "schema": [
+          "course_id"
+        ]
+      },
+      "hints": [
+        "intersection",
+        "selection",
+        "projection"
+      ]
+    },
+    {
+      "id": "q36",
+      "prompt": "Find the names of all instructors in the Comp. Sci. department together with the course titles of all the courses that the instructors teach.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{instructor_name, course_title}(rho{name->instructor_name}(sigma{dept_name = 'Comp. Sci.'}(instructor)) \u22c8 teaches \u22c8 rho{title->course_title}(course))",
+        "sql": "SELECT DISTINCT inst.name AS instructor_name, c.title AS course_title\nFROM instructor AS inst\nJOIN teaches AS te ON inst.id = te.id\nJOIN course AS c ON te.course_id = c.course_id\nWHERE inst.dept_name = 'Comp. Sci.';"
+      },
+      "expected_result": {
+        "schema": [
+          "instructor_name",
+          "course_title"
+        ]
+      },
+      "hints": [
+        "natural join",
+        "rename",
+        "selection"
+      ]
+    },
+    {
+      "id": "q37",
+      "prompt": "Find the IDs of students who have taken all the courses taught by Instructor 'Crick'.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "(pi{id, course_id}(takes)) DIV (pi{course_id}(sigma{instructor_name = 'Crick'}(rho{name->instructor_name}(instructor) \u22c8 teaches)))",
+        "sql": "SELECT t.id\nFROM takes AS t\nWHERE t.course_id IN (\n  SELECT te.course_id\n  FROM teaches AS te\n  JOIN instructor AS inst ON te.id = inst.id\n  WHERE inst.name = 'Crick'\n)\nGROUP BY t.id\nHAVING COUNT(DISTINCT t.course_id) = (\n  SELECT COUNT(DISTINCT te.course_id)\n  FROM teaches AS te\n  JOIN instructor AS inst ON te.id = inst.id\n  WHERE inst.name = 'Crick'\n);"
+      },
+      "expected_result": {
+        "schema": [
+          "id"
+        ]
+      },
+      "hints": [
+        "division",
+        "selection",
         "projection"
       ]
     }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { api, type Database, type Query, type EvaluationResult, type TableInfo } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
@@ -46,6 +46,10 @@ function queryMatchesOps(query: Query, ops: Set<string>): boolean {
 }
 
 export default function RAExercises() {
+  const databaseSelectId = useId();
+  const querySelectId = useId();
+  const solutionTextareaId = useId();
+  const customExprTextareaId = useId();
   const [databases, setDatabases] = useState<Database[]>([]);
   const [selectedDb, setSelectedDb] = useState('');
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
@@ -257,7 +261,7 @@ export default function RAExercises() {
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Relational Algebra Exercises</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475467] sm:text-base">
-                  Work through database-backed prompts in clear study blocks: choose a schema, filter the catalog, and compare your algebra against the expected result.
+                  Solve relational algebra prompts against a real dataset, then compare your result with the expected output and evaluation trace.
                 </p>
               </div>
             </div>
@@ -281,8 +285,9 @@ export default function RAExercises() {
               </p>
             </div>
             <div className="rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.82)] p-4 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
-              <label className="mb-2 block text-sm font-semibold text-[#344054]">Database collection</label>
+              <label htmlFor={databaseSelectId} className="mb-2 block text-sm font-semibold text-[#344054]">Database collection</label>
               <select
+                id={databaseSelectId}
                 value={selectedDb}
                 onChange={(e) => { setSelectedDb(e.target.value); setMode(null); }}
                 className="app-input w-full rounded-2xl bg-white/92 px-4 py-3 text-sm cursor-pointer"
@@ -305,7 +310,7 @@ export default function RAExercises() {
                     <DatabaseIcon className="app-icon-glyph-soft h-5 w-5" />
                   </div>
                   <div>
-                    <p className={sectionLabel}>Reference Block</p>
+                    <p className={sectionLabel}>Schema Panel</p>
                     <h2 className={sectionTitle}>Active database: {selectedDb}</h2>
                   </div>
                 </div>
@@ -337,7 +342,7 @@ export default function RAExercises() {
                       </div>
                       <h3 className="font-semibold text-[#3f4761]">Pre-defined Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#475467]">Browse the pre-defined query catalog or narrow it by operator families and mastery progress.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#475467]">Work through catalog prompts and narrow them by operator family or mastery status.</p>
                     {!queriesLoaded ? (
                       <p className="mt-4 text-sm italic text-[#667085]">Loading query catalog...</p>
                     ) : queries.length > 0 ? (
@@ -345,7 +350,7 @@ export default function RAExercises() {
                         onClick={() => setMode('operators')}
                         className={`mt-4 ${mode === 'operators' ? secondaryButton : primaryButton}`}
                       >
-                        Practice Pre-defined Queries
+                        Open Catalog Practice
                       </button>
                     ) : (
                       <p className="mt-4 text-sm italic text-[#667085]">This is a user database, so the system does not provide a pre-defined query catalog to browse.</p>
@@ -358,12 +363,12 @@ export default function RAExercises() {
                       </div>
                       <h3 className="font-semibold text-[#3f4761]">User-defined Queries</h3>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#475467]">Practice by writing your own relational algebra expressions without selecting from query catalog.</p>
+                    <p className="mt-3 text-sm leading-6 text-[#475467]">Evaluate any relational algebra expression directly against the selected database.</p>
                     <button
                       onClick={() => setMode('custom')}
                       className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
                     >
-                      Practice User-defined Queries
+                      Open Custom Evaluator
                     </button>
                   </div>
                 </div>
@@ -392,8 +397,10 @@ export default function RAExercises() {
               <div className="flex flex-wrap gap-2">
                 {OPERATOR_OPTIONS.map(([key, label]) => (
                   <button
+                    type="button"
                     key={key}
                     onClick={() => toggleOp(key)}
+                    aria-pressed={selectedOps.has(key)}
                     className={`rounded-2xl border-2 px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                       selectedOps.has(key) ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#cbeae3] bg-[#f7fcfa] text-[#3d6f67] hover:bg-[#edf8f6]'
                     }`}
@@ -408,7 +415,7 @@ export default function RAExercises() {
               <div className="flex flex-wrap items-center gap-4">
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Progress view</h3>
-                  <p className="mt-1 text-sm text-[#475467]">Switch between complete view, new practice, or mastered query prompts.</p>
+                  <p className="mt-1 text-sm text-[#475467]">Show all prompts, only prompts you still need to solve, or prompts you have already mastered.</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {(['all', 'unmastered', 'mastered'] as const).map((f) => (
@@ -427,7 +434,7 @@ export default function RAExercises() {
               <>
                 <div className={`${blockCardSoft} space-y-3`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <label className="block text-sm font-semibold text-[#3d6f67]">Choose a prompt from the filtered catalog</label>
+                    <label htmlFor={querySelectId} className="block text-sm font-semibold text-[#3d6f67]">Choose a prompt from the filtered list</label>
                     <div className="flex flex-wrap gap-4 text-xs font-semibold text-[#8b6a50]">
                       <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> beginner</span>
                       <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> intermediate</span>
@@ -435,6 +442,7 @@ export default function RAExercises() {
                     </div>
                   </div>
                   <select
+                    id={querySelectId}
                     value={selectedQueryId}
                     onChange={(e) => setSelectedQueryId(e.target.value)}
                     className="app-input w-full rounded-2xl bg-white px-4 py-3 text-sm cursor-pointer"
@@ -452,7 +460,7 @@ export default function RAExercises() {
                   <div className="space-y-4">
                     <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
                       <div className="rounded-[26px] border-2 border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_6px_0_0_#f4e4c7] space-y-2">
-                        <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Query Description:</span> {queryDetail.prompt}</p>
+                        <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Prompt:</span> {queryDetail.prompt}</p>
                         <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
                         {queryDetail.hints?.length ? (
                           <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Hint:</span> {queryDetail.hints.join(', ')}</p>
@@ -462,10 +470,11 @@ export default function RAExercises() {
                       <form onSubmit={handleExecute} className="rounded-[26px] border-2 border-[#d7b79f] bg-[#fbe7df] p-5 shadow-[0_6px_0_0_#f2d2c4] space-y-3">
                         <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
                           <Pencil className="app-icon-glyph h-4 w-4" />
-                          Your Solution
+                          Your expression
                         </h3>
-                        <p className="text-sm text-[#7b5a42]">Write the relational algebra expression for this query:</p>
+                        <label htmlFor={solutionTextareaId} className="text-sm text-[#7b5a42]">Write the relational algebra expression that answers this prompt:</label>
                         <textarea
+                          id={solutionTextareaId}
                           value={solution}
                           onChange={(e) => setSolution(e.target.value)}
                           className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
@@ -473,31 +482,31 @@ export default function RAExercises() {
                         <div className="flex justify-center">
                           <button type="submit" disabled={executing} className={primaryButton}>
                             <Play className="w-4 h-4" />
-                            {executing ? 'Executing...' : 'Execute My Solution'}
+                            {executing ? 'Evaluating...' : 'Evaluate Expression'}
                           </button>
                         </div>
-                        <Collapsible title="Query Syntax Help">
+                        <Collapsible title="RA syntax help">
                           <SyntaxHelp database={selectedDb} />
                         </Collapsible>
                       </form>
                     </div>
 
-                    {resultError && <StatusBadge variant="error">Error executing your solution: {resultError}</StatusBadge>}
+                    {resultError && <StatusBadge variant="error">Could not evaluate your expression: {resultError}</StatusBadge>}
 
                     {result && (
                       <div className={`${blockCardSoft} space-y-6`}>
                         <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
                           <BarChart3 className="app-icon-glyph h-4 w-4" />
-                          Results Comparison
+                          Result comparison
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-4 space-y-2">
-                            <h4 className="font-semibold text-[#6d4b31] text-sm">Your Solution Output</h4>
+                            <h4 className="font-semibold text-[#6d4b31] text-sm">Your result</h4>
                             <p className="text-sm text-[#8b6a50]">Rows returned: {result.row_count}</p>
                             {result.rows.length > 0 ? <DataTable rows={result.rows} /> : <p className="text-sm text-[#7c5433] italic">No rows returned.</p>}
                           </div>
                           <div className="rounded-[22px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-4 space-y-2">
-                            <h4 className="font-semibold text-[#6d4b31] text-sm">Expected Output</h4>
+                            <h4 className="font-semibold text-[#6d4b31] text-sm">Expected result</h4>
                             {expectedComparisonRows != null ? (
                               <>
                                 <p className="text-sm text-[#8b6a50]">Rows expected: {expectedComparisonRows.length}</p>
@@ -506,21 +515,22 @@ export default function RAExercises() {
                             ) : <p className="text-sm text-[#7c5433] italic">Expected result not available for this query.</p>}
                           </div>
                         </div>
-                        <TraceViewer trace={result.trace} title="Execution Trace of Your Solution" />
+                        <TraceViewer trace={result.trace} title="Evaluation Trace for Your Expression" />
                       </div>
                     )}
 
                     <div className={`${blockCardSoft} space-y-4`}>
                       <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
                         <Lightbulb className="app-icon-glyph h-4 w-4" />
-                        Need Help?
+                        Solution help
                       </h3>
                       <button
+                        type="button"
                         onClick={handleViewSolution}
                         className={secondaryButton}
                       >
                         <Eye className="w-4 h-4" />
-                        View Expected Solution & Results
+                        Show canonical solution and result
                       </button>
 
                       {showSolution && queryDetail.solution && (
@@ -529,7 +539,7 @@ export default function RAExercises() {
                             <div>
                               <h3 className={resultHeader}>
                                 <Pencil className="h-4 w-4 text-primary" />
-                                Expected Relational Algebra Expression
+                                Canonical relational algebra
                               </h3>
                               <pre className="overflow-x-auto rounded-2xl border-2 border-[#ead7b8] bg-white p-3 text-sm font-mono text-[#5c3b1f]">{queryDetail.solution.relational_algebra}</pre>
                             </div>
@@ -547,10 +557,10 @@ export default function RAExercises() {
                             <>
                               <h3 className={resultHeader}>
                                 <Rows3 className="h-4 w-4 text-primary" />
-                                Expected Query Results
+                                Canonical result
                               </h3>
                               {solutionResult.rows.length > 0 ? <DataTable rows={solutionResult.rows} /> : <p className="text-sm text-[#7c5433] italic">Expected result returns no rows.</p>}
-                              <TraceViewer trace={solutionResult.trace} title="Execution Trace of Expected Solution" />
+                              <TraceViewer trace={solutionResult.trace} title="Evaluation Trace for the Canonical Expression" />
                             </>
                           )}
                         </div>
@@ -570,13 +580,14 @@ export default function RAExercises() {
                 <Pencil className="app-icon-glyph h-5 w-5" />
               </div>
               <div>
-                <p className={sectionLabel}>Free Writing</p>
-                <h2 className={sectionTitle}>Custom Query Practice</h2>
+                <p className={sectionLabel}>Custom Evaluation</p>
+                <h2 className={sectionTitle}>Evaluate any RA expression</h2>
               </div>
             </div>
             <form onSubmit={handleCustomExecute} className={`${blockCardSoft} space-y-3`}>
-              <label className="text-sm font-medium text-[#3d6f67]">Enter your own relational algebra expression:</label>
+              <label htmlFor={customExprTextareaId} className="text-sm font-medium text-[#3d6f67]">Enter a relational algebra expression to evaluate:</label>
               <textarea
+                id={customExprTextareaId}
                 value={customExpr}
                 onChange={(e) => setCustomExpr(e.target.value)}
                 className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
@@ -584,21 +595,21 @@ export default function RAExercises() {
               <div className="flex justify-center">
                 <button type="submit" disabled={customExecuting} className={primaryButton}>
                   <Play className="w-4 h-4" />
-                  {customExecuting ? 'Executing...' : 'Execute Custom Query'}
+                  {customExecuting ? 'Evaluating...' : 'Evaluate Expression'}
                 </button>
               </div>
-              <Collapsible title="Query Syntax Help">
+              <Collapsible title="RA syntax help">
                 <SyntaxHelp database={selectedDb} />
               </Collapsible>
             </form>
 
-            {customError && <StatusBadge variant="error">Query execution failed: {customError}</StatusBadge>}
+            {customError && <StatusBadge variant="error">Could not evaluate the expression: {customError}</StatusBadge>}
 
             {customResult && (
               <div className={`${blockCardSoft} space-y-4`}>
                 <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
                   <BarChart3 className="app-icon-glyph h-4 w-4" />
-                  Query Results
+                  Result
                 </h3>
                 {customResult.rows.length > 0 ? (
                   <DataTable rows={customResult.rows} />

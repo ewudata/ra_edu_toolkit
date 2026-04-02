@@ -21,8 +21,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <GraduationCap className="app-icon-glyph h-8 w-8" />
         </div>
         <div>
-          <h2 className="font-display text-3xl font-semibold text-[#3f4761]">Welcome Back</h2>
-          <p className="mt-1 text-sm text-[#475467]">Sign in to access your relational algebra workspace.</p>
+          <h2 className="font-display text-3xl font-semibold text-[#3f4761]">Sign in to continue</h2>
+          <p className="mt-1 text-sm text-[#475467]">Use Google sign-in to access the database, exercise, and translation tools.</p>
         </div>
         <button
           onClick={login}

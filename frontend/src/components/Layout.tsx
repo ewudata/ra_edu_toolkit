@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home' },
   { to: '/databases', label: 'Database Manager' },
   { to: '/ra-exercises', label: 'RA Exercises' },
-  { to: '/ra-sql-reference', label: 'RA ↔ SQL' },
+  { to: '/ra-sql-reference', label: 'RA ↔ SQL Translation' },
 ];
 
 export default function Layout() {
@@ -18,13 +18,16 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
+      <a href="#main-content" className="app-skip-link">
+        Skip to main content
+      </a>
       <header className="sticky top-0 z-40 px-3 pt-3 sm:px-4">
         <div className="app-container">
           <div className="rounded-[32px] border border-[#efefef] bg-white px-5 py-4 shadow-[0_18px_34px_rgba(24,39,75,0.08)] md:px-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] shadow-[0_12px_24px_rgba(141,223,162,0.35)]">
-                  <GraduationCap className="h-7 w-7 text-white" />
+                  <GraduationCap aria-hidden="true" className="h-7 w-7 text-white" />
                 </div>
                 <div>
                   <h1 className="font-display text-3xl leading-none text-[#374151]">RALT</h1>
@@ -33,7 +36,7 @@ export default function Layout() {
               </div>
 
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-5">
-                <nav className="flex flex-wrap items-center gap-x-8 gap-y-2 px-1 py-1">
+                <nav aria-label="Primary" className="flex flex-wrap items-center gap-x-8 gap-y-2 px-1 py-1">
                   {NAV_ITEMS.map(({ to, label }) => (
                     <NavLink
                       key={to}
@@ -49,7 +52,7 @@ export default function Layout() {
                 <div className="flex items-center justify-end gap-3 lg:min-w-[240px]">
                   <div className="min-w-0 text-right">
                     {loading ? (
-                      <p className="text-sm text-[#475467]">Loading session...</p>
+                      <p className="text-sm text-[#475467]">Checking sign-in status...</p>
                     ) : null}
                   </div>
                   {loading ? (
@@ -61,8 +64,8 @@ export default function Layout() {
                         onClick={logout}
                         className="app-primary-btn shrink-0 !rounded-[20px] !px-5 !py-3"
                       >
-                        <LogOut className="h-4 w-4" />
-                        Log Out
+                        <LogOut aria-hidden="true" className="h-4 w-4" />
+                        Sign Out
                       </button>
                     </div>
                   ) : (
@@ -70,7 +73,7 @@ export default function Layout() {
                       onClick={login}
                       className="app-primary-btn shrink-0 !rounded-[20px] !px-5 !py-3"
                     >
-                      <LogIn className="h-4 w-4" />
+                      <LogIn aria-hidden="true" className="h-4 w-4" />
                       Log in with Google
                     </button>
                   )}
@@ -81,7 +84,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="pb-12 pt-6">
+      <main id="main-content" tabIndex={-1} className="pb-12 pt-6">
         <div className="app-container">
           <Outlet />
         </div>

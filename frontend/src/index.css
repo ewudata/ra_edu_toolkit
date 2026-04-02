@@ -58,6 +58,23 @@ textarea {
   outline-offset: 2px;
 }
 
+.app-skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  z-index: 100;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  color: #1f2937;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 12px 26px rgba(24, 39, 75, 0.18);
+}
+
+.app-skip-link:focus {
+  top: 1rem;
+}
+
 .app-shell {
   min-height: 100vh;
   background: #f3f3f3;

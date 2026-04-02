@@ -34,6 +34,10 @@ class QueryEvaluationRequest(BaseModel):
     expression: str = Field(..., min_length=1, strip_whitespace=True)
 
 
+class SqlEvaluationRequest(BaseModel):
+    sql: str = Field(..., min_length=1, strip_whitespace=True)
+
+
 class QueryEvaluationResponse(BaseModel):
     database: str
     query_id: str
@@ -261,6 +265,39 @@ def evaluate_custom_query(
         rows=evaluation.rows,
         row_count=len(evaluation.dataframe),
         trace=evaluation.trace,
+        expected_schema=None,
+        expected_rows=None,
+        solution_relational_algebra=None,
+        solution_sql=None,
+    )
+
+
+@custom_router.post("/evaluate-sql", response_model=QueryEvaluationResponse)
+def evaluate_custom_sql_query(
+    database: str,
+    payload: SqlEvaluationRequest,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> QueryEvaluationResponse:
+    """Evaluate a custom SQL statement without requiring a query_id"""
+    try:
+        evaluation = sql_service.evaluate_sql(
+            payload.sql,
+            database,
+            user_id=user["id"],
+        )
+    except EvaluationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    return QueryEvaluationResponse(
+        database=database,
+        query_id="custom-sql",
+        expression=payload.sql,
+        schema_eval=evaluation.schema,
+        rows=evaluation.rows,
+        row_count=len(evaluation.dataframe),
+        trace=[],
         expected_schema=None,
         expected_rows=None,
         solution_relational_algebra=None,

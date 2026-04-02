@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, type FormEvent } from 'react';
+import { useEffect, useId, useState, useCallback, useRef, type FormEvent } from 'react';
 import { api, type Database, type TableInfo } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
@@ -8,6 +8,10 @@ import { HardDrive, Upload, FileArchive, FileCode, Trash2, RefreshCw } from 'luc
 const PROTECTED = new Set(['sales', 'university', 'testdb']);
 
 export default function DatabaseManager() {
+  const zipFileInputId = useId();
+  const zipNameInputId = useId();
+  const sqlFileInputId = useId();
+  const sqlNameInputId = useId();
   const [databases, setDatabases] = useState<Database[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,13 +116,13 @@ export default function DatabaseManager() {
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">Database Manager</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475467] sm:text-base">
-              Import, browse, and manage your learning databases in the same study-ready workspace used across the toolkit.
+              Import datasets, inspect tables, and manage the databases used throughout the toolkit.
             </p>
           </div>
         </div>
       </section>
 
-      {error && <StatusBadge variant="error">Backend connection failed: {error}</StatusBadge>}
+      {error && <StatusBadge variant="error">Could not load the backend service: {error}</StatusBadge>}
       {importMsg && (
         <StatusBadge variant={importMsg.type === 'success' ? 'success' : 'error'}>
           {importMsg.text}
@@ -131,12 +135,12 @@ export default function DatabaseManager() {
             <HardDrive className="app-icon-glyph h-5 w-5" />
           </div>
           <div>
-            <p className={sectionLabel}>Catalog</p>
-            <h2 className={sectionTitle}>Existing databases</h2>
+            <p className={sectionLabel}>Available Datasets</p>
+            <h2 className={sectionTitle}>Browse imported databases</h2>
           </div>
         </div>
         <p className="mb-4 max-w-3xl text-sm leading-6 text-[#475467]">
-          Review available datasets, inspect their relations, and remove non-protected collections when they are no longer needed.
+          Review the datasets in your workspace, inspect their tables, and remove databases that are no longer needed.
         </p>
         {loading ? (
           <div className={`${softCard} flex items-center gap-2.5 py-4 text-[#475467]`}>
@@ -144,7 +148,7 @@ export default function DatabaseManager() {
             <span className="text-sm">Loading databases...</span>
           </div>
         ) : databases.length === 0 ? (
-          <StatusBadge variant="info">No databases available</StatusBadge>
+          <StatusBadge variant="info">No databases have been imported yet.</StatusBadge>
         ) : (
           <div className="space-y-3">
             {databases.map((db) => (
@@ -152,17 +156,17 @@ export default function DatabaseManager() {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
                     <div className="mb-3 flex items-center gap-2">
-                      <h4 className="text-sm font-medium text-[#344054]">Table list</h4>
+                      <h4 className="text-sm font-medium text-[#344054]">Tables</h4>
                       <button
                         onClick={() => loadSchema(db.name)}
                         className={`${secondaryButton} !rounded-xl !px-2.5 !py-1 text-xs`}
                       >
                         <RefreshCw className="h-3 w-3" />
-                        {schemas[db.name] ? 'Refresh' : 'Load'} previews
+                        {schemas[db.name] ? 'Refresh' : 'Load'} table details
                       </button>
                     </div>
                     {schemaErrors[db.name] && (
-                      <StatusBadge variant="warning">Previews unavailable: {schemaErrors[db.name]}</StatusBadge>
+                      <StatusBadge variant="warning">Table details unavailable: {schemaErrors[db.name]}</StatusBadge>
                     )}
                     <div className="space-y-0.5">
                       {db.tables.map((table) => (
@@ -175,11 +179,11 @@ export default function DatabaseManager() {
                     </div>
                   </div>
                   <div className={`${softCard} space-y-2 text-sm`}>
-                    <h4 className="font-medium text-[#344054]">Statistics</h4>
+                    <h4 className="font-medium text-[#344054]">Database details</h4>
                     <div className="space-y-1 text-[#475467]">
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Table count: {db.table_count}</p>
                       <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Database name: {db.name}</p>
-                      <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> System provided dataset: {db.is_default ? 'Yes' : 'No'}</p>
+                      <p className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#8cb7aa]" /> Shared starter dataset: {db.is_default ? 'Yes' : 'No'}</p>
                     </div>
                     {!(db.is_default && PROTECTED.has(db.name.toLowerCase())) && (
                       <button
@@ -205,31 +209,37 @@ export default function DatabaseManager() {
           </div>
           <div>
             <p className={sectionLabel}>Import</p>
-            <h2 className={sectionTitle}>Import new database</h2>
+            <h2 className={sectionTitle}>Add a new database</h2>
           </div>
         </div>
         <p className="mb-4 max-w-3xl text-sm leading-6 text-[#475467]">
-          Add new practice datasets from ZIP or SQL sources without leaving the same page-level study layout.
+          Import a dataset from table files or from a SQL script and make it available across the app.
         </p>
 
         <div className="space-y-4">
           <div className={softCard}>
             <div className="mb-3 flex items-center gap-2">
               <FileArchive className="app-icon-glyph h-4 w-4" />
-              <h3 className="font-display text-xl text-[#3f4761]">Import from ZIP File</h3>
+              <h3 className="font-display text-xl text-[#3f4761]">Import from a ZIP file</h3>
             </div>
-            <Collapsible title="ZIP Import Help">
+            <Collapsible title="ZIP format help">
               <div className="space-y-2 text-sm text-[#475467]">
-                <p>ZIP file should contain multiple CSV files. Each CSV file represents a table. File name (without extension) will be used as table name.</p>
+                <p>The ZIP file should contain one or more CSV files. Each CSV becomes a table, and the file name becomes the table name.</p>
                 <pre className="app-code p-3 text-xs text-[#344054]">{`database.zip\n├── students.csv\n├── courses.csv\n└── enrollments.csv`}</pre>
               </div>
             </Collapsible>
             <form onSubmit={handleZipImport} className="mt-3 space-y-3">
-              <input ref={zipFileRef} type="file" accept=".zip" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
-              <input name="zipName" type="text" defaultValue="" className={`${textInput} sm:w-64`} placeholder="Database name" />
+              <div className="space-y-2">
+                <label htmlFor={zipFileInputId} className="block text-sm font-semibold text-[#344054]">ZIP file</label>
+                <input id={zipFileInputId} ref={zipFileRef} type="file" accept=".zip" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor={zipNameInputId} className="block text-sm font-semibold text-[#344054]">Database name</label>
+                <input id={zipNameInputId} name="zipName" type="text" defaultValue="" className={`${textInput} sm:w-64`} placeholder="Database name" />
+              </div>
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />
-                Import ZIP Database
+                Import ZIP dataset
               </button>
             </form>
           </div>
@@ -237,19 +247,25 @@ export default function DatabaseManager() {
           <div className={softCard}>
             <div className="mb-3 flex items-center gap-2">
               <FileCode className="app-icon-glyph h-4 w-4" />
-              <h3 className="font-display text-xl text-[#3f4761]">Import from SQL File</h3>
+              <h3 className="font-display text-xl text-[#3f4761]">Import from a SQL file</h3>
             </div>
-            <Collapsible title="SQL Import Help">
+            <Collapsible title="SQL format help">
               <div className="space-y-1 text-sm text-[#475467]">
-                <p>File must be UTF-8 encoded. Should contain CREATE TABLE statements. May contain INSERT statements to insert data. Supports standard SQLite syntax.</p>
+                <p>The file must be UTF-8 encoded and use SQLite-compatible SQL. It should include <code>CREATE TABLE</code> statements and can also include <code>INSERT</code> statements.</p>
               </div>
             </Collapsible>
             <form onSubmit={handleSqlImport} className="mt-3 space-y-3">
-              <input ref={sqlFileRef} type="file" accept=".sql" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
-              <input name="sqlName" type="text" defaultValue="" className={`${textInput} sm:w-64`} placeholder="Database name" />
+              <div className="space-y-2">
+                <label htmlFor={sqlFileInputId} className="block text-sm font-semibold text-[#344054]">SQL file</label>
+                <input id={sqlFileInputId} ref={sqlFileRef} type="file" accept=".sql" className="block w-full text-sm text-[#475467] file:mr-3 file:cursor-pointer file:rounded-2xl file:border file:border-[#cbeae3] file:bg-[#f3fbf8] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#3d6f67]" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor={sqlNameInputId} className="block text-sm font-semibold text-[#344054]">Database name</label>
+                <input id={sqlNameInputId} name="sqlName" type="text" defaultValue="" className={`${textInput} sm:w-64`} placeholder="Database name" />
+              </div>
               <button type="submit" className={primaryButton}>
                 <Upload className="h-4 w-4" />
-                Import SQL Database
+                Import SQL dataset
               </button>
             </form>
           </div>

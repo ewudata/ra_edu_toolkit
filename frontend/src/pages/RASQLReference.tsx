@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ApiError, api, type Database, type EvaluationResult, type Query, type TableInfo, type TranslationCheckResult } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import DataTable from '../components/DataTable';
 import TablePreview from '../components/TablePreview';
 import { sortQueries } from '../lib/difficulty';
+import { translateRaToSql, translateSqlToRa, TranslationError } from '../lib/raSqlTranslation';
 import {
   BookOpen,
   Check,
   Database as DatabaseIcon,
+  Filter,
   LayoutList,
   Pencil,
   X,
@@ -16,6 +18,7 @@ import {
 
 type WorkspaceMode = 'catalog' | 'custom' | null;
 type PracticeDirection = 'ra-to-sql' | 'sql-to-ra';
+type CustomEditedSide = 'ra' | 'sql' | null;
 
 type SqlClause = {
   id: string;
@@ -29,6 +32,32 @@ type SqlClauseGroup = {
   title: string;
   clauses: SqlClause[];
 };
+
+const OPERATOR_OPTIONS = [
+  ['selection', 'Selection'],
+  ['project', 'Project'],
+  ['rename', 'Rename'],
+  ['intersection', 'Set Intersection'],
+  ['union', 'Set Union'],
+  ['difference', 'Set Difference'],
+  ['cartesian product', 'Cartesian Product'],
+  ['natural join', 'Natural Join'],
+  ['division', 'Division'],
+] as const;
+
+const OPERATOR_ALIASES: Record<string, Set<string>> = {
+  selection: new Set(['selection', 'select', 'sigma', 'σ']),
+  project: new Set(['project', 'projection', 'pi', 'π']),
+  rename: new Set(['rename', 'renaming', 'rho', 'ρ']),
+};
+
+function queryMatchesOps(query: Query, ops: Set<string>): boolean {
+  const hints = (query.hints ?? []).map((hint) => hint.toLowerCase()).join(' ');
+  return [...ops].every((op) => {
+    const aliases = OPERATOR_ALIASES[op] ?? new Set([op]);
+    return [...aliases].some((alias) => hints.includes(alias));
+  });
+}
 
 function normalizeComparison(value: string): string {
   return value
@@ -261,6 +290,10 @@ function formatCheckError(error: unknown): string {
 }
 
 export default function RASQLReference() {
+  const databaseSelectId = useId();
+  const querySelectId = useId();
+  const customRaTextareaId = useId();
+  const customSqlTextareaId = useId();
   const raInputRef = useRef<HTMLTextAreaElement | null>(null);
   const raCheckRequestIdRef = useRef(0);
   const [databases, setDatabases] = useState<Database[]>([]);
@@ -272,9 +305,19 @@ export default function RASQLReference() {
   const [mode, setMode] = useState<WorkspaceMode>(null);
   const [selectedQueryId, setSelectedQueryId] = useState('');
   const [practiceDirection, setPracticeDirection] = useState<PracticeDirection>('ra-to-sql');
+  const [selectedOps, setSelectedOps] = useState<Set<string>>(new Set());
   const [studentRa, setStudentRa] = useState('');
   const [customRa, setCustomRa] = useState('');
   const [customSql, setCustomSql] = useState('');
+  const [customEditedSide, setCustomEditedSide] = useState<CustomEditedSide>(null);
+  const [customTranslationError, setCustomTranslationError] = useState<string | null>(null);
+  const [customTranslationWarning, setCustomTranslationWarning] = useState<string | null>(null);
+  const [customRaResult, setCustomRaResult] = useState<EvaluationResult | null>(null);
+  const [customRaLoading, setCustomRaLoading] = useState(false);
+  const [customRaError, setCustomRaError] = useState<string | null>(null);
+  const [customSqlResult, setCustomSqlResult] = useState<EvaluationResult | null>(null);
+  const [customSqlLoading, setCustomSqlLoading] = useState(false);
+  const [customSqlError, setCustomSqlError] = useState<string | null>(null);
   const [sqlClauseAnswers, setSqlClauseAnswers] = useState<Record<string, string>>({});
   const [sqlChecked, setSqlChecked] = useState(false);
   const [revealSqlAnswers, setRevealSqlAnswers] = useState(false);
@@ -318,6 +361,7 @@ export default function RASQLReference() {
 
   useEffect(() => {
     setSelectedQueryId('');
+    setSelectedOps(new Set());
     setSqlClauseAnswers({});
     setSqlChecked(false);
     setRevealSqlAnswers(false);
@@ -329,12 +373,26 @@ export default function RASQLReference() {
     setRaCheckResult(null);
     setRaCheckError(null);
     setRaCheckLoading(false);
+    setCustomRa('');
+    setCustomSql('');
+    setCustomEditedSide(null);
+    setCustomTranslationError(null);
+    setCustomTranslationWarning(null);
+    setCustomRaResult(null);
+    setCustomRaLoading(false);
+    setCustomRaError(null);
+    setCustomSqlResult(null);
+    setCustomSqlLoading(false);
+    setCustomSqlError(null);
   }, [selectedDb]);
 
   const queryDetail = selectedQueryId ? details[selectedQueryId] ?? null : null;
   const sqlClauses = queryDetail?.solution?.sql ? parseSqlClauses(queryDetail.solution.sql) : [];
   const sqlClauseGroups = groupSqlClauses(sqlClauses);
   const selectedDbInfo = databases.find((db) => db.name === selectedDb);
+  const filteredQueries = selectedOps.size > 0
+    ? queries.filter((query) => queryMatchesOps(query, selectedOps))
+    : queries;
 
   useEffect(() => {
     if (!selectedDb || !selectedQueryId) return;
@@ -370,6 +428,138 @@ export default function RASQLReference() {
   }, [selectedQueryId, practiceDirection]);
 
   useEffect(() => {
+    if (!selectedQueryId) return;
+    if (filteredQueries.some((query) => query.id === selectedQueryId)) return;
+    setSelectedQueryId('');
+  }, [filteredQueries, selectedQueryId]);
+
+  useEffect(() => {
+    if (customEditedSide !== 'ra') return;
+    if (!customRa.trim()) {
+      setCustomSql('');
+      setCustomTranslationError(null);
+      setCustomTranslationWarning(null);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const result = translateRaToSql(customRa);
+        setCustomSql(result.translated);
+        setCustomTranslationError(null);
+        setCustomTranslationWarning(result.warning ?? null);
+      } catch (error) {
+        setCustomTranslationWarning(null);
+        setCustomTranslationError(
+          error instanceof TranslationError || error instanceof Error
+            ? error.message
+            : 'Unable to translate the relational algebra expression.',
+        );
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [customEditedSide, customRa]);
+
+  useEffect(() => {
+    if (customEditedSide !== 'sql') return;
+    if (!customSql.trim()) {
+      setCustomRa('');
+      setCustomTranslationError(null);
+      setCustomTranslationWarning(null);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const result = translateSqlToRa(customSql);
+        setCustomRa(result.translated);
+        setCustomTranslationError(null);
+        setCustomTranslationWarning(result.warning ?? null);
+      } catch (error) {
+        setCustomTranslationWarning(null);
+        setCustomTranslationError(
+          error instanceof TranslationError || error instanceof Error
+            ? error.message
+            : 'Unable to translate the SQL statement.',
+        );
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [customEditedSide, customSql]);
+
+  useEffect(() => {
+    if (!selectedDb) return;
+    if (!customRa.trim()) {
+      setCustomRaResult(null);
+      setCustomRaLoading(false);
+      setCustomRaError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      setCustomRaLoading(true);
+      setCustomRaError(null);
+      api.evaluateCustomQuery(selectedDb, customRa.trim())
+        .then((result) => {
+          if (cancelled) return;
+          setCustomRaResult(result);
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setCustomRaResult(null);
+          setCustomRaError(formatCheckError(error));
+        })
+        .finally(() => {
+          if (cancelled) return;
+          setCustomRaLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [selectedDb, customRa]);
+
+  useEffect(() => {
+    if (!selectedDb) return;
+    if (!customSql.trim()) {
+      setCustomSqlResult(null);
+      setCustomSqlLoading(false);
+      setCustomSqlError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      setCustomSqlLoading(true);
+      setCustomSqlError(null);
+      api.evaluateCustomSqlQuery(selectedDb, customSql.trim())
+        .then((result) => {
+          if (cancelled) return;
+          setCustomSqlResult(result);
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setCustomSqlResult(null);
+          setCustomSqlError(formatCheckError(error));
+        })
+        .finally(() => {
+          if (cancelled) return;
+          setCustomSqlLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [selectedDb, customSql]);
+
+  useEffect(() => {
     if (practiceDirection !== 'sql-to-ra' || !queryDetail) return;
     setRaStartedEditing(false);
     setStudentRa(createRaSkeleton(queryDetail.solution?.relational_algebra));
@@ -402,6 +592,15 @@ export default function RASQLReference() {
   function updateSqlClauseAnswer(id: string, value: string) {
     setSqlChecked(false);
     setSqlClauseAnswers((prev) => ({ ...prev, [id]: value }));
+  }
+
+  function toggleOp(op: string) {
+    setSelectedOps((prev) => {
+      const next = new Set(prev);
+      if (next.has(op)) next.delete(op);
+      else next.add(op);
+      return next;
+    });
   }
 
   function updateStudentRa(value: string) {
@@ -453,8 +652,9 @@ export default function RASQLReference() {
       setRaCheckResult(null);
       setRaCheckError(formatCheckError(error));
     } finally {
-      if (raCheckRequestIdRef.current !== requestId) return;
-      setRaCheckLoading(false);
+      if (raCheckRequestIdRef.current === requestId) {
+        setRaCheckLoading(false);
+      }
     }
   }
 
@@ -478,9 +678,9 @@ export default function RASQLReference() {
         <div className="space-y-3">
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">RA ↔ SQL Reference</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">RA ↔ SQL Translation</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#475467] sm:text-base">
-              Practice translating between relational algebra and SQL with catalog-backed prompts, intermediate traces, and clause-level mapping support.
+              Translate between relational algebra and SQL with catalog exercises, live custom translation, and result previews against the selected database.
             </p>
           </div>
         </div>
@@ -499,12 +699,13 @@ export default function RASQLReference() {
               </div>
             </div>
             <p className="max-w-2xl text-sm leading-6 text-[#475467]">
-              Pick the database you want to study. Once selected, the page opens the schema, pre-defined query practice workspace, and a user-defined translation pad.
+              Pick the database you want to work with. Once selected, this page shows the schema, catalog translation drills, and the custom translator.
             </p>
           </div>
           <div className="rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.82)] p-4 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
-            <label className="mb-2 block text-sm font-semibold text-[#344054]">Database collection</label>
+            <label htmlFor={databaseSelectId} className="mb-2 block text-sm font-semibold text-[#344054]">Database collection</label>
             <select
+              id={databaseSelectId}
               value={selectedDb}
               onChange={(e) => {
                 setSelectedDb(e.target.value);
@@ -533,7 +734,7 @@ export default function RASQLReference() {
                 <DatabaseIcon className="app-icon-glyph-soft h-5 w-5" />
               </div>
               <div>
-                <p className={sectionLabel}>Reference Block</p>
+                <p className={sectionLabel}>Schema Panel</p>
                 <h2 className={sectionTitle}>Active database: {selectedDb}</h2>
               </div>
             </div>
@@ -554,7 +755,7 @@ export default function RASQLReference() {
               <p className={sectionLabel}>Practice Mode</p>
               <h2 className={sectionTitle}>Choose how you want to work</h2>
               <p className="text-sm leading-6 text-[#475467]">
-                Use pre-defined queries for guided RA/SQL translation practice, or switch to user-defined mode to draft your own notes against the same schema.
+                Use catalog prompts for guided translation practice, or switch to the custom translator to work with your own expressions and statements.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -566,17 +767,17 @@ export default function RASQLReference() {
                   <h3 className="font-semibold text-[#3f4761]">Pre-defined Queries</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[#475467]">
-                  Work from existing catalog solutions and focus on translating between relational algebra, trace output, and SQL clauses.
+                  Use a catalog prompt as the source, inspect its output, and translate it into the target notation.
                 </p>
                 {queries.length > 0 ? (
                   <button
                     onClick={() => setMode('catalog')}
                     className={`mt-4 ${mode === 'catalog' ? secondaryButton : primaryButton}`}
                   >
-                    Practice Pre-defined Queries
+                    Open Catalog Translation
                   </button>
                 ) : (
-                  <p className="mt-4 text-sm italic text-[#667085]">This database does not have a reference catalog yet.</p>
+                  <p className="mt-4 text-sm italic text-[#667085]">This database does not have a translation catalog yet.</p>
                 )}
               </div>
               <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
@@ -587,23 +788,19 @@ export default function RASQLReference() {
                   <h3 className="font-semibold text-[#3f4761]">User-defined Queries</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[#475467]">
-                  Draft your own relational algebra and SQL side by side while keeping mapping reminders in view.
+                  Type RA or SQL directly, let the page translate it, and preview the result on both sides.
                 </p>
                 <button
                   onClick={() => setMode('custom')}
                   className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
                 >
-                  Practice User-defined Queries
+                  Open Custom Translator
                 </button>
               </div>
             </div>
           </div>
         </section>
       )}
-
-      {!selectedDb ? (
-        <StatusBadge variant="info">Select a database from the study setup block to continue.</StatusBadge>
-      ) : null}
 
       {selectedDb && mode === 'catalog' && (
         <section className={`${blockCard} space-y-5`}>
@@ -612,56 +809,90 @@ export default function RASQLReference() {
               <BookOpen className="app-icon-glyph h-5 w-5" />
             </div>
             <div>
-              <p className={sectionLabel}>Pre-defined Practice</p>
-              <h2 className={sectionTitle}>Three-Column Translation Workspace</h2>
+              <p className={sectionLabel}>Catalog Translation</p>
+              <h2 className={sectionTitle}>Practice with catalog prompts</h2>
             </div>
           </div>
 
           {queries.length === 0 ? (
-            <StatusBadge variant="info">This database does not have any cataloged reference queries yet.</StatusBadge>
+            <StatusBadge variant="info">This database does not have any cataloged translation queries yet.</StatusBadge>
           ) : (
             <>
-              <div className={`${blockCardSoft} grid gap-4 lg:grid-cols-[1.2fr_0.8fr]`}>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-[#344054]">Choose a query from the catalog</label>
+              <div className={`${blockCardSoft} space-y-4`}>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <Filter className="h-4 w-4 text-[#615a96]" />
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Operator filters</h3>
+                      <p className="mt-1 text-sm text-[#475467]">Filter the catalog by the relational algebra operators used in each prompt.</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {OPERATOR_OPTIONS.map(([key, label]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleOp(key)}
+                        aria-pressed={selectedOps.has(key)}
+                        className={`rounded-2xl border-2 px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                          selectedOps.has(key)
+                            ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]'
+                            : 'border-[#cbeae3] bg-[#f7fcfa] text-[#3d6f67] hover:bg-[#edf8f6]'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                  <div className="space-y-2">
+                  <label htmlFor={querySelectId} className="block text-sm font-semibold text-[#344054]">Choose a prompt from the catalog</label>
                   <select
+                    id={querySelectId}
                     value={selectedQueryId}
                     onChange={(e) => setSelectedQueryId(e.target.value)}
                     className="app-input w-full rounded-2xl bg-white px-4 py-3 text-sm cursor-pointer"
                   >
                     <option value="">- Select a query -</option>
-                    {queries.map((query) => (
+                    {filteredQueries.map((query) => (
                       <option key={query.id} value={query.id}>
                         {query.prompt}
                       </option>
                     ))}
                   </select>
-                </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[#344054]">Practice direction</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => setPracticeDirection('ra-to-sql')}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${practiceDirection === 'ra-to-sql' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
-                    >
-                      RA → SQL
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPracticeDirection('sql-to-ra')}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${practiceDirection === 'sql-to-ra' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
-                    >
-                      SQL → RA
-                    </button>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#344054]">Practice direction</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setPracticeDirection('ra-to-sql')}
+                        aria-pressed={practiceDirection === 'ra-to-sql'}
+                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${practiceDirection === 'ra-to-sql' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
+                      >
+                        RA → SQL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPracticeDirection('sql-to-ra')}
+                        aria-pressed={practiceDirection === 'sql-to-ra'}
+                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${practiceDirection === 'sql-to-ra' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
+                      >
+                        SQL → RA
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {!queryDetail ? (
-                <StatusBadge variant="info">Pick a catalog query to open the three-column workspace.</StatusBadge>
-              ) : (
+              {filteredQueries.length === 0 ? (
+                <StatusBadge variant="info">No catalog prompts match the selected operator filters.</StatusBadge>
+              ) : null}
+
+              {!queryDetail ? null : (
                 <div className="space-y-4">
                   <div className={`${blockCardSoft} space-y-2`}>
                     <p className="text-base text-[#344054]">{queryDetail.prompt}</p>
@@ -686,14 +917,14 @@ export default function RASQLReference() {
                       {practiceDirection === 'ra-to-sql' ? (
                         <>
                           <p className="text-sm leading-6 text-[#475467]">
-                            Use the solved RA expression as the source representation, then translate it into SQL on the right.
+                            Use the canonical RA expression as the source, then write the equivalent SQL on the right.
                           </p>
                           <pre className="app-code overflow-x-auto p-4 text-sm text-[#344054]">
                             {formatRaExpression(queryDetail.solution?.relational_algebra)}
                           </pre>
                           <div className="space-y-4">
                             <div>
-                              <p className="mb-2 text-sm font-semibold text-[#344054]">Output preview</p>
+                              <p className="mb-2 text-sm font-semibold text-[#344054]">Result preview</p>
                               <p className="mb-3 text-sm text-[#475467]">Rows returned: {traceResult?.row_count ?? '—'}</p>
                               {traceLoading ? (
                                 <p className="text-sm italic text-[#667085]">Loading output preview...</p>
@@ -714,14 +945,14 @@ export default function RASQLReference() {
                       ) : (
                         <>
                           <p className="text-sm leading-6 text-[#475467]">
-                            Use the SQL statement as the source representation, then translate it into relational algebra on the right.
+                            Use the canonical SQL statement as the source, then write the equivalent relational algebra on the right.
                           </p>
                           <pre className="app-code overflow-x-auto p-4 text-sm text-[#344054]">
                             {formatSqlForDisplay(queryDetail.solution?.sql)}
                           </pre>
                           <div className="space-y-4">
                             <div>
-                              <p className="mb-2 text-sm font-semibold text-[#344054]">Output preview</p>
+                              <p className="mb-2 text-sm font-semibold text-[#344054]">Result preview</p>
                               <p className="mb-3 text-sm text-[#475467]">Rows returned: {traceResult?.row_count ?? '—'}</p>
                               {traceLoading ? (
                                 <p className="text-sm italic text-[#667085]">Loading output preview...</p>
@@ -740,14 +971,14 @@ export default function RASQLReference() {
                       <div className="flex items-center gap-2">
                         <Pencil className="h-4 w-4 text-[#615a96]" />
                         <h3 className="text-base font-semibold text-[#3f4761]">
-                          {practiceDirection === 'ra-to-sql' ? 'Equivalent SQL' : 'Relational Algebra Skeleton'}
+                          {practiceDirection === 'ra-to-sql' ? 'Your SQL answer' : 'Your RA answer'}
                         </h3>
                       </div>
 
                       {practiceDirection === 'ra-to-sql' ? (
                         <>
                           <p className="text-sm leading-6 text-[#475467]">
-                            Complete the SQL one clause at a time. Each box corresponds to a piece of the canonical SQL solution from the query catalog.
+                            Complete the SQL answer one clause at a time. Each box maps to one part of the canonical SQL solution.
                           </p>
                           <div className="space-y-3">
                             {sqlClauseGroups.map((group) => {
@@ -771,6 +1002,7 @@ export default function RASQLReference() {
                                             <textarea
                                               value={userValue}
                                               onChange={(e) => updateSqlClauseAnswer(clause.id, e.target.value)}
+                                              aria-label={clause.label}
                                               placeholder={clause.keyword === 'SQL' ? 'Write SQL here' : 'Fill in'}
                                               className={`min-h-[54px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee] ${isOperatorOnly ? '' : 'border-[#e4e7f2]'}`}
                                             />
@@ -804,10 +1036,10 @@ export default function RASQLReference() {
 
                           <div className="flex flex-wrap gap-3">
                             <button type="button" onClick={() => setSqlChecked(true)} className={primaryButton}>
-                              Check SQL Answer
+                              Check SQL
                             </button>
                             <button type="button" onClick={() => setRevealSqlAnswers((value) => !value)} className={secondaryButton}>
-                              {revealSqlAnswers ? 'Hide Expected SQL' : 'Reveal Expected SQL'}
+                              {revealSqlAnswers ? 'Hide Canonical SQL' : 'Show Canonical SQL'}
                             </button>
                           </div>
                           <p className="text-xs leading-5 text-[#667085]">
@@ -817,7 +1049,7 @@ export default function RASQLReference() {
                       ) : (
                         <>
                           <p className="text-sm leading-6 text-[#475467]">
-                            Fill in the relational algebra expression that matches the SQL statement on the left, then check it against the catalog answer.
+                            Write the relational algebra expression that matches the SQL statement on the left, then compare it with the canonical answer.
                           </p>
                           <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
                             <div className="flex items-start gap-2.5">
@@ -829,6 +1061,7 @@ export default function RASQLReference() {
                                   ref={raInputRef}
                                   value={studentRa}
                                   onChange={(e) => updateStudentRa(e.target.value)}
+                                  aria-label="Relational algebra answer"
                                   placeholder="π{_____}(σ{_____}(relation))"
                                   className="min-h-[72px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
                                 />
@@ -866,10 +1099,10 @@ export default function RASQLReference() {
 
                           <div className="flex flex-wrap gap-3">
                             <button type="button" onClick={() => { void checkRaAnswer(); }} className={primaryButton} disabled={raCheckLoading}>
-                              {raCheckLoading ? 'Checking RA...' : 'Check RA Answer'}
+                              {raCheckLoading ? 'Checking RA...' : 'Check RA'}
                             </button>
                             <button type="button" onClick={() => setRevealRaAnswer((value) => !value)} className={secondaryButton}>
-                              {revealRaAnswer ? 'Hide Expected RA' : 'Reveal Expected RA'}
+                              {revealRaAnswer ? 'Hide Canonical RA' : 'Show Canonical RA'}
                             </button>
                           </div>
                         </>
@@ -882,8 +1115,8 @@ export default function RASQLReference() {
                       {practiceDirection === 'sql-to-ra' && raCheckResult ? (
                         <StatusBadge variant={raCheckResult.is_correct ? 'success' : 'warning'}>
                           {raCheckResult.is_correct
-                            ? 'Correct answer: your relational algebra expression returns the same relation as the SQL query.'
-                            : 'Incorrect answer on the current dataset: the relational algebra result differs from the SQL query result.'}
+                            ? 'Correct: your relational algebra expression returns the same relation as the SQL statement.'
+                            : 'Not equivalent on the current dataset: your relational algebra result differs from the SQL statement.'}
                         </StatusBadge>
                       ) : null}
 
@@ -904,45 +1137,121 @@ export default function RASQLReference() {
             </div>
             <div>
               <p className={sectionLabel}>Translation Workspace</p>
-              <h2 className={sectionTitle}>User-defined Query Notes</h2>
+              <h2 className={sectionTitle}>User-defined Query Translator</h2>
             </div>
           </div>
+
+          <p className="text-sm leading-6 text-[#475467]">
+            Edit either side and the page will translate it into the other notation automatically after a short pause.
+          </p>
 
           <div className="grid gap-4 xl:grid-cols-2">
             <div className={`${blockCardSoft} space-y-3`}>
-              <label className="text-sm font-semibold text-[#344054]">Relational algebra draft</label>
+              <label htmlFor={customRaTextareaId} className="text-sm font-semibold text-[#344054]">Relational algebra</label>
               <textarea
+                id={customRaTextareaId}
                 value={customRa}
-                onChange={(e) => setCustomRa(e.target.value)}
+                onChange={(e) => {
+                  setCustomEditedSide('ra');
+                  setCustomTranslationError(null);
+                  setCustomTranslationWarning(null);
+                  setCustomRa(e.target.value);
+                }}
                 placeholder="π{name}(σ{dept_name = 'Comp. Sci.'}(student))"
                 className="h-44 w-full resize-y rounded-2xl border border-[#d7deef] bg-white px-4 py-3 font-mono text-sm text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
               />
+              <p className="text-xs leading-5 text-[#667085]">
+                Supported RA operators here: projection, selection, rename, join, product, union, difference, and intersection.
+              </p>
+
+              <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
+                <p className="text-sm font-semibold text-[#344054]">Result preview</p>
+                <p className="mt-1 text-xs text-[#667085]">
+                  {customRaResult ? `Rows returned: ${customRaResult.row_count}` : 'This RA expression is evaluated against the selected database.'}
+                </p>
+                <div className="mt-3">
+                  {customRaLoading ? (
+                    <p className="text-sm italic text-[#667085]">Evaluating the RA expression...</p>
+                  ) : customRaError ? (
+                    <StatusBadge variant="warning">{customRaError}</StatusBadge>
+                  ) : customRaResult ? (
+                    customRaResult.rows.length ? (
+                      <DataTable rows={customRaResult.rows} columns={customRaResult.schema_eval} compact maxHeight="15rem" />
+                    ) : (
+                      <p className="text-sm italic text-[#667085]">No rows returned.</p>
+                    )
+                  ) : (
+                    <p className="text-sm italic text-[#667085]">Enter a relational algebra expression to preview its result.</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className={`${blockCardSoft} space-y-3`}>
-              <label className="text-sm font-semibold text-[#344054]">SQL draft</label>
+              <label htmlFor={customSqlTextareaId} className="text-sm font-semibold text-[#344054]">SQL</label>
               <textarea
+                id={customSqlTextareaId}
                 value={customSql}
-                onChange={(e) => setCustomSql(e.target.value)}
+                onChange={(e) => {
+                  setCustomEditedSide('sql');
+                  setCustomTranslationError(null);
+                  setCustomTranslationWarning(null);
+                  setCustomSql(e.target.value);
+                }}
                 placeholder="SELECT name FROM student WHERE dept_name = 'Comp. Sci.';"
                 className="h-44 w-full resize-y rounded-2xl border border-[#d7deef] bg-white px-4 py-3 font-mono text-sm text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
               />
+              <p className="text-xs leading-5 text-[#667085]">
+                Best-supported SQL shape: <code>SELECT ... FROM ... JOIN ... WHERE ...</code>, plus <code>UNION</code>, <code>EXCEPT</code>, and <code>INTERSECT</code>.
+              </p>
+
+              <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
+                <p className="text-sm font-semibold text-[#344054]">Result preview</p>
+                <p className="mt-1 text-xs text-[#667085]">
+                  {customSqlResult ? `Rows returned: ${customSqlResult.row_count}` : 'This SQL statement is evaluated against the selected database.'}
+                </p>
+                <div className="mt-3">
+                  {customSqlLoading ? (
+                    <p className="text-sm italic text-[#667085]">Evaluating SQL...</p>
+                  ) : customSqlError ? (
+                    <StatusBadge variant="warning">{customSqlError}</StatusBadge>
+                  ) : customSqlResult ? (
+                    customSqlResult.rows.length ? (
+                      <DataTable rows={customSqlResult.rows} columns={customSqlResult.schema_eval} compact maxHeight="15rem" />
+                    ) : (
+                      <p className="text-sm italic text-[#667085]">No rows returned.</p>
+                    )
+                  ) : (
+                    <p className="text-sm italic text-[#667085]">Enter a SQL statement to preview its result.</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+
+          {customTranslationError ? (
+            <StatusBadge variant="warning">{customTranslationError}</StatusBadge>
+          ) : null}
+
+          {!customTranslationError && customTranslationWarning ? (
+            <StatusBadge variant="info">{customTranslationWarning}</StatusBadge>
+          ) : null}
         </section>
       )}
 
-      <div className={blockCard}>
-        <Collapsible title="Translation Tips">
-          <div className="space-y-1.5 text-sm text-[#475467]">
-            <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
-            <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
-            <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
-            <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
-            <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Set operations:</strong> Union, difference, and intersection correspond to UNION, EXCEPT, and INTERSECT.</span></p>
-          </div>
-        </Collapsible>
-      </div>
+      {selectedDb ? (
+        <div className={blockCard}>
+          <Collapsible title="Translation Tips">
+            <div className="space-y-1.5 text-sm text-[#475467]">
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Set operations:</strong> Union, difference, and intersection correspond to UNION, EXCEPT, and INTERSECT.</span></p>
+            </div>
+          </Collapsible>
+        </div>
+      ) : null}
     </div>
   );
 }

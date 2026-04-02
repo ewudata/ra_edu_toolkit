@@ -61,7 +61,7 @@ interface Props {
   title?: string;
 }
 
-export default function TraceViewer({ trace, title = 'Execution Trace' }: Props) {
+export default function TraceViewer({ trace, title = 'Evaluation Trace' }: Props) {
   if (!trace.length) return null;
 
   return (
@@ -125,11 +125,11 @@ export default function TraceViewer({ trace, title = 'Execution Trace' }: Props)
                 </div>
               )}
               <div>
-                <p className="mb-1 font-medium text-[#8b6a50]">Output (up to 10 records):</p>
+                <p className="mb-1 font-medium text-[#8b6a50]">Output preview (up to 10 rows):</p>
                 {step.preview?.length ? (
                   <DataTable rows={step.preview} compact />
                 ) : (
-                  <p className="text-xs italic text-[#7c5433]">No preview rows for this step.</p>
+                  <p className="text-xs italic text-[#7c5433]">No preview rows were recorded for this step.</p>
                 )}
               </div>
             </div>

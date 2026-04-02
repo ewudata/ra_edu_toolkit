@@ -205,6 +205,9 @@ export const api = {
   evaluateCustomQuery: (database: string, expression: string) =>
     request<EvaluationResult>('POST', `/databases/${database}/evaluate`, { body: { expression } }),
 
+  evaluateCustomSqlQuery: (database: string, sql: string) =>
+    request<EvaluationResult>('POST', `/databases/${database}/evaluate-sql`, { body: { sql } }),
+
   getGoogleLoginUrl: async (frontendRedirect: string): Promise<string> => {
     const payload = await request<{ auth_url: string }>('GET', '/auth/google/start', { params: { frontend_redirect: frontendRedirect } });
     if (!payload.auth_url) throw new ApiError('Backend did not return Google OAuth URL.');

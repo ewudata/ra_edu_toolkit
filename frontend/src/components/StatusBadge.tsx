@@ -14,9 +14,16 @@ const config: Record<string, { bg: string; icon: typeof Info }> = {
 
 export default function StatusBadge({ variant, children }: Props) {
   const { bg, icon: Icon } = config[variant];
+  const role = variant === 'error' ? 'alert' : 'status';
+  const live = variant === 'error' ? 'assertive' : 'polite';
+
   return (
-    <div className={`flex items-start gap-2.5 rounded-[22px] border-2 px-4 py-3 text-sm shadow-[0_4px_0_0_#f1ddbf] ${bg}`}>
-      <Icon className="w-4 h-4 mt-0.5 shrink-0" />
+    <div
+      role={role}
+      aria-live={live}
+      className={`flex items-start gap-2.5 rounded-[22px] border-2 px-4 py-3 text-sm shadow-[0_4px_0_0_#f1ddbf] ${bg}`}
+    >
+      <Icon aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0" />
       <span>{children}</span>
     </div>
   );
