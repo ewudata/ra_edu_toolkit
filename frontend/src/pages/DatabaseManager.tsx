@@ -17,6 +17,7 @@ export default function DatabaseManager() {
   const [error, setError] = useState<string | null>(null);
   const [schemas, setSchemas] = useState<Record<string, Record<string, TableInfo>>>({});
   const [schemaErrors, setSchemaErrors] = useState<Record<string, string>>({});
+  const [catalogMsg, setCatalogMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const zipFileRef = useRef<HTMLInputElement>(null);
@@ -58,11 +59,19 @@ export default function DatabaseManager() {
   async function handleDelete(db: Database) {
     try {
       await api.deleteDatabase(db.name);
-      setImportMsg({ type: 'success', text: db.is_default ? `Hidden shared dataset: ${db.name}` : `Deleted database: ${db.name}` });
+      setCatalogMsg({ type: 'success', text: db.is_default ? `Hidden shared dataset: ${db.name}` : `Deleted database: ${db.name}` });
       loadDatabases();
     } catch (e) {
-      setImportMsg({ type: 'error', text: `Delete failed: ${e}` });
+      setCatalogMsg({ type: 'error', text: `Delete failed: ${e}` });
     }
+  }
+
+  function formatImportError(err: unknown, attemptedName: string) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('is a shared default name and cannot be overwritten')) {
+      return `Database '${attemptedName}' already exists`;
+    }
+    return message;
   }
 
   async function handleZipImport(e: FormEvent<HTMLFormElement>) {
@@ -71,13 +80,14 @@ export default function DatabaseManager() {
     const name = (form.elements.namedItem('zipName') as HTMLInputElement).value.trim();
     const file = zipFileRef.current?.files?.[0];
     if (!file || !name) return;
+    setImportMsg(null);
     try {
       const result = await api.importDatabaseFromZip(name, file);
       setImportMsg({ type: 'success', text: `Successfully imported database: ${result.name}` });
       form.reset();
       loadDatabases();
     } catch (e) {
-      setImportMsg({ type: 'error', text: `Import failed: ${e}` });
+      setImportMsg({ type: 'error', text: `Import failed: ${formatImportError(e, name)}` });
     }
   }
 
@@ -87,13 +97,14 @@ export default function DatabaseManager() {
     const name = (form.elements.namedItem('sqlName') as HTMLInputElement).value.trim();
     const file = sqlFileRef.current?.files?.[0];
     if (!file || !name) return;
+    setImportMsg(null);
     try {
       const result = await api.importDatabaseFromSql(name, file);
       setImportMsg({ type: 'success', text: `Successfully imported database: ${result.name}` });
       form.reset();
       loadDatabases();
     } catch (e) {
-      setImportMsg({ type: 'error', text: `Import failed: ${e}` });
+      setImportMsg({ type: 'error', text: `Import failed: ${formatImportError(e, name)}` });
     }
   }
 
@@ -123,12 +134,6 @@ export default function DatabaseManager() {
       </section>
 
       {error && <StatusBadge variant="error">Could not load the backend service: {error}</StatusBadge>}
-      {importMsg && (
-        <StatusBadge variant={importMsg.type === 'success' ? 'success' : 'error'}>
-          {importMsg.text}
-        </StatusBadge>
-      )}
-
       <section className={blockCard}>
         <div className="mb-4 flex items-center gap-3">
           <div className={iconTile}>
@@ -142,6 +147,13 @@ export default function DatabaseManager() {
         <p className="mb-4 max-w-3xl text-sm leading-6 text-[#475467]">
           Review the datasets in your workspace, inspect their tables, and remove databases that are no longer needed.
         </p>
+        {catalogMsg && (
+          <div className="mb-4">
+            <StatusBadge variant={catalogMsg.type === 'success' ? 'success' : 'error'}>
+              {catalogMsg.text}
+            </StatusBadge>
+          </div>
+        )}
         {loading ? (
           <div className={`${softCard} flex items-center gap-2.5 py-4 text-[#475467]`}>
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#74c8b8] border-t-transparent" />
@@ -215,6 +227,13 @@ export default function DatabaseManager() {
         <p className="mb-4 max-w-3xl text-sm leading-6 text-[#475467]">
           Import a dataset from table files or from a SQL script and make it available across the app.
         </p>
+        {importMsg && (
+          <div className="mb-4">
+            <StatusBadge variant={importMsg.type === 'success' ? 'success' : 'error'}>
+              {importMsg.text}
+            </StatusBadge>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className={softCard}>
