@@ -97,11 +97,13 @@ def _combine_aliases(
     aliases: Dict[str, List[str]] = {}
     out_set = set(output_cols)
 
-    def _map_and_store(source: Dict[str, List[str]]):
+    def _map_and_store(source: Dict[str, List[str]], *, prefer_suffix: bool = False):
         for alias, cols in source.items():
             mapped = []
             for c in cols:
-                if c in out_set:
+                if prefer_suffix and f"{c}_r" in out_set:
+                    mapped.append(f"{c}_r")
+                elif c in out_set:
                     mapped.append(c)
                 elif f"{c}_r" in out_set:
                     mapped.append(f"{c}_r")
@@ -111,7 +113,7 @@ def _combine_aliases(
     if left_aliases:
         _map_and_store(left_aliases)
     if right_aliases:
-        _map_and_store(right_aliases)
+        _map_and_store(right_aliases, prefer_suffix=True)
     return aliases
 
 
@@ -124,10 +126,77 @@ def _row_env(row: pd.Series, aliases: Dict[str, List[str]]) -> Dict[str, Any]:
     for alias, cols in (aliases or {}).items():
         alias_l = alias.lower()
         for col in cols:
-            key = f"{alias_l}.{col.lower()}"
+            col_l = col.lower()
             if col in row.index:
-                env[key] = row[col]
+                env[f"{alias_l}.{col_l}"] = row[col]
+                # Product/join suffixes colliding right-side columns with "_r".
+                # Alias-qualified references should still use the logical base name.
+                if col_l.endswith("_r"):
+                    env[f"{alias_l}.{col_l[:-2]}"] = row[col]
     return env
+
+
+def _resolve_projection_attrs(
+    attrs: List[str], columns: List[str], aliases: Dict[str, List[str]]
+) -> List[str]:
+    actual_columns = [c for c in columns if c != "_prov"]
+    actual_set = set(actual_columns)
+    resolved: List[str] = []
+
+    for attr in attrs:
+        attr_l = attr.lower()
+        if attr_l in actual_set:
+            resolved.append(attr_l)
+            continue
+
+        if "." not in attr_l:
+            raise KeyError(f"{[attr]} not in index")
+
+        alias, _, qualified_name = attr_l.partition(".")
+        alias_cols = aliases.get(alias, [])
+        match = next(
+            (
+                col.lower()
+                for col in alias_cols
+                if col.lower() == qualified_name
+                or (col.lower().endswith("_r") and col.lower()[:-2] == qualified_name)
+            ),
+            None,
+        )
+        if match is None or match not in actual_set:
+            raise KeyError(f"{[attr]} not in index")
+        resolved.append(match)
+
+    return resolved
+
+
+def _resolve_rename_source(
+    source: str, columns: List[str], aliases: Dict[str, List[str]]
+) -> str | None:
+    actual_columns = [c for c in columns if c != "_prov"]
+    actual_set = set(actual_columns)
+    source_l = source.lower()
+
+    if source_l in actual_set:
+        return source_l
+
+    if "." not in source_l:
+        return None
+
+    alias, _, qualified_name = source_l.partition(".")
+    alias_cols = aliases.get(alias, [])
+    match = next(
+        (
+            col.lower()
+            for col in alias_cols
+            if col.lower() == qualified_name
+            or (col.lower().endswith("_r") and col.lower()[:-2] == qualified_name)
+        ),
+        None,
+    )
+    if match is None or match not in actual_set:
+        return None
+    return match
 
 
 def _product(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
@@ -282,13 +351,15 @@ def eval(
         return df
     if isinstance(node, AST.Projection):
         inp = eval(node.sub, env, steps)
+        aliases = inp.attrs.get("aliases", {})
+        resolved_attrs = _resolve_projection_attrs(node.attrs, list(inp.columns), aliases)
         out = (
-            inp[node.attrs + ["_prov"]]
+            inp[resolved_attrs + ["_prov"]]
             .copy()
-            .drop_duplicates(subset=node.attrs)
+            .drop_duplicates(subset=resolved_attrs)
             .reset_index(drop=True)
         )
-        out.attrs["aliases"] = _filter_aliases(inp.attrs.get("aliases", {}), out.columns)
+        out.attrs["aliases"] = _filter_aliases(aliases, out.columns)
         steps.append(
             {
                 "op": "π",
@@ -331,14 +402,16 @@ def eval(
         return out
     if isinstance(node, AST.Rename):
         inp = eval(node.sub, env, steps)
+        aliases = inp.attrs.get("aliases", {})
         relation_alias = node.relation.lower() if node.relation else None
         attr_pairs = []
         relation_pair = None
         for o, n in node.pairs:
-            if o in inp.columns:
-                attr_pairs.append((o, n))
+            resolved_source = _resolve_rename_source(o, list(inp.columns), aliases)
+            if resolved_source is not None:
+                attr_pairs.append((resolved_source, n))
             else:
-                if relation_pair is None and relation_alias is None:
+                if relation_pair is None and relation_alias is None and "." not in o:
                     relation_pair = (o, n)
                 else:
                     raise ValueError(f"Cannot rename missing '{o}'")
@@ -353,7 +426,6 @@ def eval(
         if any((n in inp.columns and n != o) for o, n in attr_pairs):
             raise ValueError("Rename target already exists")
         out = inp.rename(columns=m).copy()
-        aliases = inp.attrs.get("aliases", {})
         if attr_pairs:
             aliases = {
                 alias: [m.get(c, c) for c in cols]

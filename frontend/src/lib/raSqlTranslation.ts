@@ -295,11 +295,17 @@ function renderRa(node: RaNode): string {
     case 'selection':
       return `σ{${node.cond}}(${renderRa(node.sub)})`;
     case 'rename': {
-      const alias = node.relationAlias ?? '';
       const pairs = node.pairs.length
         ? `{${node.pairs.map(([from, to]) => `${from}->${to}`).join(', ')}}`
         : '';
-      return `ρ${alias}${pairs}(${renderRa(node.sub)})`;
+
+      if (node.relationAlias && node.pairs.length) {
+        return `ρ${pairs}(ρ${node.relationAlias}(${renderRa(node.sub)}))`;
+      }
+      if (node.relationAlias) {
+        return `ρ${node.relationAlias}(${renderRa(node.sub)})`;
+      }
+      return `ρ${pairs}(${renderRa(node.sub)})`;
     }
     case 'join':
       return `${wrapRaBinary(node.left)} ${node.theta ? `⋈{${node.theta}}` : '⋈'} ${wrapRaBinary(node.right)}`;
@@ -330,11 +336,71 @@ function indentSql(sql: string): string {
     .join('\n');
 }
 
-function mapRenamedSchema(columns: string[], pairs: Array<[string, string]>): string[] {
+type SchemaContext = {
+  columns: string[];
+  aliases: Record<string, string[]>;
+};
+
+function combineAliases(
+  outputCols: string[],
+  leftAliases: Record<string, string[]>,
+  rightAliases?: Record<string, string[]>,
+): Record<string, string[]> {
+  const outSet = new Set(outputCols);
+  const aliases: Record<string, string[]> = {};
+
+  function mapAndStore(source: Record<string, string[]>, preferSuffix = false) {
+    for (const [alias, cols] of Object.entries(source)) {
+      const mapped: string[] = [];
+      for (const col of cols) {
+        if (preferSuffix && outSet.has(`${col}_r`)) mapped.push(`${col}_r`);
+        else if (outSet.has(col)) mapped.push(col);
+        else if (outSet.has(`${col}_r`)) mapped.push(`${col}_r`);
+      }
+      if (mapped.length) aliases[alias] = mapped;
+    }
+  }
+
+  mapAndStore(leftAliases);
+  if (rightAliases) mapAndStore(rightAliases, true);
+  return aliases;
+}
+
+function resolveRenameSource(source: string, columns: string[], aliases: Record<string, string[]>): string | null {
+  if (columns.includes(source)) return source;
+  if (!source.includes('.')) return null;
+
+  const [alias, qualifiedName] = source.split('.', 2);
+  if (!alias || !qualifiedName) return null;
+  const aliasCols = aliases[alias] ?? [];
+  const match = aliasCols.find((col) => col === qualifiedName || (col.endsWith('_r') && col.slice(0, -2) === qualifiedName));
+  return match ?? null;
+}
+
+function resolveRenamePairs(
+  columns: string[],
+  pairs: Array<[string, string]>,
+  aliases: Record<string, string[]>,
+): Array<[string, string]> {
+  return pairs.map(([from, to]) => {
+    const resolved = resolveRenameSource(from, columns, aliases);
+    if (!resolved) {
+      throw new TranslationError(`Cannot rename missing attribute "${from}".`);
+    }
+    return [resolved, to];
+  });
+}
+
+function mapRenamedSchema(
+  columns: string[],
+  pairs: Array<[string, string]>,
+  aliases: Record<string, string[]> = {},
+): string[] {
   const sourceSet = new Set(columns);
   const renameMap = new Map<string, string>();
+  const resolvedPairs = resolveRenamePairs(columns, pairs, aliases);
 
-  for (const [from, to] of pairs) {
+  for (const [from, to] of resolvedPairs) {
     if (!sourceSet.has(from)) {
       throw new TranslationError(`Cannot rename missing attribute "${from}".`);
     }
@@ -351,42 +417,57 @@ function mapRenamedSchema(columns: string[], pairs: Array<[string, string]>): st
   return renamed;
 }
 
-function inferNodeSchema(node: RaNode, schema: TranslationSchema): string[] {
+function inferNodeContext(node: RaNode, schema: TranslationSchema): SchemaContext {
   switch (node.type) {
     case 'relation': {
       const columns = schema[node.name];
       if (!columns) {
         throw new TranslationError(`Schema information is required to rename attributes from relation "${node.name}".`);
       }
-      return [...columns];
+      return { columns: [...columns], aliases: { [node.name]: [...columns] } };
     }
     case 'projection':
-      return [...node.attrs];
+      return { columns: [...node.attrs], aliases: {} };
     case 'selection':
-      return inferNodeSchema(node.sub, schema);
-    case 'rename':
-      return mapRenamedSchema(inferNodeSchema(node.sub, schema), node.pairs);
+      return inferNodeContext(node.sub, schema);
+    case 'rename': {
+      const child = inferNodeContext(node.sub, schema);
+      const columns = mapRenamedSchema(child.columns, node.pairs, child.aliases);
+      let aliases = child.aliases;
+      if (node.pairs.length) {
+        const resolvedPairs = resolveRenamePairs(child.columns, node.pairs, child.aliases);
+        const renameMap = new Map<string, string>(resolvedPairs);
+        aliases = Object.fromEntries(
+          Object.entries(child.aliases).map(([alias, cols]) => [alias, cols.map((col) => renameMap.get(col) ?? col)]),
+        );
+      }
+      if (node.relationAlias) {
+        aliases = { [node.relationAlias]: [...columns] };
+      }
+      return { columns, aliases };
+    }
     case 'join': {
       if (node.theta) {
-        return inferNodeSchema({ type: 'product', left: node.left, right: node.right }, schema);
+        return inferNodeContext({ type: 'product', left: node.left, right: node.right }, schema);
       }
-      const left = inferNodeSchema(node.left, schema);
-      const right = inferNodeSchema(node.right, schema);
-      const common = new Set(left.filter((column) => right.includes(column)));
-      return [...left, ...right.filter((column) => !common.has(column))];
+      const left = inferNodeContext(node.left, schema);
+      const right = inferNodeContext(node.right, schema);
+      const common = new Set(left.columns.filter((column) => right.columns.includes(column)));
+      const columns = [...left.columns, ...right.columns.filter((column) => !common.has(column))];
+      return { columns, aliases: combineAliases(columns, left.aliases, right.aliases) };
     }
     case 'product': {
-      const left = inferNodeSchema(node.left, schema);
-      const leftSet = new Set(left);
-      const right = inferNodeSchema(node.right, schema).map((column) => (
-        leftSet.has(column) ? `${column}_r` : column
-      ));
-      return [...left, ...right];
+      const left = inferNodeContext(node.left, schema);
+      const leftSet = new Set(left.columns);
+      const right = inferNodeContext(node.right, schema);
+      const rightCols = right.columns.map((column) => (leftSet.has(column) ? `${column}_r` : column));
+      const columns = [...left.columns, ...rightCols];
+      return { columns, aliases: combineAliases(columns, left.aliases, right.aliases) };
     }
     case 'union':
     case 'difference':
     case 'intersection':
-      return inferNodeSchema(node.left, schema);
+      return inferNodeContext(node.left, schema);
     case 'division':
       throw new TranslationError('RA division is not supported by the automatic SQL translator.');
   }
@@ -419,22 +500,40 @@ function toSql(node: RaNode, aliasCounter: { value: number }, schema: Translatio
 function toSelectSql(node: RaNode, aliasCounter: { value: number }, schema: TranslationSchema): string {
   let projection: string[] | null = null;
   const selections: string[] = [];
+  const renamePairs: Array<[string, string]> = [];
   let current = node;
 
-  while (current.type === 'projection' || current.type === 'selection') {
+  while (
+    current.type === 'projection'
+    || current.type === 'selection'
+    || (current.type === 'rename' && current.pairs.length > 0 && current.relationAlias === null)
+  ) {
     if (current.type === 'projection') {
       if (projection === null) projection = current.attrs;
       current = current.sub;
       continue;
     }
 
-    selections.push(current.cond);
+    if (current.type === 'selection') {
+      selections.push(current.cond);
+      current = current.sub;
+      continue;
+    }
+
+    renamePairs.push(...current.pairs);
     current = current.sub;
   }
 
   const from = toFromSql(current, aliasCounter, schema);
+  const renameByOutput = new Map(renamePairs.map(([fromAttr, toAttr]) => [toAttr, fromAttr]));
+  const selectList = projection
+    ? projection.map((attr) => {
+      const source = renameByOutput.get(attr);
+      return source ? `${source} AS ${attr}` : attr;
+    }).join(', ')
+    : '*';
   const lines = [
-    `SELECT ${projection ? `DISTINCT ${projection.join(', ')}` : '*'}`,
+    `SELECT ${projection ? `DISTINCT ${selectList}` : selectList}`,
     `FROM ${from}`,
   ];
 
@@ -446,8 +545,9 @@ function toSelectSql(node: RaNode, aliasCounter: { value: number }, schema: Tran
 }
 
 function toRenameSql(node: Extract<RaNode, { type: 'rename' }>, aliasCounter: { value: number }, schema: TranslationSchema): string {
-  const childSchema = inferNodeSchema(node.sub, schema);
-  const renamedSchema = mapRenamedSchema(childSchema, node.pairs);
+  const childContext = inferNodeContext(node.sub, schema);
+  const childSchema = childContext.columns;
+  const renamedSchema = mapRenamedSchema(childSchema, node.pairs, childContext.aliases);
   const inner = toFromOperandSql(node.sub, aliasCounter, schema);
   const selectList = childSchema.map((column, index) => {
     const renamed = renamedSchema[index]!;
@@ -665,6 +765,134 @@ type SelectItem = {
   output: string;
 };
 
+function replaceQualifiedReferences(expression: string, replacements: Map<string, string>): string {
+  if (!expression.trim() || replacements.size === 0) return expression;
+
+  let result = '';
+  let index = 0;
+
+  while (index < expression.length) {
+    const char = expression[index]!;
+    if (char === '\'' || char === '"') {
+      const quote = char;
+      let end = index + 1;
+      while (end < expression.length) {
+        const current = expression[end]!;
+        if (current === '\\' && end + 1 < expression.length) {
+          end += 2;
+          continue;
+        }
+        end += 1;
+        if (current === quote) break;
+      }
+      result += expression.slice(index, end);
+      index = end;
+      continue;
+    }
+
+    if (!isIdentifierStart(char)) {
+      result += char;
+      index += 1;
+      continue;
+    }
+
+    let end = index + 1;
+    while (end < expression.length && isIdentifierChar(expression[end])) end += 1;
+    const token = expression.slice(index, end);
+    result += replacements.get(token) ?? token;
+    index = end;
+  }
+
+  return result;
+}
+
+function applyQualifiedSelectRenames(node: RaNode, renameMap: Map<string, Array<[string, string]>>): RaNode {
+  if (renameMap.size === 0) return node;
+
+  switch (node.type) {
+    case 'relation': {
+      const pairs = renameMap.get(node.name) ?? [];
+      if (pairs.length === 0) return node;
+      return { type: 'rename', relationAlias: null, pairs, sub: node };
+    }
+    case 'rename': {
+      const key = node.relationAlias ?? (node.sub.type === 'relation' ? node.sub.name : null);
+      const extraPairs = key ? (renameMap.get(key) ?? []) : [];
+      const updatedSub = applyQualifiedSelectRenames(node.sub, renameMap);
+      if (extraPairs.length === 0) {
+        return updatedSub === node.sub ? node : { ...node, sub: updatedSub };
+      }
+      return {
+        type: 'rename',
+        relationAlias: node.relationAlias,
+        pairs: [...node.pairs, ...extraPairs],
+        sub: updatedSub,
+      };
+    }
+    case 'projection':
+      return { ...node, sub: applyQualifiedSelectRenames(node.sub, renameMap) };
+    case 'selection':
+      return { ...node, sub: applyQualifiedSelectRenames(node.sub, renameMap) };
+    case 'join':
+      return {
+        ...node,
+        left: applyQualifiedSelectRenames(node.left, renameMap),
+        right: applyQualifiedSelectRenames(node.right, renameMap),
+      };
+    case 'product':
+      return {
+        ...node,
+        left: applyQualifiedSelectRenames(node.left, renameMap),
+        right: applyQualifiedSelectRenames(node.right, renameMap),
+      };
+    case 'union':
+    case 'difference':
+    case 'intersection':
+    case 'division':
+      return {
+        ...node,
+        left: applyQualifiedSelectRenames(node.left, renameMap),
+        right: applyQualifiedSelectRenames(node.right, renameMap),
+      };
+  }
+}
+
+function rewriteQualifiedReferences(node: RaNode, replacements: Map<string, string>): RaNode {
+  if (replacements.size === 0) return node;
+
+  switch (node.type) {
+    case 'selection':
+      return {
+        ...node,
+        cond: replaceQualifiedReferences(node.cond, replacements),
+        sub: rewriteQualifiedReferences(node.sub, replacements),
+      };
+    case 'join':
+      return {
+        ...node,
+        theta: node.theta ? replaceQualifiedReferences(node.theta, replacements) : null,
+        left: rewriteQualifiedReferences(node.left, replacements),
+        right: rewriteQualifiedReferences(node.right, replacements),
+      };
+    case 'projection':
+      return { ...node, sub: rewriteQualifiedReferences(node.sub, replacements) };
+    case 'rename':
+      return { ...node, sub: rewriteQualifiedReferences(node.sub, replacements) };
+    case 'product':
+    case 'union':
+    case 'difference':
+    case 'intersection':
+    case 'division':
+      return {
+        ...node,
+        left: rewriteQualifiedReferences(node.left, replacements),
+        right: rewriteQualifiedReferences(node.right, replacements),
+      };
+    case 'relation':
+      return node;
+  }
+}
+
 function parseSelectItems(selectBody: string): SelectItem[] {
   return splitTopLevel(selectBody, ',').map((item) => {
     const trimmed = item.trim();
@@ -739,8 +967,27 @@ function parseSimpleSqlToRa(sql: string): RaNode {
   const selectCompact = selectBody.replace(/^DISTINCT\s+/i, '').trim();
   if (selectCompact !== '*') {
     const selectItems = parseSelectItems(selectCompact);
+    const qualifiedRenamePairs = new Map<string, Array<[string, string]>>();
+    const qualifiedReferenceReplacements = new Map<string, string>();
+
+    for (const item of selectItems) {
+      const sourceMatch = item.source.match(/^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$/);
+      if (!sourceMatch || item.source === item.output) continue;
+      const [, relationAlias, attribute] = sourceMatch;
+      const existing = qualifiedRenamePairs.get(relationAlias) ?? [];
+      existing.push([attribute, item.output]);
+      qualifiedRenamePairs.set(relationAlias, existing);
+      qualifiedReferenceReplacements.set(item.source, item.output);
+    }
+
+    if (qualifiedRenamePairs.size) {
+      current = applyQualifiedSelectRenames(current, qualifiedRenamePairs);
+      current = rewriteQualifiedReferences(current, qualifiedReferenceReplacements);
+    }
+
     const renamePairs = selectItems
       .filter((item) => item.source !== item.output)
+      .filter((item) => !qualifiedReferenceReplacements.has(item.source))
       .map((item) => [item.source, item.output] as [string, string]);
     if (renamePairs.length) {
       current = { type: 'rename', relationAlias: null, pairs: renamePairs, sub: current };

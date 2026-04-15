@@ -62,8 +62,8 @@
       "prompt": "Show the departments that have at least two students.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{s1_dept}(sigma{s1_dept = s2_dept AND s1_id != s2_id}(rho{id->s1_id, dept_name->s1_dept}(student) x rho{id->s2_id, dept_name->s2_dept}(student)))",
-        "sql": "SELECT DISTINCT s1.dept_name FROM student AS s1, student AS s2 WHERE s1.dept_name = s2.dept_name AND s1.id != s2.id;"
+        "relational_algebra": "π{s1.dept_name}(σ{s1.dept_name = s2.dept_name AND s1.id != s2.id}(ρs1(student) × ρs2(student)))",
+        "sql": "SELECT DISTINCT s1.dept_name FROM student s1, student s2 WHERE s1.dept_name = s2.dept_name AND s1.id != s2.id;"
       },
       "expected_result": {
         "schema": [
@@ -192,16 +192,18 @@
     },
     {
       "id": "q11",
-      "prompt": "Produce student-course pairs where the student majors in the same department that offers the course using a Cartesian product.",
+      "prompt": "Use a Cartesian product to produce student name and course title pairs where the student majors in the same department that offers the course.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{student_name, course_title}(sigma{student_major = course_dept}( rho{name->student_name, dept_name->student_major}(student) \u00d7 rho{title->course_title, dept_name->course_dept}(course) ))",
-        "sql": "SELECT st.name AS student_name, co.title AS course_title\nFROM student AS st CROSS JOIN course AS co\nWHERE st.dept_name = co.dept_name;"
+        "relational_algebra": "π{student_name, student_major, course_title, course_dept}(ρ{st.name -> student_name, st.dept_name -> student_major, co.title -> course_title, co.dept_name -> course_dept}(σ{st.dept_name = co.dept_name}(ρst(student) × ρco(course))))",
+        "sql": "SELECT st.name AS student_name, st.dept_name as student_major, co.title AS course_title, co.dept_name as course_dept\nFROM student AS st, course AS co\nWHERE st.dept_name = co.dept_name;"
       },
       "expected_result": {
         "schema": [
           "student_name",
-          "course_title"
+          "student_major",
+          "course_title",
+          "course_dept"
         ]
       },
       "hints": [
