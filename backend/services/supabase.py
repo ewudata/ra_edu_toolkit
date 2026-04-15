@@ -264,6 +264,22 @@ def exchange_google_oauth_code(
     return payload, frontend_redirect
 
 
+def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
+    if not refresh_token.strip():
+        raise SupabaseAuthError("Missing refresh token.")
+    return _request_json(
+        "POST",
+        f"{_supabase_url()}/auth/v1/token?grant_type=refresh_token",
+        headers={
+            "apikey": _anon_key(),
+            "Content-Type": "application/json",
+        },
+        json_body={"refresh_token": refresh_token},
+        error_cls=SupabaseAuthError,
+        error_message="Failed to refresh access token.",
+    )
+
+
 def verify_access_token(access_token: str) -> Dict[str, Any]:
     payload = _request_json(
         "GET",

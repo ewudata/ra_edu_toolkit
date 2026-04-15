@@ -12,6 +12,7 @@ from ..services.supabase import (
     SupabaseConfigError,
     build_google_oauth_url,
     exchange_google_oauth_code,
+    refresh_access_token,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -38,6 +39,16 @@ def _merge_redirect_query_params(target_url: str, params: dict[str, str]) -> str
 
 class GoogleAuthStartResponse(BaseModel):
     auth_url: str
+
+
+class RefreshSessionRequest(BaseModel):
+    refresh_token: str
+
+
+class RefreshSessionResponse(BaseModel):
+    auth_token: str
+    auth_email: str
+    auth_refresh_token: str
 
 
 @router.get("/google/start", response_model=GoogleAuthStartResponse)
@@ -98,6 +109,36 @@ def google_callback(
         {
             "auth_token": token,
             "auth_email": user.get("email") or "",
+            "auth_refresh_token": payload.get("refresh_token") or "",
         },
     )
     return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
+
+
+@router.post("/refresh", response_model=RefreshSessionResponse)
+def refresh_session(payload: RefreshSessionRequest) -> RefreshSessionResponse:
+    try:
+        refreshed = refresh_access_token(payload.refresh_token)
+    except SupabaseConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+        ) from exc
+    except SupabaseAuthError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
+        ) from exc
+
+    access_token = str(refreshed.get("access_token") or "").strip()
+    refresh_token = str(refreshed.get("refresh_token") or payload.refresh_token).strip()
+    user = refreshed.get("user") or {}
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh completed without access token.",
+        )
+
+    return RefreshSessionResponse(
+        auth_token=access_token,
+        auth_email=str(user.get("email") or ""),
+        auth_refresh_token=refresh_token,
+    )

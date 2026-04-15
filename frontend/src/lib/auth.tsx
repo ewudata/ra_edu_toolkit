@@ -1,9 +1,15 @@
-import { useState, useEffect, useLayoutEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type ReactNode } from 'react';
 import Cookies from 'js-cookie';
-import { api, setAuthToken, setUnauthorizedHandler } from './api';
+import { api, setAuthToken, setRefreshSessionHandler, setUnauthorizedHandler } from './api';
 import { AuthContext, type AuthContextValue } from './auth-context';
 
 const AUTH_COOKIE = 'ra_edu_auth';
+
+type PersistedAuthState = {
+  token: string;
+  email: string;
+  refreshToken: string | null;
+};
 
 function formatAuthError(message: string | null): string | null {
   if (!message) return null;
@@ -25,16 +31,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: null,
     loading: true,
   });
+  const sessionRef = useRef<PersistedAuthState | null>(null);
+  const refreshInFlightRef = useRef<Promise<boolean> | null>(null);
 
-  function applyAuthenticatedSession(token: string, email: string) {
+  function applyAuthenticatedSession(token: string, email: string, refreshToken: string | null = null) {
     setAuthToken(token);
-    Cookies.set(AUTH_COOKIE, JSON.stringify({ token, email }), { expires: 30, sameSite: 'lax' });
+    sessionRef.current = { token, email, refreshToken };
+    Cookies.set(AUTH_COOKIE, JSON.stringify({ token, email, refreshToken }), { expires: 30, sameSite: 'lax' });
     setState({ token, email, error: null, loading: false });
   }
 
   function clearAuthState(message: string | null = null) {
     Cookies.remove(AUTH_COOKIE);
     setAuthToken(null);
+    sessionRef.current = null;
     setState({ token: null, email: null, error: formatAuthError(message), loading: false });
   }
 
@@ -42,23 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams(window.location.search);
     const authToken = params.get('auth_token');
     const authEmail = params.get('auth_email');
+    const authRefreshToken = params.get('auth_refresh_token');
     const authError = params.get('auth_error');
     const returnPage = params.get('return_page');
 
     if (authError) {
       clearAuthState(authError);
       const url = new URL(window.location.href);
-      ['auth_token', 'auth_email', 'auth_error', 'return_page'].forEach((k) => url.searchParams.delete(k));
+      ['auth_token', 'auth_email', 'auth_refresh_token', 'auth_error', 'return_page'].forEach((k) => url.searchParams.delete(k));
       window.history.replaceState({}, '', url.toString());
       return;
     }
 
     if (authToken) {
       const email = authEmail || 'Google User';
-      applyAuthenticatedSession(authToken, email);
+      applyAuthenticatedSession(authToken, email, authRefreshToken || null);
 
       const url = new URL(window.location.href);
-      ['auth_token', 'auth_email', 'auth_error', 'return_page'].forEach((k) => url.searchParams.delete(k));
+      ['auth_token', 'auth_email', 'auth_refresh_token', 'auth_error', 'return_page'].forEach((k) => url.searchParams.delete(k));
       if (returnPage) {
         url.pathname = returnPage;
       }
@@ -69,9 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const raw = Cookies.get(AUTH_COOKIE);
     if (raw) {
       try {
-        const { token, email } = JSON.parse(raw);
+        const { token, email, refreshToken } = JSON.parse(raw);
         if (token) {
-          applyAuthenticatedSession(token, email || 'Google User');
+          applyAuthenticatedSession(token, email || 'Google User', refreshToken || null);
           return;
         }
       } catch {
@@ -85,8 +96,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler((message) => {
       clearAuthState(message);
     });
+    setRefreshSessionHandler(() => {
+      if (refreshInFlightRef.current) return refreshInFlightRef.current;
+      const activeSession = sessionRef.current;
+      if (!activeSession?.refreshToken) return Promise.resolve(false);
+
+      refreshInFlightRef.current = api.refreshSession(activeSession.refreshToken)
+        .then((payload) => {
+          applyAuthenticatedSession(
+            payload.auth_token,
+            payload.auth_email || activeSession.email || 'Google User',
+            payload.auth_refresh_token || activeSession.refreshToken,
+          );
+          return true;
+        })
+        .catch(() => false)
+        .finally(() => {
+          refreshInFlightRef.current = null;
+        });
+
+      return refreshInFlightRef.current;
+    });
     return () => {
       setUnauthorizedHandler(null);
+      setRefreshSessionHandler(null);
     };
   }, []);
 

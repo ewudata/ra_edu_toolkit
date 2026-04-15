@@ -2,6 +2,7 @@ const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? '/api';
 
 let _authToken: string | null = null;
 let _onUnauthorized: ((message: string) => void) | null = null;
+let _refreshSession: (() => Promise<boolean>) | null = null;
 
 export function setAuthToken(token: string | null) {
   _authToken = token?.trim() || null;
@@ -9,6 +10,10 @@ export function setAuthToken(token: string | null) {
 
 export function setUnauthorizedHandler(handler: ((message: string) => void) | null) {
   _onUnauthorized = handler;
+}
+
+export function setRefreshSessionHandler(handler: (() => Promise<boolean>) | null) {
+  _refreshSession = handler;
 }
 
 export function getAuthToken() {
@@ -43,6 +48,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
   params?: Record<string, string | number>;
   body?: unknown;
   formData?: FormData;
+  retryOnAuthFailure?: boolean;
 }): Promise<T> {
   let url = `${BASE_URL}${endpoint}`;
   if (opts?.params) {
@@ -75,7 +81,14 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
     } catch {
       /* ignore */
     }
-    if (isAuthFailure(res.status, detail, message)) _onUnauthorized?.(message);
+    const isAuthError = isAuthFailure(res.status, detail, message);
+    if (isAuthError && opts?.retryOnAuthFailure !== false && _refreshSession) {
+      const refreshed = await _refreshSession();
+      if (refreshed) {
+        return request<T>(method, endpoint, { ...opts, retryOnAuthFailure: false });
+      }
+    }
+    if (isAuthError) _onUnauthorized?.(message);
     throw new ApiError(message, res.status, detail);
   }
   if (res.status === 204) return {} as T;
@@ -160,6 +173,12 @@ export interface MasteryResponse {
   query_ids: string[];
 }
 
+export interface RefreshSessionResponse {
+  auth_token: string;
+  auth_email: string;
+  auth_refresh_token: string;
+}
+
 export const api = {
   healthCheck: () => request<{ status: string }>('GET', '/health'),
 
@@ -213,4 +232,10 @@ export const api = {
     if (!payload.auth_url) throw new ApiError('Backend did not return Google OAuth URL.');
     return payload.auth_url;
   },
+
+  refreshSession: (refreshToken: string) =>
+    request<RefreshSessionResponse>('POST', '/auth/refresh', {
+      body: { refresh_token: refreshToken },
+      retryOnAuthFailure: false,
+    }),
 };

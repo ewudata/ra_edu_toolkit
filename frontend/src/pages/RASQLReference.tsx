@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ApiError, api, type Database, type EvaluationResult, type Query, type TableInfo, type TranslationCheckResult } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
@@ -390,6 +390,12 @@ export default function RASQLReference() {
   const sqlClauses = queryDetail?.solution?.sql ? parseSqlClauses(queryDetail.solution.sql) : [];
   const sqlClauseGroups = groupSqlClauses(sqlClauses);
   const selectedDbInfo = databases.find((db) => db.name === selectedDb);
+  const translatorSchema = useMemo(
+    () => Object.fromEntries(
+      Object.entries(schemaMap).map(([tableName, table]) => [tableName, table.columns.map((column) => column.name)]),
+    ),
+    [schemaMap],
+  );
   const filteredQueries = selectedOps.size > 0
     ? queries.filter((query) => queryMatchesOps(query, selectedOps))
     : queries;
@@ -444,7 +450,7 @@ export default function RASQLReference() {
 
     const timeoutId = window.setTimeout(() => {
       try {
-        const result = translateRaToSql(customRa);
+        const result = translateRaToSql(customRa, translatorSchema);
         setCustomSql(result.translated);
         setCustomTranslationError(null);
         setCustomTranslationWarning(result.warning ?? null);
@@ -459,7 +465,7 @@ export default function RASQLReference() {
     }, 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [customEditedSide, customRa]);
+  }, [customEditedSide, customRa, translatorSchema]);
 
   useEffect(() => {
     if (customEditedSide !== 'sql') return;
@@ -1245,8 +1251,9 @@ export default function RASQLReference() {
             <div className="space-y-1.5 text-sm text-[#475467]">
               <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
               <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Projection ↔ SELECT:</strong> Projections (π) map to SELECT column lists.</span></p>
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Joins:</strong> Natural joins or specific join conditions translate to explicit JOIN ... ON ... clauses.</span></p>
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Projection ↔ SELECT DISTINCT:</strong> Projections (π) remove duplicates, so they map most closely to <code>SELECT DISTINCT</code> column lists.</span></p>
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Rename ↔ AS / ρ:</strong> Simple SQL aliases such as <code>id AS student_id</code> translate to relational renaming (ρ), and RA rename can translate back through SQL aliases.</span></p>
+              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Joins:</strong> Natural joins map to <code>NATURAL JOIN</code>, while theta joins map to <code>JOIN ... ON ...</code>.</span></p>
               <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Set operations:</strong> Union, difference, and intersection correspond to UNION, EXCEPT, and INTERSECT.</span></p>
             </div>
           </Collapsible>

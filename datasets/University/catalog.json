@@ -42,27 +42,7 @@
     },
     {
       "id": "q03",
-      "prompt": "Retrieve all information for students whose total credits are below 30.",
-      "difficulty": "beginner",
-      "solution": {
-        "relational_algebra": "sigma{tot_cred < 30}(student)",
-        "sql": "SELECT * FROM student WHERE tot_cred < 30;"
-      },
-      "expected_result": {
-        "schema": [
-          "id",
-          "name",
-          "dept_name",
-          "tot_cred"
-        ]
-      },
-      "hints": [
-        "selection"
-      ]
-    },
-    {
-      "id": "q04",
-      "prompt": "Show the distinct majors represented by the students.",
+      "prompt": "Show the distinct departments represented by the students.",
       "difficulty": "beginner",
       "solution": {
         "relational_algebra": "pi{dept_name}(student)",
@@ -78,11 +58,30 @@
       ]
     },
     {
+      "id": "q04",
+      "prompt": "Show the departments that have at least two students.",
+      "difficulty": "advanced",
+      "solution": {
+        "relational_algebra": "pi{s1_dept}(sigma{s1_dept = s2_dept AND s1_id != s2_id}(rho{id->s1_id, dept_name->s1_dept}(student) x rho{id->s2_id, dept_name->s2_dept}(student)))",
+        "sql": "SELECT DISTINCT s1.dept_name FROM student AS s1, student AS s2 WHERE s1.dept_name = s2.dept_name AND s1.id != s2.id;"
+      },
+      "expected_result": {
+        "schema": [
+          "dept_name"
+        ]
+      },
+      "hints": [
+        "selection",
+        "rename",
+        "cartesian product"
+      ]
+    },
+    {
       "id": "q05",
       "prompt": "List the departments that have either students or instructors.",
-      "difficulty": "beginner",
+      "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{dept_name}(student) UNION pi{dept_name}(instructor)",
+        "relational_algebra": "pi{dept_name}(student) ∪ pi{dept_name}(instructor)",
         "sql": "SELECT dept_name FROM student UNION SELECT dept_name FROM instructor;"
       },
       "expected_result": {
@@ -91,8 +90,8 @@
         ]
       },
       "hints": [
-        "union",
-        "projection"
+        "projection",
+        "union"
       ]
     },
     {
@@ -109,8 +108,8 @@
         ]
       },
       "hints": [
-        "difference",
-        "projection"
+        "projection",
+        "difference"
       ]
     },
     {
@@ -118,7 +117,7 @@
       "prompt": "Return the departments that have at least one student and at least one instructor.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{dept_name}(student) INTERSECT pi{dept_name}(instructor)",
+        "relational_algebra": "pi{dept_name}(student) ∩ pi{dept_name}(instructor)",
         "sql": "SELECT dept_name FROM student INTERSECT SELECT dept_name FROM instructor;"
       },
       "expected_result": {
@@ -127,8 +126,8 @@
         ]
       },
       "hints": [
-        "intersection",
-        "projection"
+        "projection",
+        "intersect"
       ]
     },
     {
@@ -136,7 +135,7 @@
       "prompt": "Rename the student relation so that id becomes student_id and dept_name becomes major.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "rho{id->student_id, dept_name->major}(student)",
+        "relational_algebra": "ρ{id->student_id, dept_name->major}(student)",
         "sql": "SELECT id AS student_id, name, dept_name AS major, tot_cred FROM student;"
       },
       "expected_result": {
@@ -156,40 +155,38 @@
       "prompt": "List each course along with its title and the budget of the offering department.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id, title, dept_budget}(rho{budget->dept_budget}(course \u22c8 department))",
-        "sql": "SELECT c.course_id, c.title, d.budget AS dept_budget FROM course AS c NATURAL JOIN department AS d;"
+        "relational_algebra": "pi{course_id, title, budget}(course JOIN department)",
+        "sql": "SELECT course_id, title, budget FROM course NATURAL JOIN department;"
       },
       "expected_result": {
         "schema": [
           "course_id",
           "title",
-          "dept_budget"
+          "budget"
         ]
       },
       "hints": [
-        "natural join",
-        "rename"
+        "natural join"
       ]
     },
     {
       "id": "q10",
-      "prompt": "Find the sections offered in Fall 2009 along with the rooms they occupy using an explicit join condition.",
-      "difficulty": "advanced",
+      "prompt": "Find the sections offered in Fall 2017 along with the building, room_number, and classroom capacity.",
+      "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id, sec_id, sec_building, sec_room}( rho{building->sec_building, room_number->sec_room}(sigma{semester = 'Fall' AND year = 2009}(section)) \u22c8{sec_building = class_building AND sec_room = class_room} rho{building->class_building, room_number->class_room}(classroom) )",
-        "sql": "SELECT s.course_id, s.sec_id, s.building AS sec_building, s.room_number AS sec_room\nFROM section AS s\nJOIN classroom AS c ON s.building = c.building AND s.room_number = c.room_number\nWHERE s.semester = 'Fall' AND s.year = 2009;"
+        "relational_algebra": "pi{course_id, sec_id, building, room_number, capacity}(sigma{semester = 'Fall' AND year = 2017}(section JOIN classroom))",
+        "sql": "SELECT course_id, sec_id, building, room_number\nFROM section NATURAL JOIN classroom\nWHERE semester = 'Fall' AND year = 2017;"
       },
       "expected_result": {
         "schema": [
           "course_id",
           "sec_id",
-          "sec_building",
-          "sec_room"
+          "building",
+          "room"
         ]
       },
       "hints": [
-        "theta join",
-        "rename",
+        "natural join",
         "selection"
       ]
     },

@@ -17,6 +17,8 @@ export type TranslationOutcome = {
   warning?: string;
 };
 
+export type TranslationSchema = Record<string, string[]>;
+
 function isIdentifierStart(char: string | undefined): boolean {
   return !!char && /[A-Za-z_]/.test(char);
 }
@@ -328,22 +330,93 @@ function indentSql(sql: string): string {
     .join('\n');
 }
 
-function toSql(node: RaNode, aliasCounter: { value: number }): string {
+function mapRenamedSchema(columns: string[], pairs: Array<[string, string]>): string[] {
+  const sourceSet = new Set(columns);
+  const renameMap = new Map<string, string>();
+
+  for (const [from, to] of pairs) {
+    if (!sourceSet.has(from)) {
+      throw new TranslationError(`Cannot rename missing attribute "${from}".`);
+    }
+    if (sourceSet.has(to) && to !== from && !renameMap.has(to)) {
+      throw new TranslationError(`Rename target "${to}" already exists.`);
+    }
+    renameMap.set(from, to);
+  }
+
+  const renamed = columns.map((column) => renameMap.get(column) ?? column);
+  if (new Set(renamed).size !== renamed.length) {
+    throw new TranslationError('Attribute renaming creates duplicate output columns.');
+  }
+  return renamed;
+}
+
+function inferNodeSchema(node: RaNode, schema: TranslationSchema): string[] {
   switch (node.type) {
+    case 'relation': {
+      const columns = schema[node.name];
+      if (!columns) {
+        throw new TranslationError(`Schema information is required to rename attributes from relation "${node.name}".`);
+      }
+      return [...columns];
+    }
+    case 'projection':
+      return [...node.attrs];
+    case 'selection':
+      return inferNodeSchema(node.sub, schema);
+    case 'rename':
+      return mapRenamedSchema(inferNodeSchema(node.sub, schema), node.pairs);
+    case 'join': {
+      if (node.theta) {
+        return inferNodeSchema({ type: 'product', left: node.left, right: node.right }, schema);
+      }
+      const left = inferNodeSchema(node.left, schema);
+      const right = inferNodeSchema(node.right, schema);
+      const common = new Set(left.filter((column) => right.includes(column)));
+      return [...left, ...right.filter((column) => !common.has(column))];
+    }
+    case 'product': {
+      const left = inferNodeSchema(node.left, schema);
+      const leftSet = new Set(left);
+      const right = inferNodeSchema(node.right, schema).map((column) => (
+        leftSet.has(column) ? `${column}_r` : column
+      ));
+      return [...left, ...right];
+    }
     case 'union':
-      return `${toSql(node.left, aliasCounter)}\nUNION\n${toSql(node.right, aliasCounter)}`;
     case 'difference':
-      return `${toSql(node.left, aliasCounter)}\nEXCEPT\n${toSql(node.right, aliasCounter)}`;
     case 'intersection':
-      return `${toSql(node.left, aliasCounter)}\nINTERSECT\n${toSql(node.right, aliasCounter)}`;
+      return inferNodeSchema(node.left, schema);
     case 'division':
       throw new TranslationError('RA division is not supported by the automatic SQL translator.');
-    default:
-      return toSelectSql(node, aliasCounter);
   }
 }
 
-function toSelectSql(node: RaNode, aliasCounter: { value: number }): string {
+function nextAlias(aliasCounter: { value: number }): string {
+  return `subq_${++aliasCounter.value}`;
+}
+
+function wrapSubquery(sql: string, aliasCounter: { value: number }, aliasOverride?: string): string {
+  const alias = aliasOverride ?? nextAlias(aliasCounter);
+  return `(\n${indentSql(sql)}\n) AS ${alias}`;
+}
+
+function toSql(node: RaNode, aliasCounter: { value: number }, schema: TranslationSchema): string {
+  switch (node.type) {
+    case 'union':
+      return `${toSql(node.left, aliasCounter, schema)}\nUNION\n${toSql(node.right, aliasCounter, schema)}`;
+    case 'difference':
+      return `${toSql(node.left, aliasCounter, schema)}\nEXCEPT\n${toSql(node.right, aliasCounter, schema)}`;
+    case 'intersection':
+      return `${toSql(node.left, aliasCounter, schema)}\nINTERSECT\n${toSql(node.right, aliasCounter, schema)}`;
+    case 'division':
+      throw new TranslationError('RA division is not supported by the automatic SQL translator.');
+    default:
+      return toSelectSql(node, aliasCounter, schema);
+  }
+}
+
+function toSelectSql(node: RaNode, aliasCounter: { value: number }, schema: TranslationSchema): string {
   let projection: string[] | null = null;
   const selections: string[] = [];
   let current = node;
@@ -359,9 +432,9 @@ function toSelectSql(node: RaNode, aliasCounter: { value: number }): string {
     current = current.sub;
   }
 
-  const from = toFromSql(current, aliasCounter);
+  const from = toFromSql(current, aliasCounter, schema);
   const lines = [
-    `SELECT ${projection?.join(', ') ?? '*'}`,
+    `SELECT ${projection ? `DISTINCT ${projection.join(', ')}` : '*'}`,
     `FROM ${from}`,
   ];
 
@@ -372,29 +445,49 @@ function toSelectSql(node: RaNode, aliasCounter: { value: number }): string {
   return lines.join('\n');
 }
 
-function toFromSql(node: RaNode, aliasCounter: { value: number }): string {
+function toRenameSql(node: Extract<RaNode, { type: 'rename' }>, aliasCounter: { value: number }, schema: TranslationSchema): string {
+  const childSchema = inferNodeSchema(node.sub, schema);
+  const renamedSchema = mapRenamedSchema(childSchema, node.pairs);
+  const inner = toFromOperandSql(node.sub, aliasCounter, schema);
+  const selectList = childSchema.map((column, index) => {
+    const renamed = renamedSchema[index]!;
+    return renamed === column ? column : `${column} AS ${renamed}`;
+  });
+  const sql = [
+    `SELECT ${selectList.join(', ')}`,
+    `FROM ${inner}`,
+  ].join('\n');
+  return node.relationAlias ? wrapSubquery(sql, aliasCounter, node.relationAlias) : wrapSubquery(sql, aliasCounter);
+}
+
+function toFromSql(node: RaNode, aliasCounter: { value: number }, schema: TranslationSchema): string {
   switch (node.type) {
     case 'relation':
       return node.name;
     case 'rename': {
-      if (node.pairs.length) {
-        throw new TranslationError('Attribute renaming is not supported by the automatic SQL translator.');
+      if (!node.pairs.length) {
+        if (!node.relationAlias) {
+          throw new TranslationError('Rename requires a relation alias or at least one attribute mapping.');
+        }
+        if (node.sub.type === 'relation') {
+          return `${node.sub.name} AS ${node.relationAlias}`;
+        }
+        return wrapSubquery([
+          'SELECT *',
+          `FROM ${toFromOperandSql(node.sub, aliasCounter, schema)}`,
+        ].join('\n'), aliasCounter, node.relationAlias);
       }
-      if (!node.relationAlias) {
-        throw new TranslationError('Rename requires a relation alias for SQL translation.');
-      }
-      const inner = toFromOperandSql(node.sub, aliasCounter);
-      return `${inner} AS ${node.relationAlias}`;
+      return toRenameSql(node, aliasCounter, schema);
     }
     case 'join': {
-      const left = toFromOperandSql(node.left, aliasCounter);
-      const right = toFromOperandSql(node.right, aliasCounter);
+      const left = toFromOperandSql(node.left, aliasCounter, schema);
+      const right = toFromOperandSql(node.right, aliasCounter, schema);
       if (node.theta) return `${left} JOIN ${right} ON ${node.theta}`;
       return `${left} NATURAL JOIN ${right}`;
     }
     case 'product': {
-      const left = toFromOperandSql(node.left, aliasCounter);
-      const right = toFromOperandSql(node.right, aliasCounter);
+      const left = toFromOperandSql(node.left, aliasCounter, schema);
+      const right = toFromOperandSql(node.right, aliasCounter, schema);
       return `${left} CROSS JOIN ${right}`;
     }
     case 'projection':
@@ -402,30 +495,28 @@ function toFromSql(node: RaNode, aliasCounter: { value: number }): string {
     case 'union':
     case 'difference':
     case 'intersection': {
-      const alias = `subq_${++aliasCounter.value}`;
-      return `(\n${indentSql(toSql(node, aliasCounter))}\n) AS ${alias}`;
+      return wrapSubquery(toSql(node, aliasCounter, schema), aliasCounter);
     }
     case 'division':
       throw new TranslationError('RA division is not supported by the automatic SQL translator.');
   }
 }
 
-function toFromOperandSql(node: RaNode, aliasCounter: { value: number }): string {
+function toFromOperandSql(node: RaNode, aliasCounter: { value: number }, schema: TranslationSchema): string {
   switch (node.type) {
     case 'relation':
       return node.name;
     case 'rename':
-      return toFromSql(node, aliasCounter);
+      return toFromSql(node, aliasCounter, schema);
     case 'join':
     case 'product':
-      return `(${toFromSql(node, aliasCounter)})`;
+      return `(${toFromSql(node, aliasCounter, schema)})`;
     case 'projection':
     case 'selection':
     case 'union':
     case 'difference':
     case 'intersection': {
-      const alias = `subq_${++aliasCounter.value}`;
-      return `(\n${indentSql(toSql(node, aliasCounter))}\n) AS ${alias}`;
+      return wrapSubquery(toSql(node, aliasCounter, schema), aliasCounter);
     }
     case 'division':
       throw new TranslationError('RA division is not supported by the automatic SQL translator.');
@@ -569,6 +660,31 @@ function parseJoinClause(clause: string): { type: 'join' | 'product'; right: RaN
   };
 }
 
+type SelectItem = {
+  source: string;
+  output: string;
+};
+
+function parseSelectItems(selectBody: string): SelectItem[] {
+  return splitTopLevel(selectBody, ',').map((item) => {
+    const trimmed = item.trim();
+    const aliasMatch = trimmed.match(/^([A-Za-z_][A-Za-z0-9_.]*)\s+(?:AS\s+)?([A-Za-z_][A-Za-z0-9_.]*)$/i);
+    if (aliasMatch) {
+      return {
+        source: aliasMatch[1].trim(),
+        output: aliasMatch[2].trim(),
+      };
+    }
+    if (/^[A-Za-z_][A-Za-z0-9_.]*$/.test(trimmed)) {
+      return {
+        source: trimmed,
+        output: trimmed,
+      };
+    }
+    throw new TranslationError('Only simple attribute projections and aliases are supported by the automatic RA translator.');
+  });
+}
+
 function parseSimpleSqlToRa(sql: string): RaNode {
   const compact = collapseWhitespace(sql).replace(/;$/, '');
   const upper = compact.toUpperCase();
@@ -596,7 +712,7 @@ function parseSimpleSqlToRa(sql: string): RaNode {
   ]);
   const whereBody = extractSection(compact, 'WHERE', []);
   const joins = [
-    ...compact.matchAll(/((?:(?:INNER|LEFT|RIGHT|FULL|CROSS|NATURAL)\s+)?JOIN\s+.+?)(?=\s+(?:(?:(?:INNER|LEFT|RIGHT|FULL|CROSS|NATURAL)\s+)?JOIN|WHERE|$))/gi),
+    ...compact.matchAll(/((?:(?:INNER|LEFT|RIGHT|FULL|CROSS|NATURAL)\s+)?JOIN\s+.+?)(?=\s+(?:(?:(?:INNER|LEFT|RIGHT|FULL|CROSS|NATURAL)\s+)?JOIN|WHERE)|$)/gi),
   ].map((match) => match[1].trim());
 
   if (!fromBody) {
@@ -622,21 +738,24 @@ function parseSimpleSqlToRa(sql: string): RaNode {
 
   const selectCompact = selectBody.replace(/^DISTINCT\s+/i, '').trim();
   if (selectCompact !== '*') {
-    const attrs = splitTopLevel(selectCompact, ',').map((item) => item.trim());
-    if (!attrs.every((item) => /^[A-Za-z_][A-Za-z0-9_.]*$/.test(item))) {
-      throw new TranslationError('Only simple attribute projections are supported by the automatic RA translator.');
+    const selectItems = parseSelectItems(selectCompact);
+    const renamePairs = selectItems
+      .filter((item) => item.source !== item.output)
+      .map((item) => [item.source, item.output] as [string, string]);
+    if (renamePairs.length) {
+      current = { type: 'rename', relationAlias: null, pairs: renamePairs, sub: current };
     }
-    current = { type: 'projection', attrs, sub: current };
+    current = { type: 'projection', attrs: selectItems.map((item) => item.output), sub: current };
   }
 
   return current;
 }
 
-export function translateRaToSql(expression: string): TranslationOutcome {
+export function translateRaToSql(expression: string, schema: TranslationSchema = {}): TranslationOutcome {
   const parser = new RaParser(expression.trim());
   const ast = parser.parse();
   return {
-    translated: toSql(ast, { value: 0 }),
+    translated: toSql(ast, { value: 0 }, schema),
   };
 }
 
