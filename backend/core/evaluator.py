@@ -249,10 +249,9 @@ def _natural_join(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
 def _theta_join(L: pd.DataFrame, R: pd.DataFrame, cond: str) -> pd.DataFrame:
     P = _product(L, R)
     keeps = []
-    vis = [c for c in P.columns if c != "_prov"]
+    aliases = P.attrs.get("aliases", {})
     for i, row in P.iterrows():
-        env = {c: row[c] for c in vis}
-        if _cond_eval(cond, env):
+        if _cond_eval(cond, _row_env(row, aliases)):
             keeps.append(i)
     return P.loc[keeps].reset_index(drop=True)
 

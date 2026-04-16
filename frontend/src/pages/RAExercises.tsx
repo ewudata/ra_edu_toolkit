@@ -438,7 +438,7 @@ export default function RAExercises() {
                     <div className="flex flex-wrap gap-4 text-xs font-semibold text-[#8b6a50]">
                       <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> beginner</span>
                       <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> intermediate</span>
-                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> difficult</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> advanced</span>
                     </div>
                   </div>
                   <select

@@ -3,8 +3,8 @@ import type { Query } from './api';
 export function normalizeDifficulty(d?: string): string {
   if (!d) return 'beginner';
   const lower = d.toLowerCase().trim();
-  if (lower === 'advanced') return 'difficult';
-  if (['beginner', 'intermediate', 'difficult'].includes(lower)) return lower;
+  if (lower === 'difficult') return 'advanced';
+  if (['beginner', 'intermediate', 'advanced'].includes(lower)) return lower;
   return 'beginner';
 }
 
@@ -15,11 +15,11 @@ export function difficultyLabel(d?: string): string {
 
 export function difficultyIcon(d?: string): string {
   const n = normalizeDifficulty(d);
-  return { beginner: '🟢', intermediate: '🟡', difficult: '🔴' }[n] ?? '⚪';
+  return { beginner: '🟢', intermediate: '🟡', advanced: '🔴' }[n] ?? '⚪';
 }
 
 export function difficultyRank(d?: string): number {
-  return { beginner: 0, intermediate: 1, difficult: 2 }[normalizeDifficulty(d)] ?? 0;
+  return { beginner: 0, intermediate: 1, advanced: 2 }[normalizeDifficulty(d)] ?? 0;
 }
 
 export function sortQueries<T extends Query>(queries: T[]): T[] {

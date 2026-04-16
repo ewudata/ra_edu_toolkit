@@ -192,7 +192,7 @@
     },
     {
       "id": "q11",
-      "prompt": "Use a Cartesian product to produce student name and course title pairs where the student majors in the same department that offers the course.",
+      "prompt": "Use a Cartesian Product to solve the query: produce student name and course title pairs where the student majors in the same department that offers the course.",
       "difficulty": "advanced",
       "solution": {
         "relational_algebra": "π{student_name, student_major, course_title, course_dept}(ρ{st.name -> student_name, st.dept_name -> student_major, co.title -> course_title, co.dept_name -> course_dept}(σ{st.dept_name = co.dept_name}(ρst(student) × ρco(course))))",
@@ -215,9 +215,9 @@
     {
       "id": "q12",
       "prompt": "List student names with their advisors' names.",
-      "difficulty": "intermediate",
+      "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) \u22c8 advisor \u22c8 rho{id->i_id, name->advisor_name}(instructor) )",
+        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) JOIN advisor JOIN rho{id->i_id, name->advisor_name}(instructor) )",
         "sql": "SELECT st.name AS student_name, inst.name AS advisor_name\nFROM student AS st\nJOIN advisor AS adv ON st.id = adv.s_id\nJOIN instructor AS inst ON adv.i_id = inst.id;"
       },
       "expected_result": {
@@ -227,8 +227,10 @@
         ]
       },
       "hints": [
-        "natural join",
-        "rename"
+        "cartesian product",
+        "selection",
+        "rename",
+        "projection"
       ]
     },
     {

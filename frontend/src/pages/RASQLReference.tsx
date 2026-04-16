@@ -4,7 +4,7 @@ import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import DataTable from '../components/DataTable';
 import TablePreview from '../components/TablePreview';
-import { sortQueries } from '../lib/difficulty';
+import { sortQueries, difficultyIcon, difficultyLabel } from '../lib/difficulty';
 import { translateRaToSql, translateSqlToRa, TranslationError } from '../lib/raSqlTranslation';
 import {
   BookOpen,
@@ -761,7 +761,7 @@ export default function RASQLReference() {
               <p className={sectionLabel}>Practice Mode</p>
               <h2 className={sectionTitle}>Choose how you want to work</h2>
               <p className="text-sm leading-6 text-[#475467]">
-                Use catalog prompts for guided translation practice, or switch to the custom translator to work with your own expressions and statements.
+                Use the catalog when you want guided practice with canonical answers and equivalence checks. Use the custom translator when you want to experiment with your own RA and SQL and see the system's best automatic translation.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -770,10 +770,13 @@ export default function RASQLReference() {
                   <div className="app-icon-tile flex h-10 w-10 items-center justify-center rounded-[14px]">
                     <LayoutList className="app-icon-glyph h-4 w-4" />
                   </div>
-                  <h3 className="font-semibold text-[#3f4761]">Pre-defined Queries</h3>
+                  <h3 className="font-semibold text-[#3f4761]">Guided Catalog Practice</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[#475467]">
-                  Use a catalog prompt as the source, inspect its output, and translate it into the target notation.
+                  Work from curated prompts in the selected database. Inspect the expected result, submit an answer, and compare your work against the canonical query for that dataset.
+                </p>
+                <p className="mt-2 text-xs leading-5 text-[#667085]">
+                  Best for: structured practice, checking correctness, and learning standard RA/SQL patterns.
                 </p>
                 {queries.length > 0 ? (
                   <button
@@ -791,10 +794,13 @@ export default function RASQLReference() {
                   <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
                     <Pencil className="app-icon-glyph-soft h-4 w-4" />
                   </div>
-                  <h3 className="font-semibold text-[#3f4761]">User-defined Queries</h3>
+                  <h3 className="font-semibold text-[#3f4761]">Custom Auto-Translator</h3>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-[#475467]">
-                  Type RA or SQL directly, let the page translate it, and preview the result on both sides.
+                  Enter your own RA or SQL and let the page translate it automatically while previewing evaluation results for each side.
+                </p>
+                <p className="mt-2 text-xs leading-5 text-[#667085]">
+                  Best for: trying ideas quickly, debugging expressions, and exploring supported translation patterns. Automatic translation is helpful, but not guaranteed to match one canonical form.
                 </p>
                 <button
                   onClick={() => setMode('custom')}
@@ -854,7 +860,14 @@ export default function RASQLReference() {
 
                 <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="space-y-2">
-                  <label htmlFor={querySelectId} className="block text-sm font-semibold text-[#344054]">Choose a prompt from the catalog</label>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <label htmlFor={querySelectId} className="block text-sm font-semibold text-[#344054]">Choose a prompt from the catalog</label>
+                    <div className="flex flex-wrap gap-4 text-xs font-semibold text-[#8b6a50]">
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> beginner</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> intermediate</span>
+                      <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> advanced</span>
+                    </div>
+                  </div>
                   <select
                     id={querySelectId}
                     value={selectedQueryId}
@@ -864,7 +877,7 @@ export default function RASQLReference() {
                     <option value="">- Select a query -</option>
                     {filteredQueries.map((query) => (
                       <option key={query.id} value={query.id}>
-                        {query.prompt}
+                        {difficultyIcon(query.difficulty)} {query.prompt}
                       </option>
                     ))}
                   </select>
@@ -902,6 +915,9 @@ export default function RASQLReference() {
                 <div className="space-y-4">
                   <div className={`${blockCardSoft} space-y-2`}>
                     <p className="text-base text-[#344054]">{queryDetail.prompt}</p>
+                    <p className="text-sm text-[#667085]">
+                      <span className="font-semibold text-[#475467]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}
+                    </p>
                   </div>
 
                   <div className={`grid gap-4 ${practiceDirection === 'ra-to-sql' ? 'xl:grid-cols-[0.95fr_1.05fr]' : 'xl:grid-cols-[0.95fr_1.05fr]'}`}>
