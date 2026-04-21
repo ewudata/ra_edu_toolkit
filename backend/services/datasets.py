@@ -69,6 +69,7 @@ class DatasetLocation:
 
 
 _SCHEMA_PREVIEW_CACHE: Dict[Tuple[str, str, int], "DatabaseSchema"] = {}
+_DATABASE_ENV_CACHE: Dict[Tuple[str, str], Dict[str, pd.DataFrame]] = {}
 
 
 class SqlImportError(ValueError):
@@ -143,6 +144,24 @@ def clear_schema_preview_cache(database: Optional[str] = None) -> None:
     stale_keys = [key for key in _SCHEMA_PREVIEW_CACHE if key[1] == normalised]
     for key in stale_keys:
         _SCHEMA_PREVIEW_CACHE.pop(key, None)
+
+
+def _database_env_cache_key(
+    database: str,
+    user_id: Optional[str],
+) -> Tuple[str, str]:
+    return user_id or "", _normalise_database_name(database)
+
+
+def clear_database_env_cache(database: Optional[str] = None) -> None:
+    if database is None:
+        _DATABASE_ENV_CACHE.clear()
+        return
+
+    normalised = _normalise_database_name(database)
+    stale_keys = [key for key in _DATABASE_ENV_CACHE if key[1] == normalised]
+    for key in stale_keys:
+        _DATABASE_ENV_CACHE.pop(key, None)
 
 
 def _approximate_csv_row_count(raw: bytes) -> int:
@@ -440,6 +459,9 @@ def create_database_from_zip(
         hidden=False,
     )
     clear_schema_preview_cache(name)
+    clear_database_env_cache(name)
+    from . import sql as sql_service
+    sql_service.clear_sqlite_cache(name)
     return DatabaseSummary(
         name=name,
         tables=sorted(PurePosixPath(f).stem.lower() for f in csv_map.keys()),
@@ -485,6 +507,9 @@ def create_database_from_sql(
         hidden=False,
     )
     clear_schema_preview_cache(name)
+    clear_database_env_cache(name)
+    from . import sql as sql_service
+    sql_service.clear_sqlite_cache(name)
     return DatabaseSummary(
         name=name,
         tables=sorted(PurePosixPath(f).stem.lower() for f in csv_map.keys()),
@@ -512,6 +537,9 @@ def delete_database(database: str, *, user_id: Optional[str] = None) -> None:
             hidden=True,
         )
         clear_schema_preview_cache(name)
+        clear_database_env_cache(name)
+        from . import sql as sql_service
+        sql_service.clear_sqlite_cache(name)
         return
 
     row = user_rows.get(name)
@@ -522,6 +550,9 @@ def delete_database(database: str, *, user_id: Optional[str] = None) -> None:
             raise FileNotFoundError(str(exc)) from exc
         delete_user_dataset_row(user_id, name)
         clear_schema_preview_cache(name)
+        clear_database_env_cache(name)
+        from . import sql as sql_service
+        sql_service.clear_sqlite_cache(name)
         return
 
     raise FileNotFoundError(f"Database '{name}' not found")
@@ -541,11 +572,20 @@ def _load_relation_dataframe(bucket: str, object_path: str, relation_name: str) 
     return df
 
 
+def _clone_database_env(env: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    return {relation: df.copy(deep=True) for relation, df in env.items()}
+
+
 def load_database_env(
     database: str,
     *,
     user_id: Optional[str] = None,
 ) -> Dict[str, pd.DataFrame]:
+    key = _database_env_cache_key(database, user_id)
+    cached = _DATABASE_ENV_CACHE.get(key)
+    if cached is not None:
+        return _clone_database_env(cached)
+
     location = _resolve_location(database, user_id)
     names = storage_list_objects(location.bucket, location.prefix)
     csv_names = [name for name in names if PurePosixPath(name).suffix.lower() == ".csv"]
@@ -557,7 +597,8 @@ def load_database_env(
         relation = PurePosixPath(name).stem.lower()
         object_path = _join_prefix(location.prefix, name)
         env[relation] = _load_relation_dataframe(location.bucket, object_path, relation)
-    return env
+    _DATABASE_ENV_CACHE[key] = _clone_database_env(env)
+    return _clone_database_env(env)
 
 
 def get_database_schema(

@@ -4,6 +4,9 @@ import { api, setAuthToken, setRefreshSessionHandler, setUnauthorizedHandler } f
 import { AuthContext, type AuthContextValue } from './auth-context';
 
 const AUTH_COOKIE = 'ra_edu_auth';
+const UI_SESSION_STORAGE_KEYS = [
+  'ra_sql_reference_state_v1',
+] as const;
 
 type PersistedAuthState = {
   token: string;
@@ -33,6 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const sessionRef = useRef<PersistedAuthState | null>(null);
   const refreshInFlightRef = useRef<Promise<boolean> | null>(null);
+
+  function clearUiSessionState() {
+    if (typeof window === 'undefined') return;
+    UI_SESSION_STORAGE_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
+  }
 
   function applyAuthenticatedSession(token: string, email: string, refreshToken: string | null = null) {
     setAuthToken(token);
@@ -66,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (authToken) {
       const email = authEmail || 'Google User';
+      clearUiSessionState();
       applyAuthenticatedSession(authToken, email, authRefreshToken || null);
 
       const url = new URL(window.location.href);
@@ -134,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    clearUiSessionState();
     clearAuthState(null);
   }, []);
 

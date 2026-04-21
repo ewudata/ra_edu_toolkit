@@ -54,3 +54,11 @@ def test_ra_sql_reference_treats_alias_free_select_from_where_as_equivalent():
     assert "function normalizeFromClause(value: string): string[]" in source
     assert "function normalizeWhereClause(value: string, aliases: Map<string, string>): string" in source
     assert "clauseMatchesCatalogClause(clause, userValue, userFromClause, expectedFromClause)" in source
+
+
+def test_ra_sql_reference_splits_multiple_join_clauses_for_guided_sql_and_expected_view():
+    source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
+
+    assert "function extractTopLevelJoinClauses(sql: string): string[]" in source
+    assert "const joins = extractTopLevelJoinClauses(compact);" in source
+    assert "clauses.push(sql.slice(joinStart, joinEnd).trim());" in source

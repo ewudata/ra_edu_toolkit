@@ -278,6 +278,35 @@ function extractSection(sql: string, startKeyword: string, endKeywords: string[]
   return sql.slice(searchStart, end).trim();
 }
 
+function extractTopLevelJoinClauses(sql: string): string[] {
+  const clauses: string[] = [];
+  const upper = sql.toUpperCase();
+  const boundaryKeywords = [' WHERE ', ' GROUP BY ', ' HAVING ', ' ORDER BY '];
+  const joinKeywords = [' NATURAL JOIN ', ' INNER JOIN ', ' LEFT JOIN ', ' RIGHT JOIN ', ' FULL JOIN ', ' CROSS JOIN ', ' JOIN '];
+
+  const fromIndex = upper.indexOf('FROM ');
+  if (fromIndex === -1) return clauses;
+
+  let searchIndex = fromIndex + 'FROM '.length;
+  while (searchIndex < sql.length) {
+    const joinStartCandidates = joinKeywords
+      .map((keyword) => upper.indexOf(keyword, searchIndex))
+      .filter((index) => index !== -1);
+    if (!joinStartCandidates.length) break;
+
+    const joinStart = Math.min(...joinStartCandidates);
+    const joinEndCandidates = [
+      ...joinKeywords.map((keyword) => upper.indexOf(keyword, joinStart + 1)).filter((index) => index !== -1),
+      ...boundaryKeywords.map((keyword) => upper.indexOf(keyword, joinStart + 1)).filter((index) => index !== -1),
+    ];
+    const joinEnd = joinEndCandidates.length ? Math.min(...joinEndCandidates) : sql.length;
+    clauses.push(sql.slice(joinStart, joinEnd).trim());
+    searchIndex = joinEnd;
+  }
+
+  return clauses;
+}
+
 function parseSetOperationClauses(sql: string): SqlClause[] {
   const compact = sql.replace(/\s+/g, ' ').trim().replace(/;$/, '');
   const match = compact.match(/\b(UNION|EXCEPT|INTERSECT)\b/i);
@@ -316,7 +345,7 @@ function parseSqlClauses(sql: string): SqlClause[] {
   const clauses: SqlClause[] = [];
   const selectBody = extractSection(compact, 'SELECT', [' FROM ']);
   const fromBody = extractSection(compact, 'FROM', [' JOIN ', ' INNER JOIN ', ' LEFT JOIN ', ' RIGHT JOIN ', ' FULL JOIN ', ' CROSS JOIN ', ' WHERE ', ' GROUP BY ', ' HAVING ', ' ORDER BY ']);
-  const joins = [...compact.matchAll(/((?:(?:INNER|LEFT|RIGHT|FULL|CROSS)\s+)?JOIN\s+.+?)(?=\s+(?:(?:(?:INNER|LEFT|RIGHT|FULL|CROSS)\s+)?JOIN|WHERE|GROUP BY|HAVING|ORDER BY|$))/gi)].map((match) => match[1].trim());
+  const joins = extractTopLevelJoinClauses(compact);
   const whereBody = extractSection(compact, 'WHERE', [' GROUP BY ', ' HAVING ', ' ORDER BY ']);
   const groupByBody = extractSection(compact, 'GROUP BY', [' HAVING ', ' ORDER BY ']);
   const havingBody = extractSection(compact, 'HAVING', [' ORDER BY ']);
