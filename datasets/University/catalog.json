@@ -155,7 +155,7 @@
       "prompt": "List each course along with its title and the budget of the offering department.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id, title, budget}(course JOIN department)",
+        "relational_algebra": "pi{course_id, title, budget}(course ⋈ department)",
         "sql": "SELECT course_id, title, budget FROM course NATURAL JOIN department;"
       },
       "expected_result": {
@@ -174,15 +174,18 @@
       "prompt": "Find the sections offered in Fall 2017 along with the building, room_number, and classroom capacity.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id, sec_id, building, room_number, capacity}(sigma{semester = 'Fall' AND year = 2017}(section JOIN classroom))",
-        "sql": "SELECT course_id, sec_id, building, room_number\nFROM section NATURAL JOIN classroom\nWHERE semester = 'Fall' AND year = 2017;"
+        "relational_algebra": "pi{course_id, sec_id, semeber, year, building, room_number, capacity}(sigma{semester = 'Fall' AND year = 2017}(section ⋈ classroom))",
+        "sql": "SELECT course_id, sec_id, semeber, year, building, room_number, capacity\nFROM section NATURAL JOIN classroom\nWHERE semester = 'Fall' AND year = 2017;"
       },
       "expected_result": {
         "schema": [
           "course_id",
           "sec_id",
+          "semeber",
+          "year",
           "building",
-          "room"
+          "room_number",
+          "capacity"
         ]
       },
       "hints": [
@@ -214,10 +217,10 @@
     },
     {
       "id": "q12",
-      "prompt": "List student names with their advisors' names.",
+      "prompt": "List student names with their corresponding advisor's names.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) JOIN advisor JOIN rho{id->i_id, name->advisor_name}(instructor) )",
+        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) ⋈ advisor ⋈ rho{id->i_id, name->advisor_name}(instructor) )",
         "sql": "SELECT st.name AS student_name, inst.name AS advisor_name\nFROM student AS st\nJOIN advisor AS adv ON st.id = adv.s_id\nJOIN instructor AS inst ON adv.i_id = inst.id;"
       },
       "expected_result": {
@@ -228,7 +231,6 @@
       },
       "hints": [
         "cartesian product",
-        "selection",
         "rename",
         "projection"
       ]

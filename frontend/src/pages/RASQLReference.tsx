@@ -19,6 +19,24 @@ import {
 type WorkspaceMode = 'catalog' | 'custom' | null;
 type PracticeDirection = 'ra-to-sql' | 'sql-to-ra';
 type CustomEditedSide = 'ra' | 'sql' | null;
+type SqlAnswerMode = 'guided' | 'freeform';
+type RaAnswerMode = 'guided' | 'freeform';
+type PersistedReferenceState = {
+  selectedDb: string;
+  mode: WorkspaceMode;
+  selectedQueryId: string;
+  practiceDirection: PracticeDirection;
+  selectedOps: string[];
+  raAnswerMode: RaAnswerMode;
+  studentRa: string;
+  raStartedEditing: boolean;
+  freeformRaAnswer: string;
+  sqlAnswerMode: SqlAnswerMode;
+  freeformSqlAnswer: string;
+  customRa: string;
+  customSql: string;
+  customEditedSide: CustomEditedSide;
+};
 
 type SqlClause = {
   id: string;
@@ -50,6 +68,34 @@ const OPERATOR_ALIASES: Record<string, Set<string>> = {
   project: new Set(['project', 'projection', 'pi', 'π']),
   rename: new Set(['rename', 'renaming', 'rho', 'ρ']),
 };
+
+const REFERENCE_SESSION_STORAGE_KEY = 'ra_sql_reference_state_v1';
+
+function loadPersistedReferenceState(): PersistedReferenceState | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(REFERENCE_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PersistedReferenceState>;
+    return {
+      selectedDb: typeof parsed.selectedDb === 'string' ? parsed.selectedDb : '',
+      mode: parsed.mode === 'catalog' || parsed.mode === 'custom' ? parsed.mode : null,
+      selectedQueryId: typeof parsed.selectedQueryId === 'string' ? parsed.selectedQueryId : '',
+      practiceDirection: parsed.practiceDirection === 'sql-to-ra' ? 'sql-to-ra' : 'ra-to-sql',
+      selectedOps: Array.isArray(parsed.selectedOps) ? parsed.selectedOps.filter((value): value is string => typeof value === 'string') : [],
+      raAnswerMode: parsed.raAnswerMode === 'freeform' ? 'freeform' : 'guided',
+      studentRa: typeof parsed.studentRa === 'string' ? parsed.studentRa : '',
+      raStartedEditing: parsed.raStartedEditing === true,
+      freeformRaAnswer: typeof parsed.freeformRaAnswer === 'string' ? parsed.freeformRaAnswer : '',
+      customRa: typeof parsed.customRa === 'string' ? parsed.customRa : '',
+      customSql: typeof parsed.customSql === 'string' ? parsed.customSql : '',
+      customEditedSide: parsed.customEditedSide === 'ra' || parsed.customEditedSide === 'sql' ? parsed.customEditedSide : null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function queryMatchesOps(query: Query, ops: Set<string>): boolean {
   const hints = (query.hints ?? []).map((hint) => hint.toLowerCase()).join(' ');
@@ -107,8 +153,72 @@ function haveSameItemsIgnoringOrder(left: string[], right: string[]): boolean {
   return counts.size === 0;
 }
 
-function clauseMatchesCatalogClause(clause: SqlClause, userValue: string): boolean {
-  if (clause.keyword === 'SELECT' || clause.keyword === 'GROUP BY') {
+function buildFromAliasMap(fromClause: string): Map<string, string> {
+  const aliases = new Map<string, string>();
+  for (const item of splitTopLevelCommaList(fromClause)) {
+    const match = item.match(/^([a-z_][a-z0-9_\.]*)(?:\s+(?:as\s+)?([a-z_][a-z0-9_]*))?$/i);
+    if (!match) continue;
+    const table = match[1]!.toLowerCase();
+    const alias = (match[2] ?? match[1])!.toLowerCase();
+    aliases.set(alias, table);
+    aliases.set(table, table);
+  }
+  return aliases;
+}
+
+function replaceAliasQualifiers(value: string, aliases: Map<string, string>): string {
+  let normalized = value;
+  for (const [alias, table] of aliases.entries()) {
+    normalized = normalized.replace(new RegExp(`\\b${alias}\\.`, 'gi'), `${table}.`);
+  }
+  return normalized;
+}
+
+function normalizeSelectItem(value: string, aliases: Map<string, string>): string {
+  const normalized = normalizeComparison(replaceAliasQualifiers(value, aliases));
+  const aliasMatch = normalized.match(/^(.*?)(?:\s+as)?\s+([a-z_][a-z0-9_]*)$/i);
+  if (!aliasMatch) return normalized;
+  return `${aliasMatch[1]!.trim()} as ${aliasMatch[2]!.toLowerCase()}`;
+}
+
+function normalizeFromClause(value: string): string[] {
+  return splitTopLevelCommaList(value)
+    .map((item) => item.match(/^([a-z_][a-z0-9_\.]*)/i)?.[1]?.toLowerCase() ?? item)
+    .filter(Boolean);
+}
+
+function normalizeWhereClause(value: string, aliases: Map<string, string>): string {
+  return normalizeComparison(replaceAliasQualifiers(value, aliases));
+}
+
+function clauseMatchesCatalogClause(
+  clause: SqlClause,
+  userValue: string,
+  userFromClause = '',
+  expectedFromClause = '',
+): boolean {
+  const userAliases = buildFromAliasMap(userFromClause);
+  const expectedAliases = buildFromAliasMap(expectedFromClause);
+
+  if (clause.keyword === 'SELECT') {
+    return haveSameItemsIgnoringOrder(
+      splitTopLevelCommaList(userValue).map((item) => normalizeSelectItem(item, userAliases)),
+      splitTopLevelCommaList(clause.expectedBody).map((item) => normalizeSelectItem(item, expectedAliases)),
+    );
+  }
+
+  if (clause.keyword === 'FROM') {
+    return haveSameItemsIgnoringOrder(
+      normalizeFromClause(userValue),
+      normalizeFromClause(clause.expectedBody),
+    );
+  }
+
+  if (clause.keyword === 'WHERE') {
+    return normalizeWhereClause(userValue, userAliases) === normalizeWhereClause(clause.expectedBody, expectedAliases);
+  }
+
+  if (clause.keyword === 'GROUP BY') {
     return haveSameItemsIgnoringOrder(
       splitTopLevelCommaList(userValue),
       splitTopLevelCommaList(clause.expectedBody),
@@ -250,6 +360,47 @@ function groupSqlClauses(clauses: SqlClause[]): SqlClauseGroup[] {
   return [{ id: 'sql_query', title: 'SQL query', clauses }];
 }
 
+type ClauseBadgeState = 'correct' | 'mismatch' | 'neutral';
+
+function getClauseBadgeState(
+  clauseCorrect: boolean,
+  clauseAnswered: boolean,
+  overallSqlCorrect: boolean,
+): ClauseBadgeState {
+  if (overallSqlCorrect && clauseAnswered) return 'correct';
+  if (clauseCorrect) return 'correct';
+  if (!clauseAnswered) return 'neutral';
+  return 'mismatch';
+}
+
+function buildSqlFromClauseList(clauses: SqlClause[], answers: Record<string, string>): string {
+  return clauses
+    .map((clause) => {
+      const value = (answers[clause.id] ?? '').trim();
+      if (!value) return '';
+      if (clause.keyword === 'SQL') return value;
+      if (clause.keyword === 'OPERATOR') return value.toUpperCase();
+      return `${clause.keyword} ${value}`.trim();
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+function buildSqlFromClauseGroups(groups: SqlClauseGroup[], answers: Record<string, string>): string {
+  const leftGroup = groups.find((group) => group.id === 'left_query');
+  const rightGroup = groups.find((group) => group.id === 'right_query');
+  const operatorGroup = groups.find((group) => group.id === 'set_operator');
+
+  if (leftGroup || rightGroup || operatorGroup) {
+    const leftSql = leftGroup ? buildSqlFromClauseList(leftGroup.clauses, answers) : '';
+    const rightSql = rightGroup ? buildSqlFromClauseList(rightGroup.clauses, answers) : '';
+    const operator = operatorGroup ? (answers[operatorGroup.clauses[0]?.id ?? ''] ?? '').trim().toUpperCase() : '';
+    return [leftSql, operator, rightSql].filter(Boolean).join('\n');
+  }
+
+  return groups.map((group) => buildSqlFromClauseList(group.clauses, answers)).filter(Boolean).join('\n');
+}
+
 function extractExpectedRows(result: EvaluationResult | null, fallback: Query | null): Record<string, unknown>[] | null {
   return result?.expected_rows ?? fallback?.expected_rows ?? null;
 }
@@ -290,26 +441,29 @@ function formatCheckError(error: unknown): string {
 }
 
 export default function RASQLReference() {
+  const persistedState = loadPersistedReferenceState();
   const databaseSelectId = useId();
   const querySelectId = useId();
   const customRaTextareaId = useId();
   const customSqlTextareaId = useId();
   const raInputRef = useRef<HTMLTextAreaElement | null>(null);
   const raCheckRequestIdRef = useRef(0);
+  const previousSelectedDbRef = useRef<string | null>(persistedState?.selectedDb ?? null);
   const [databases, setDatabases] = useState<Database[]>([]);
-  const [selectedDb, setSelectedDb] = useState('');
+  const [selectedDb, setSelectedDb] = useState(persistedState?.selectedDb ?? '');
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [queries, setQueries] = useState<Query[]>([]);
   const [details, setDetails] = useState<Record<string, Query>>({});
   const [schemaMap, setSchemaMap] = useState<Record<string, TableInfo>>({});
-  const [mode, setMode] = useState<WorkspaceMode>(null);
-  const [selectedQueryId, setSelectedQueryId] = useState('');
-  const [practiceDirection, setPracticeDirection] = useState<PracticeDirection>('ra-to-sql');
-  const [selectedOps, setSelectedOps] = useState<Set<string>>(new Set());
-  const [studentRa, setStudentRa] = useState('');
-  const [customRa, setCustomRa] = useState('');
-  const [customSql, setCustomSql] = useState('');
-  const [customEditedSide, setCustomEditedSide] = useState<CustomEditedSide>(null);
+  const [mode, setMode] = useState<WorkspaceMode>(persistedState?.mode ?? null);
+  const [selectedQueryId, setSelectedQueryId] = useState(persistedState?.selectedQueryId ?? '');
+  const [practiceDirection, setPracticeDirection] = useState<PracticeDirection>(persistedState?.practiceDirection ?? 'ra-to-sql');
+  const [selectedOps, setSelectedOps] = useState<Set<string>>(new Set(persistedState?.selectedOps ?? []));
+  const [raAnswerMode, setRaAnswerMode] = useState<RaAnswerMode>(persistedState?.raAnswerMode ?? 'guided');
+  const [studentRa, setStudentRa] = useState(persistedState?.studentRa ?? '');
+  const [customRa, setCustomRa] = useState(persistedState?.customRa ?? '');
+  const [customSql, setCustomSql] = useState(persistedState?.customSql ?? '');
+  const [customEditedSide, setCustomEditedSide] = useState<CustomEditedSide>(persistedState?.customEditedSide ?? null);
   const [customTranslationError, setCustomTranslationError] = useState<string | null>(null);
   const [customTranslationWarning, setCustomTranslationWarning] = useState<string | null>(null);
   const [customRaResult, setCustomRaResult] = useState<EvaluationResult | null>(null);
@@ -323,9 +477,15 @@ export default function RASQLReference() {
   const [revealSqlAnswers, setRevealSqlAnswers] = useState(false);
   const [raChecked, setRaChecked] = useState(false);
   const [revealRaAnswer, setRevealRaAnswer] = useState(false);
-  const [raStartedEditing, setRaStartedEditing] = useState(false);
+  const [raStartedEditing, setRaStartedEditing] = useState(persistedState?.raStartedEditing ?? false);
+  const [freeformRaAnswer, setFreeformRaAnswer] = useState(persistedState?.freeformRaAnswer ?? '');
+  const [sqlAnswerMode, setSqlAnswerMode] = useState<SqlAnswerMode>(persistedState?.sqlAnswerMode ?? 'guided');
+  const [freeformSqlAnswer, setFreeformSqlAnswer] = useState(persistedState?.freeformSqlAnswer ?? '');
   const [traceResult, setTraceResult] = useState<EvaluationResult | null>(null);
   const [traceLoading, setTraceLoading] = useState(false);
+  const [sqlCheckResult, setSqlCheckResult] = useState<TranslationCheckResult | null>(null);
+  const [sqlCheckLoading, setSqlCheckLoading] = useState(false);
+  const [sqlCheckError, setSqlCheckError] = useState<string | null>(null);
   const [raCheckResult, setRaCheckResult] = useState<TranslationCheckResult | null>(null);
   const [raCheckLoading, setRaCheckLoading] = useState(false);
   const [raCheckError, setRaCheckError] = useState<string | null>(null);
@@ -360,11 +520,59 @@ export default function RASQLReference() {
   }, [selectedDb]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem(
+      REFERENCE_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        selectedDb,
+        mode,
+        selectedQueryId,
+        practiceDirection,
+        selectedOps: [...selectedOps],
+        raAnswerMode,
+        studentRa,
+        raStartedEditing,
+        freeformRaAnswer,
+        sqlAnswerMode,
+        freeformSqlAnswer,
+        customRa,
+        customSql,
+        customEditedSide,
+      } satisfies PersistedReferenceState),
+    );
+  }, [
+    selectedDb,
+    mode,
+    selectedQueryId,
+    practiceDirection,
+    selectedOps,
+    raAnswerMode,
+    studentRa,
+    raStartedEditing,
+    freeformRaAnswer,
+    sqlAnswerMode,
+    freeformSqlAnswer,
+    customRa,
+    customSql,
+    customEditedSide,
+  ]);
+
+  useEffect(() => {
+    if (previousSelectedDbRef.current === selectedDb) return;
+    previousSelectedDbRef.current = selectedDb;
+
     setSelectedQueryId('');
     setSelectedOps(new Set());
     setSqlClauseAnswers({});
     setSqlChecked(false);
     setRevealSqlAnswers(false);
+    setRaAnswerMode('guided');
+    setSqlAnswerMode('guided');
+    setFreeformRaAnswer('');
+    setFreeformSqlAnswer('');
+    setSqlCheckResult(null);
+    setSqlCheckError(null);
+    setSqlCheckLoading(false);
     setRaChecked(false);
     setRevealRaAnswer(false);
     setRaStartedEditing(false);
@@ -423,6 +631,13 @@ export default function RASQLReference() {
     setSqlClauseAnswers({});
     setSqlChecked(false);
     setRevealSqlAnswers(false);
+    setRaAnswerMode('guided');
+    setSqlAnswerMode('guided');
+    setFreeformRaAnswer('');
+    setFreeformSqlAnswer('');
+    setSqlCheckResult(null);
+    setSqlCheckError(null);
+    setSqlCheckLoading(false);
     setRaChecked(false);
     setRevealRaAnswer(false);
     setRaStartedEditing(false);
@@ -597,6 +812,8 @@ export default function RASQLReference() {
 
   function updateSqlClauseAnswer(id: string, value: string) {
     setSqlChecked(false);
+    setSqlCheckResult(null);
+    setSqlCheckError(null);
     setSqlClauseAnswers((prev) => ({ ...prev, [id]: value }));
   }
 
@@ -636,7 +853,8 @@ export default function RASQLReference() {
 
   async function checkRaAnswer() {
     if (!selectedDb || !selectedQueryId) return;
-    if (!studentRa.trim()) {
+    const raAnswer = raAnswerMode === 'guided' ? studentRa.trim() : freeformRaAnswer.trim();
+    if (!raAnswer) {
       setRaChecked(true);
       setRaCheckResult(null);
       setRaCheckError('Enter a relational algebra expression before checking it.');
@@ -650,7 +868,7 @@ export default function RASQLReference() {
     setRaCheckError(null);
 
     try {
-      const result = await api.checkTranslation(selectedDb, selectedQueryId, 'sql-to-ra', studentRa.trim());
+      const result = await api.checkTranslation(selectedDb, selectedQueryId, 'sql-to-ra', raAnswer);
       if (raCheckRequestIdRef.current !== requestId) return;
       setRaCheckResult(result);
     } catch (error) {
@@ -661,6 +879,36 @@ export default function RASQLReference() {
       if (raCheckRequestIdRef.current === requestId) {
         setRaCheckLoading(false);
       }
+    }
+  }
+
+  async function checkSqlAnswer() {
+    if (!selectedDb || !selectedQueryId) return;
+
+    const sqlAnswer = sqlAnswerMode === 'guided'
+      ? buildSqlFromClauseGroups(sqlClauseGroups, sqlClauseAnswers).trim()
+      : freeformSqlAnswer.trim();
+
+    if (!sqlAnswer) {
+      setSqlChecked(true);
+      setSqlCheckResult(null);
+      setSqlCheckError('Enter a SQL query before checking it.');
+      return;
+    }
+
+    setSqlChecked(false);
+    setSqlCheckLoading(true);
+    setSqlCheckError(null);
+
+    try {
+      const result = await api.checkTranslation(selectedDb, selectedQueryId, 'ra-to-sql', sqlAnswer);
+      setSqlCheckResult(result);
+    } catch (error) {
+      setSqlCheckResult(null);
+      setSqlCheckError(formatCheckError(error));
+    } finally {
+      setSqlCheckLoading(false);
+      setSqlChecked(true);
     }
   }
 
@@ -678,6 +926,7 @@ export default function RASQLReference() {
   const secondaryButton = 'app-secondary-btn';
   const activeQueryRows = extractExpectedRows(traceResult, queryDetail);
   const raMatchesSolution = raCheckResult?.is_correct ?? false;
+  const sqlMatchesSolution = sqlCheckResult?.is_correct ?? false;
   return (
     <div className={shell}>
       <section className={hero}>
@@ -1000,11 +1249,42 @@ export default function RASQLReference() {
                       {practiceDirection === 'ra-to-sql' ? (
                         <>
                           <p className="text-sm leading-6 text-[#475467]">
-                            Complete the SQL answer one clause at a time. Each box maps to one part of the canonical SQL solution.
+                            Start from the canonical SQL layout, then either fill the scaffold clause by clause or switch to a free-form SQL answer if you want to use a different valid structure.
                           </p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSqlAnswerMode('guided');
+                                setSqlCheckResult(null);
+                                setSqlCheckError(null);
+                              }}
+                              aria-pressed={sqlAnswerMode === 'guided'}
+                              className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${sqlAnswerMode === 'guided' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
+                            >
+                              Guided SQL layout
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSqlAnswerMode('freeform');
+                                setSqlCheckResult(null);
+                                setSqlCheckError(null);
+                              }}
+                              aria-pressed={sqlAnswerMode === 'freeform'}
+                              className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${sqlAnswerMode === 'freeform' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
+                            >
+                              Write full SQL
+                            </button>
+                          </div>
+                          {sqlAnswerMode === 'guided' ? (
                           <div className="space-y-3">
                             {sqlClauseGroups.map((group) => {
                               const isOperatorOnly = group.id === 'set_operator';
+                              const userFromClause = group.clauses.find((candidate) => candidate.keyword === 'FROM')
+                                ? (sqlClauseAnswers[group.clauses.find((candidate) => candidate.keyword === 'FROM')!.id] ?? '')
+                                : '';
+                              const expectedFromClause = group.clauses.find((candidate) => candidate.keyword === 'FROM')?.expectedBody ?? '';
 
                               return (
                                 <div key={group.id} className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
@@ -1013,8 +1293,13 @@ export default function RASQLReference() {
                                   <div className={`mt-2.5 space-y-2 ${isOperatorOnly ? '' : 'rounded-2xl border border-[#d7deef] bg-white p-3'}`}>
                                     {group.clauses.map((clause) => {
                                       const userValue = sqlClauseAnswers[clause.id] ?? '';
-                                      const clauseCorrect = clauseMatchesCatalogClause(clause, userValue);
+                                      const clauseCorrect = clauseMatchesCatalogClause(clause, userValue, userFromClause, expectedFromClause);
                                       const clauseAnswered = userValue.trim().length > 0;
+                                      const clauseBadgeState = getClauseBadgeState(
+                                        clauseCorrect,
+                                        clauseAnswered,
+                                        sqlMatchesSolution,
+                                      );
                                       return (
                                         <div key={clause.id} className="flex items-start gap-2.5">
                                           <span className="min-w-[88px] rounded-xl border border-[#cbeae3] bg-[#f3fbf8] px-2.5 py-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3d6f67]">
@@ -1028,9 +1313,25 @@ export default function RASQLReference() {
                                               placeholder={clause.keyword === 'SQL' ? 'Write SQL here' : 'Fill in'}
                                               className={`min-h-[54px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee] ${isOperatorOnly ? '' : 'border-[#e4e7f2]'}`}
                                             />
-                                            {sqlChecked ? (
-                                              <span className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${clauseCorrect ? 'bg-[#e8faf4] text-[#166534]' : clauseAnswered ? 'bg-[#fff1f2] text-[#be123c]' : 'bg-[#f4f5f7] text-[#667085]'}`}>
-                                                {clauseCorrect ? <Check className="h-4 w-4" /> : clauseAnswered ? <X className="h-4 w-4" /> : null}
+                                            {sqlChecked && !sqlCheckLoading ? (
+                                              <span
+                                                title={
+                                                  clauseBadgeState === 'correct'
+                                                    ? sqlMatchesSolution
+                                                      ? 'Accepted as correct because the full SQL answer is semantically correct.'
+                                                      : 'Matches the catalog clause.'
+                                                    : clauseBadgeState === 'mismatch'
+                                                        ? 'Does not match the catalog clause.'
+                                                        : 'No clause feedback yet.'
+                                                }
+                                                className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                                                clauseBadgeState === 'correct'
+                                                  ? 'bg-[#e8faf4] text-[#166534]'
+                                                  : clauseBadgeState === 'mismatch'
+                                                    ? 'bg-[#fff1f2] text-[#be123c]'
+                                                    : 'bg-[#f4f5f7] text-[#667085]'
+                                              }`}>
+                                                {clauseBadgeState === 'correct' ? <Check className="h-4 w-4" /> : clauseBadgeState === 'mismatch' ? <X className="h-4 w-4" /> : null}
                                               </span>
                                             ) : null}
                                           </div>
@@ -1055,45 +1356,113 @@ export default function RASQLReference() {
                               );
                             })}
                           </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <textarea
+                                value={freeformSqlAnswer}
+                                onChange={(e) => {
+                                  setFreeformSqlAnswer(e.target.value);
+                                  setSqlChecked(false);
+                                  setSqlCheckResult(null);
+                                  setSqlCheckError(null);
+                                }}
+                                aria-label="Full SQL answer"
+                                placeholder="Write a complete SQL query here."
+                                className="min-h-[180px] w-full resize-y rounded-2xl border border-[#d7deef] bg-white px-4 py-3 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
+                              />
+                              <p className="text-xs leading-5 text-[#667085]">
+                                Use this mode when your SQL is correct but does not follow the catalog&apos;s clause layout exactly.
+                              </p>
+                            </div>
+                          )}
 
                           <div className="flex flex-wrap gap-3">
-                            <button type="button" onClick={() => setSqlChecked(true)} className={primaryButton}>
-                              Check SQL
+                            <button type="button" onClick={() => { void checkSqlAnswer(); }} className={primaryButton} disabled={sqlCheckLoading}>
+                              {sqlCheckLoading ? 'Checking SQL...' : 'Check SQL'}
                             </button>
                             <button type="button" onClick={() => setRevealSqlAnswers((value) => !value)} className={secondaryButton}>
                               {revealSqlAnswers ? 'Hide Canonical SQL' : 'Show Canonical SQL'}
                             </button>
                           </div>
-                          <p className="text-xs leading-5 text-[#667085]">
-                            Clause checkmarks reflect match against the catalog clause only.
-                          </p>
+                          {sqlAnswerMode === 'guided' ? (
+                            <p className="text-xs leading-5 text-[#667085]">
+                              Clause badges reflect the final guided verdict. If the full SQL answer is semantically correct, the guided clauses are marked correct as well; otherwise, badges fall back to catalog-layout alignment.
+                            </p>
+                          ) : (
+                            <p className="text-xs leading-5 text-[#667085]">
+                              Free-form mode skips clause matching and checks only whether your SQL returns the correct relation.
+                            </p>
+                          )}
                         </>
                       ) : (
                         <>
                           <p className="text-sm leading-6 text-[#475467]">
-                            Write the relational algebra expression that matches the SQL statement on the left, then compare it with the canonical answer.
+                            Start from the canonical RA layout, then either fill the scaffold or switch to a full relational algebra answer if you want to write your own complete expression.
                           </p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRaAnswerMode('guided');
+                                setRaChecked(false);
+                                setRaCheckResult(null);
+                                setRaCheckError(null);
+                              }}
+                              aria-pressed={raAnswerMode === 'guided'}
+                              className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${raAnswerMode === 'guided' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
+                            >
+                              Guided RA layout
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRaAnswerMode('freeform');
+                                setRaChecked(false);
+                                setRaCheckResult(null);
+                                setRaCheckError(null);
+                              }}
+                              aria-pressed={raAnswerMode === 'freeform'}
+                              className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${raAnswerMode === 'freeform' ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#dfe2f0] bg-white text-[#475467]'}`}
+                            >
+                              Write full RA
+                            </button>
+                          </div>
                           <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
                             <div className="flex items-start gap-2.5">
                               <span className="min-w-[88px] rounded-xl border border-[#cbeae3] bg-[#f3fbf8] px-2.5 py-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3d6f67]">
                                 RA
                               </span>
                               <div className="flex flex-1 items-start gap-2">
-                                <textarea
-                                  ref={raInputRef}
-                                  value={studentRa}
-                                  onChange={(e) => updateStudentRa(e.target.value)}
-                                  aria-label="Relational algebra answer"
-                                  placeholder="π{_____}(σ{_____}(relation))"
-                                  className="min-h-[72px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
-                                />
+                                {raAnswerMode === 'guided' ? (
+                                  <textarea
+                                    ref={raInputRef}
+                                    value={studentRa}
+                                    onChange={(e) => updateStudentRa(e.target.value)}
+                                    aria-label="Relational algebra answer"
+                                    placeholder="π{_____}(σ{_____}(relation))"
+                                    className="min-h-[72px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
+                                  />
+                                ) : (
+                                  <textarea
+                                    value={freeformRaAnswer}
+                                    onChange={(e) => {
+                                      setFreeformRaAnswer(e.target.value);
+                                      setRaChecked(false);
+                                      setRaCheckResult(null);
+                                      setRaCheckError(null);
+                                    }}
+                                    aria-label="Full relational algebra answer"
+                                    placeholder="Write a complete relational algebra expression here."
+                                    className="min-h-[140px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
+                                  />
+                                )}
                                 {raChecked ? (
                                   <span className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                                     raCheckLoading
                                       ? 'bg-[#f4f5f7] text-[#667085]'
                                       : raMatchesSolution
                                       ? 'bg-[#e8faf4] text-[#166534]'
-                                      : studentRa.trim()
+                                      : (raAnswerMode === 'guided' ? studentRa.trim() : freeformRaAnswer.trim())
                                         ? 'bg-[#fff1f2] text-[#be123c]'
                                         : 'bg-[#f4f5f7] text-[#667085]'
                                   }`}>
@@ -1101,7 +1470,7 @@ export default function RASQLReference() {
                                       ? null
                                       : raMatchesSolution
                                       ? <Check className="h-4 w-4" />
-                                      : studentRa.trim()
+                                      : (raAnswerMode === 'guided' ? studentRa.trim() : freeformRaAnswer.trim())
                                         ? <X className="h-4 w-4" />
                                         : null}
                                   </span>
@@ -1127,11 +1496,28 @@ export default function RASQLReference() {
                               {revealRaAnswer ? 'Hide Canonical RA' : 'Show Canonical RA'}
                             </button>
                           </div>
+                          <p className="text-xs leading-5 text-[#667085]">
+                            Guided mode gives you the canonical RA skeleton. Free-form mode checks any complete RA expression for semantic equivalence.
+                          </p>
                         </>
                       )}
 
                       {practiceDirection === 'sql-to-ra' && raCheckError ? (
                         <StatusBadge variant="error">{raCheckError}</StatusBadge>
+                      ) : null}
+
+                      {practiceDirection === 'ra-to-sql' && sqlCheckError ? (
+                        <StatusBadge variant="error">{sqlCheckError}</StatusBadge>
+                      ) : null}
+
+                      {practiceDirection === 'ra-to-sql' && sqlCheckResult ? (
+                        <StatusBadge variant={sqlCheckResult.is_correct ? 'success' : 'warning'}>
+                          {sqlCheckResult.is_correct
+                            ? sqlAnswerMode === 'guided'
+                              ? 'Correct: your SQL returns the same relation as the relational algebra expression.'
+                              : 'Correct: your SQL returns the same relation as the relational algebra expression, even though it may use a different structure than the catalog answer.'
+                            : 'Not equivalent on the current dataset: your SQL result differs from the relational algebra expression.'}
+                        </StatusBadge>
                       ) : null}
 
                       {practiceDirection === 'sql-to-ra' && raCheckResult ? (
