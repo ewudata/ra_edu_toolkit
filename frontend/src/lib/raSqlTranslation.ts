@@ -557,7 +557,9 @@ function toRenameSql(node: Extract<RaNode, { type: 'rename' }>, aliasCounter: { 
     `SELECT ${selectList.join(', ')}`,
     `FROM ${inner}`,
   ].join('\n');
-  return node.relationAlias ? wrapSubquery(sql, aliasCounter, node.relationAlias) : wrapSubquery(sql, aliasCounter);
+  const aliasOverride = node.relationAlias
+    ?? (node.sub.type === 'rename' && node.sub.relationAlias ? node.sub.relationAlias : undefined);
+  return wrapSubquery(sql, aliasCounter, aliasOverride);
 }
 
 function toFromSql(node: RaNode, aliasCounter: { value: number }, schema: TranslationSchema): string {

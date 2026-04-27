@@ -289,15 +289,24 @@ function extractTopLevelJoinClauses(sql: string): string[] {
 
   let searchIndex = fromIndex + 'FROM '.length;
   while (searchIndex < sql.length) {
-    const joinStartCandidates = joinKeywords
-      .map((keyword) => upper.indexOf(keyword, searchIndex))
-      .filter((index) => index !== -1);
-    if (!joinStartCandidates.length) break;
+    let joinStart = -1;
+    let matchedJoinKeyword = '';
+    for (let index = searchIndex; index < upper.length; index += 1) {
+      const keyword = joinKeywords.find((candidate) => upper.startsWith(candidate, index));
+      if (!keyword) continue;
+      joinStart = index;
+      matchedJoinKeyword = keyword;
+      break;
+    }
+    if (joinStart === -1) break;
 
-    const joinStart = Math.min(...joinStartCandidates);
     const joinEndCandidates = [
-      ...joinKeywords.map((keyword) => upper.indexOf(keyword, joinStart + 1)).filter((index) => index !== -1),
-      ...boundaryKeywords.map((keyword) => upper.indexOf(keyword, joinStart + 1)).filter((index) => index !== -1),
+      ...joinKeywords
+        .map((keyword) => upper.indexOf(keyword, joinStart + matchedJoinKeyword.length))
+        .filter((index) => index !== -1),
+      ...boundaryKeywords
+        .map((keyword) => upper.indexOf(keyword, joinStart + matchedJoinKeyword.length))
+        .filter((index) => index !== -1),
     ];
     const joinEnd = joinEndCandidates.length ? Math.min(...joinEndCandidates) : sql.length;
     clauses.push(sql.slice(joinStart, joinEnd).trim());
@@ -305,6 +314,18 @@ function extractTopLevelJoinClauses(sql: string): string[] {
   }
 
   return clauses;
+}
+
+function splitJoinClause(joinClause: string): { keyword: string; body: string } {
+  const trimmed = joinClause.trim();
+  const match = trimmed.match(/^((?:(?:NATURAL|INNER|LEFT|RIGHT|FULL|CROSS)\s+)?JOIN)\s+(.+)$/i);
+  if (!match) {
+    return { keyword: 'JOIN', body: trimmed };
+  }
+  return {
+    keyword: match[1]!.toUpperCase(),
+    body: match[2]!.trim(),
+  };
 }
 
 function parseSetOperationClauses(sql: string): SqlClause[] {
@@ -344,7 +365,7 @@ function parseSqlClauses(sql: string): SqlClause[] {
 
   const clauses: SqlClause[] = [];
   const selectBody = extractSection(compact, 'SELECT', [' FROM ']);
-  const fromBody = extractSection(compact, 'FROM', [' JOIN ', ' INNER JOIN ', ' LEFT JOIN ', ' RIGHT JOIN ', ' FULL JOIN ', ' CROSS JOIN ', ' WHERE ', ' GROUP BY ', ' HAVING ', ' ORDER BY ']);
+  const fromBody = extractSection(compact, 'FROM', [' NATURAL JOIN ', ' JOIN ', ' INNER JOIN ', ' LEFT JOIN ', ' RIGHT JOIN ', ' FULL JOIN ', ' CROSS JOIN ', ' WHERE ', ' GROUP BY ', ' HAVING ', ' ORDER BY ']);
   const joins = extractTopLevelJoinClauses(compact);
   const whereBody = extractSection(compact, 'WHERE', [' GROUP BY ', ' HAVING ', ' ORDER BY ']);
   const groupByBody = extractSection(compact, 'GROUP BY', [' HAVING ', ' ORDER BY ']);
@@ -354,7 +375,13 @@ function parseSqlClauses(sql: string): SqlClause[] {
   if (selectBody) clauses.push({ id: 'select', label: 'SELECT clause', keyword: 'SELECT', expectedBody: selectBody });
   if (fromBody) clauses.push({ id: 'from', label: 'FROM clause', keyword: 'FROM', expectedBody: fromBody });
   joins.forEach((joinClause, index) => {
-    clauses.push({ id: `join_${index}`, label: `JOIN clause ${index + 1}`, keyword: 'JOIN', expectedBody: joinClause.replace(/^JOIN\s+/i, '').trim() });
+    const parsedJoin = splitJoinClause(joinClause);
+    clauses.push({
+      id: `join_${index}`,
+      label: `${parsedJoin.keyword} clause ${index + 1}`,
+      keyword: parsedJoin.keyword,
+      expectedBody: parsedJoin.body,
+    });
   });
   if (whereBody) clauses.push({ id: 'where', label: 'WHERE clause', keyword: 'WHERE', expectedBody: whereBody });
   if (groupByBody) clauses.push({ id: 'group_by', label: 'GROUP BY clause', keyword: 'GROUP BY', expectedBody: groupByBody });

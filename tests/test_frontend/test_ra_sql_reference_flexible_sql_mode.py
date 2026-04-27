@@ -62,3 +62,15 @@ def test_ra_sql_reference_splits_multiple_join_clauses_for_guided_sql_and_expect
     assert "function extractTopLevelJoinClauses(sql: string): string[]" in source
     assert "const joins = extractTopLevelJoinClauses(compact);" in source
     assert "clauses.push(sql.slice(joinStart, joinEnd).trim());" in source
+
+
+def test_ra_sql_reference_handles_natural_join_without_creating_extra_join_clause():
+    source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
+
+    assert "' NATURAL JOIN '" in source
+    assert "matchedJoinKeyword = keyword;" in source
+    assert "joinStart + matchedJoinKeyword.length" in source
+    assert "extractSection(compact, 'FROM', [' NATURAL JOIN '" in source
+    assert "function splitJoinClause(joinClause: string): { keyword: string; body: string }" in source
+    assert "keyword: match[1]!.toUpperCase()," in source
+    assert "label: `${parsedJoin.keyword} clause ${index + 1}`," in source

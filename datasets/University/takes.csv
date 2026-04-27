@@ -1,6 +1,6 @@
 ID,course_id,sec_id,semester,year,grade
-00128,CS-101,1,Fall,2017,A
-00128,CS-347,1,Fall,2017,A-
+128,CS-101,1,Fall,2017,A
+128,CS-347,1,Fall,2017,A-
 12345,CS-101,1,Fall,2017,C
 12345,CS-190,2,Spring,2017,A
 12345,CS-315,1,Spring,2018,A
@@ -21,3 +21,4 @@ ID,course_id,sec_id,semester,year,grade
 98765,CS-315,1,Spring,2018,B
 98988,BIO-101,1,Summer,2017,A
 98988,BIO-301,1,Summer,2018,NULL
+12345,CS-319,1,Fall,2017,A

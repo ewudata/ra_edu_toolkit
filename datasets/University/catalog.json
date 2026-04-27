@@ -220,7 +220,7 @@
       "prompt": "List student names with their corresponding advisor's names.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) ⋈ advisor ⋈ rho{id->i_id, name->advisor_name}(instructor) )",
+        "relational_algebra": "pi{student_name, advisor_name}( rho{id->s_id, name->student_name}(student) ⋈ advisor ⋈ rho{id->i_id, name->advisor_name}(instructor))",
         "sql": "SELECT st.name AS student_name, inst.name AS advisor_name\nFROM student AS st\nJOIN advisor AS adv ON st.id = adv.s_id\nJOIN instructor AS inst ON adv.i_id = inst.id;"
       },
       "expected_result": {
@@ -236,34 +236,12 @@
       ]
     },
     {
-      "id": "q13",
-      "prompt": "Find the student-course pairs where the grade is A.",
-      "difficulty": "beginner",
-      "solution": {
-        "relational_algebra": "pi{id, course_id, sec_id, semester, year}(sigma{grade = 'A'}(takes))",
-        "sql": "SELECT id, course_id, sec_id, semester, year FROM takes WHERE grade = 'A';"
-      },
-      "expected_result": {
-        "schema": [
-          "id",
-          "course_id",
-          "sec_id",
-          "semester",
-          "year"
-        ]
-      },
-      "hints": [
-        "selection",
-        "projection"
-      ]
-    },
-    {
       "id": "q14",
       "prompt": "Return the course id and title for courses that have at least one prerequisite.",
-      "difficulty": "intermediate",
+      "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{course_id, title}(course \u22c8 prereq)",
-        "sql": "SELECT DISTINCT c.course_id, c.title\nFROM course AS c JOIN prereq AS p ON c.course_id = p.course_id;"
+        "relational_algebra": "π{course_id, title}(course ⋈ prereq)",
+        "sql": "SELECT DISTINCT course_id, title\nFROM course natural join prereq;"
       },
       "expected_result": {
         "schema": [
@@ -280,8 +258,8 @@
       "prompt": "Find students who have not taken any course.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{id, name}(student) - pi{id, name}(student \u22c8 pi{id}(takes))",
-        "sql": "SELECT id, name FROM student\nEXCEPT\nSELECT DISTINCT st.id, st.name\nFROM student AS st\nJOIN takes AS t ON st.id = t.id;"
+        "relational_algebra": "pi{id, name}(student) - pi{id, name}(student ⋈ pi{id}(takes))",
+        "sql": "SELECT id, name FROM student\nEXCEPT\nSELECT DISTINCT id, name\nFROM student NATURAL JOIN takes;"
       },
       "expected_result": {
         "schema": [
@@ -291,7 +269,8 @@
       },
       "hints": [
         "difference",
-        "natural join"
+        "natural join",
+        "projection"
       ]
     },
     {
@@ -299,8 +278,8 @@
       "prompt": "Find student-course pairs where the student earned an A or a B.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{id, course_id, sec_id, semester, year}(sigma{grade = 'A'}(takes)) UNION pi{id, course_id, sec_id, semester, year}(sigma{grade = 'B'}(takes))",
-        "sql": "SELECT id, course_id, sec_id, semester, year FROM takes WHERE grade = 'A'\nUNION\nSELECT id, course_id, sec_id, semester, year FROM takes WHERE grade = 'B';"
+        "relational_algebra": "σ{grade = 'A' or grade = 'B'}(takes)",
+        "sql": "SELECT * \nFROM takes \nWHERE grade = 'A' or grade = 'B';"
       },
       "expected_result": {
         "schema": [
@@ -308,30 +287,33 @@
           "course_id",
           "sec_id",
           "semester",
-          "year"
+          "year",
+          "grade"
         ]
       },
       "hints": [
-        "union",
         "selection"
       ]
     },
     {
       "id": "q17",
-      "prompt": "Return the ids of people who appear as both a student and an instructor.",
+      "prompt": "Return the ids and names of people who appear in both student and instructor tables but have different names.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{id}(student) INTERSECT pi{id}(instructor)",
-        "sql": "SELECT id FROM student INTERSECT SELECT id FROM instructor;"
+        "relational_algebra": "π{student.id, student_name, instructor_name}(σ{student_name != instructor_name}(ρ{name->student_name}(student) ⋈ {student.id = instructor.id} ρ{name->instructor_name}(instructor)))",
+        "sql": "SELECT student.id, student.name student_name, instructor.name instructor_name \nFROM student JOIN instructor ON student.id = instructor.id \nWHERE student.name != instructor.name;"
       },
       "expected_result": {
         "schema": [
-          "id"
+          "id",
+          "student_name",
+          "intructor_name"
         ]
       },
       "hints": [
-        "intersection",
-        "projection"
+        "cartesian product",
+        "projection",
+        "selection"
       ]
     },
     {
@@ -339,8 +321,8 @@
       "prompt": "Show each section together with the meeting day and start time.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{course_id, sec_id, semester, year, day, start_hr, start_min}(section \u22c8 time_slot)",
-        "sql": "SELECT s.course_id, s.sec_id, s.semester, s.year, t.day, t.start_hr, t.start_min\nFROM section AS s\nJOIN time_slot AS t ON s.time_slot_id = t.time_slot_id;"
+        "relational_algebra": "pi{course_id, sec_id, semester, year, day, start_hr, start_min}(section ⋈ time_slot)",
+        "sql": "SELECT s.course_id, s.sec_id, s.semester, s.year, t.day, t.start_hr, t.start_min\nFROM section AS s NATURAL JOIN time_slot AS t;"
       },
       "expected_result": {
         "schema": [
@@ -354,16 +336,17 @@
         ]
       },
       "hints": [
-        "natural join"
+        "natural join",
+        "projection"
       ]
     },
     {
       "id": "q19",
-      "prompt": "Report the course and section identifiers that were offered in Fall 2009 but not in Spring 2010.",
-      "difficulty": "intermediate",
+      "prompt": "Find the course_ids and section_ids of courses that were offered in Fall 2017 but not in Spring 2018.",
+      "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{course_id, sec_id}(sigma{semester = 'Fall' AND year = 2009}(section)) - pi{course_id, sec_id}(sigma{semester = 'Spring' AND year = 2010}(section))",
-        "sql": "SELECT course_id, sec_id FROM section WHERE semester = 'Fall' AND year = 2009\nEXCEPT\nSELECT course_id, sec_id FROM section WHERE semester = 'Spring' AND year = 2010;"
+        "relational_algebra": "pi{course_id, sec_id}(sigma{semester = 'Fall' AND year = 2017}(section)) - pi{course_id, sec_id}(sigma{semester = 'Spring' AND year = 2018}(section))",
+        "sql": "SELECT course_id, sec_id FROM section WHERE semester = 'Fall' AND year = 2017\nEXCEPT\nSELECT course_id, sec_id FROM section WHERE semester = 'Spring' AND year = 2018;"
       },
       "expected_result": {
         "schema": [
@@ -397,7 +380,7 @@
     },
     {
       "id": "q21",
-      "prompt": "Find the ids of students who have taken every Computer Science course (may be empty).",
+      "prompt": "Find the ids of students who have taken every Computer Science course (result may be empty).",
       "difficulty": "advanced",
       "solution": {
         "relational_algebra": "(pi{id, course_id}(takes)) DIV (pi{course_id}(sigma{dept_name = 'Comp. Sci.'}(course)))",
@@ -415,16 +398,17 @@
     },
     {
       "id": "q22",
-      "prompt": "List the building and room numbers of classrooms with capacity at least 80.",
+      "prompt": "List the building, room number and capacity of classrooms with capacity at least 80.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{building, room_number}(sigma{capacity >= 80}(classroom))",
-        "sql": "SELECT building, room_number FROM classroom WHERE capacity >= 80;"
+        "relational_algebra": "pi{building, room_number, capacity}(sigma{capacity >= 80}(classroom))",
+        "sql": "SELECT building, room_number, capacity FROM classroom WHERE capacity >= 80;"
       },
       "expected_result": {
         "schema": [
           "building",
-          "room_number"
+          "room_number",
+          "capacity"
         ]
       },
       "hints": [
@@ -434,23 +418,24 @@
     },
     {
       "id": "q23",
-      "prompt": "List instructors who earn more than 90,000 along with their departments.",
+      "prompt": "List instructors and their corresponding departments that the instructor's salary is highter than the department's budget.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{instructor_name, dept_name, salary}(sigma{salary > 90000}(rho{name->instructor_name}(instructor) \u22c8 department))",
-        "sql": "SELECT inst.name AS instructor_name, inst.dept_name, inst.salary\nFROM instructor AS inst\nWHERE inst.salary > 90000;"
+        "relational_algebra": "π{name, dept_name, salary, budget}(σ{salary > department.budget}(instructor ⋈ department))",
+        "sql": "SELECT name, dept_name, salary, budget \nFROM instructor NATURAL JOIN department \nWHERE salary > department.budget;"
       },
       "expected_result": {
         "schema": [
-          "instructor_name",
+          "name",
           "dept_name",
-          "salary"
+          "salary",
+          "budget"
         ]
       },
       "hints": [
         "natural join",
-        "rename",
-        "selection"
+        "selection",
+        "projection"
       ]
     },
     {
@@ -549,28 +534,6 @@
       ]
     },
     {
-      "id": "q29",
-      "prompt": "List student-course combinations where the student did not receive an F.",
-      "difficulty": "beginner",
-      "solution": {
-        "relational_algebra": "pi{id, course_id, sec_id, semester, year}(takes) - pi{id, course_id, sec_id, semester, year}(sigma{grade = 'F'}(takes))",
-        "sql": "SELECT id, course_id, sec_id, semester, year FROM takes\nEXCEPT\nSELECT id, course_id, sec_id, semester, year FROM takes WHERE grade = 'F';"
-      },
-      "expected_result": {
-        "schema": [
-          "id",
-          "course_id",
-          "sec_id",
-          "semester",
-          "year"
-        ]
-      },
-      "hints": [
-        "difference",
-        "selection"
-      ]
-    },
-    {
       "id": "q30",
       "prompt": "Find departments that currently do not offer any course.",
       "difficulty": "intermediate",
@@ -609,20 +572,22 @@
     },
     {
       "id": "q32",
-      "prompt": "Find all courses taught in the Fall 2017 semester, but not in the Spring 2018 semester.",
-      "difficulty": "intermediate",
+      "prompt": "Find each course title together with the title of its prerequisite course.",
+      "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{course_id}(sigma{semester = 'Fall' AND year = 2017}(teaches)) - pi{course_id}(sigma{semester = 'Spring' AND year = 2018}(teaches))",
-        "sql": "SELECT course_id FROM teaches WHERE semester = 'Fall' AND year = 2017\nEXCEPT\nSELECT course_id FROM teaches WHERE semester = 'Spring' AND year = 2018;"
+        "relational_algebra": "π{course_title, prerequisite_title}((ρ{title->course_title}(ρc(course)) ⋈ ρpr(prereq)) ⋈{pr.prereq_id = p.course_id} ρ{title->prerequisite_title}(ρp(course)))",
+        "sql": "SELECT c.title AS course_title, p.title AS prerequisite_title \nFROM course c NATURAL JOIN prereq AS pr \nJOIN course AS p ON pr.prereq_id = p.course_id;"
       },
       "expected_result": {
         "schema": [
-          "course_id"
+          "course_title",
+          "prerequisite_title"
         ]
       },
       "hints": [
-        "difference",
-        "selection",
+        "cartesian product",
+        "natural join",
+        "rename",
         "projection"
       ]
     },
