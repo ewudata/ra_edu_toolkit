@@ -10,10 +10,26 @@ import time
 import threading
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+
+def _resolve_host(host_var: str, base_url_var: str, default: str) -> str:
+    """Resolve a bind host from explicit env or the configured base URL."""
+    host = os.getenv(host_var)
+    if host:
+        return host
+
+    base_url = os.getenv(base_url_var, "")
+    if base_url:
+        parsed = urlparse(base_url)
+        if parsed.hostname:
+            return parsed.hostname
+
+    return default
 
 
 def start_backend():
@@ -50,10 +66,11 @@ def start_frontend():
     """Start frontend React dev server"""
     print("🚀 Starting frontend application...")
     try:
+        host = _resolve_host("FRONTEND_HOST", "FRONTEND_BASE_URL", "127.0.0.1")
         port = os.getenv("FRONTEND_PORT", "5173")
 
         subprocess.run(
-            ["npm", "run", "dev", "--", "--port", port],
+            ["npm", "run", "dev", "--", "--host", host, "--port", port],
             cwd=str(Path(__file__).parent.parent / "frontend"),
             check=True,
         )
@@ -77,7 +94,7 @@ def main():
     # Get configuration from environment
     backend_host = os.getenv("BACKEND_HOST", "0.0.0.0")
     backend_port = os.getenv("BACKEND_PORT", "8000")
-    frontend_host = os.getenv("FRONTEND_HOST", "0.0.0.0")
+    frontend_host = _resolve_host("FRONTEND_HOST", "FRONTEND_BASE_URL", "127.0.0.1")
     frontend_port = os.getenv("FRONTEND_PORT", "5173")
 
     print("📋 Service Information:")
