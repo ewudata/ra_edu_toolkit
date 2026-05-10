@@ -236,26 +236,8 @@
       ]
     },
     {
-      "id": "q14",
-      "prompt": "Return the course id and title for courses that have at least one prerequisite.",
-      "difficulty": "beginner",
-      "solution": {
-        "relational_algebra": "π{course_id, title}(course ⋈ prereq)",
-        "sql": "SELECT DISTINCT course_id, title\nFROM course natural join prereq;"
-      },
-      "expected_result": {
-        "schema": [
-          "course_id",
-          "title"
-        ]
-      },
-      "hints": [
-        "natural join"
-      ]
-    },
-    {
       "id": "q15",
-      "prompt": "Find students who have not taken any course.",
+      "prompt": "Find ids and names of students who have not taken any course.",
       "difficulty": "intermediate",
       "solution": {
         "relational_algebra": "pi{id, name}(student) - pi{id, name}(student ⋈ pi{id}(takes))",
@@ -459,20 +441,19 @@
     },
     {
       "id": "q25",
-      "prompt": "Retrieve the names of instructors who taught during Spring 2010.",
-      "difficulty": "intermediate",
+      "prompt": "Retrieve the names of instructors who taught during Spring 2018.",
+      "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{instructor_name}(rho{id->i_id, name->instructor_name}(instructor) \u22c8 sigma{semester = 'Spring' AND year = 2010}(teaches))",
-        "sql": "SELECT DISTINCT inst.name AS instructor_name\nFROM instructor AS inst\nJOIN teaches AS te ON inst.id = te.id\nWHERE te.semester = 'Spring' AND te.year = 2010;"
+        "relational_algebra": "pi{name}((instructor) \u22c8 sigma{semester = 'Spring' AND year = 2018}(teaches))",
+        "sql": "SELECT DISTINCT name\nFROM instructor NATURAL JOIN teaches\nWHERE semester = 'Spring' AND year = 2018;"
       },
       "expected_result": {
         "schema": [
-          "instructor_name"
+          "name"
         ]
       },
       "hints": [
         "natural join",
-        "rename",
         "selection"
       ]
     },
@@ -517,20 +498,23 @@
     },
     {
       "id": "q28",
-      "prompt": "Return ids of students who have earned both an A and a B in different courses.",
+      "prompt": "Return ids (together with couse_ids and grades) of students who have taken the same course more than once.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{id}(sigma{grade = 'A'}(takes)) INTERSECT pi{id}(sigma{grade = 'B'}(takes))",
-        "sql": "SELECT t1.id\nFROM takes AS t1\nWHERE t1.grade = 'A' AND EXISTS (SELECT 1 FROM takes AS t2 WHERE t2.id = t1.id AND t2.grade = 'B');"
-      },
+        "relational_algebra": "π{t1.id, t1.course_id, t1.grade}(σ{t1.id = t2.id and t1.course_id = t2.course_id and (t1.semester != t2.semester or t1.year != t2.year or t1.sec_id != t2.sec_id)}(ρt1(takes) x ρt2(takes)))",
+        "sql": "SELECT DISTINCT t1.id, t1.course_id, t1.grade\nFROM takes AS t1 JOIN takes AS t2 ON t1.id = t2.id and t1.course_id = t2.course_id\nWHERE t1.semester != t2.semester or t1.year != t2.year or t1.sec_id != t2.sec_id;"
+        },
       "expected_result": {
         "schema": [
-          "id"
+          "id",
+          "course_id",
+          "grade"
         ]
       },
       "hints": [
-        "intersection",
-        "selection"
+        "cartesian product",
+        "selection",
+        "projection"
       ]
     },
     {

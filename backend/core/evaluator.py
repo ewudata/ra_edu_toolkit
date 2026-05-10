@@ -207,7 +207,7 @@ def _product(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
     right_aliases = R.attrs.get("aliases", {})
     L["_k"] = 1
     R["_k"] = 1
-    M = L.merge(R, on="_k", how="outer", suffixes=("", "_r"))
+    M = L.merge(R, on="_k", how="inner", suffixes=("", "_r"))
     if "_k" in M.columns:
         M = M.drop(columns=["_k"])
     L.drop(columns=["_k"], inplace=True)

@@ -1,376 +1,352 @@
 # RA Education Toolkit
 
-An interactive educational platform designed for learning relational algebra, combining modern AI-driven interactivity with traditional database education to make learning more accessible, engaging, and conceptually clear.
+An interactive platform for learning relational algebra and SQL with a FastAPI backend and a React/Vite frontend.
 
-## 🎯 Project Goals
+## Project Goals
 
-This project provides a suite of LLM-powered learning tools that bridge the conceptual and practical gap between relational algebra and SQL through three major components:
+The toolkit focuses on three learning workflows:
 
-- **Dual Query Translation**: A model that maps between relational algebra expressions and SQL queries using a dual-encoder architecture
-- **Interactive Query Visualization**: A dynamic visualization engine that executes relational algebra expressions step by step and visually displays intermediate results
-- **Personalized Learning and Feedback**: An adaptive tutor system that uses LLMs to generate tailored exercises, guided hints, and detailed explanations
+- Translate between relational algebra and SQL.
+- Execute relational algebra expressions step by step and inspect intermediate results.
+- Practice guided exercises with feedback, hints, and progress tracking.
 
-## 🏗️ Project Architecture
+## Project Architecture
 
-```
+```text
 ra_edu_toolkit/
 ├── backend/                    # FastAPI backend service
-│   ├── main.py                # Application entry point
-│   ├── api/routes/            # API routes
-│   ├── core/                  # Core RA engine
-│   └── services/              # Business logic services
-├── frontend/                  # Streamlit frontend application
-│   ├── app.py                # Main application
-│   ├── pages/                # Multi-page application
-│   ├── components/            # UI components
-│   └── utils/                # Utility functions
-├── datasets/                  # Sample datasets
-├── assets/                    # Static resources
-├── scripts/                   # Utility scripts
-├── tests/                     # Test files
-└── .github/workflows/        # CI/CD configuration
+├── frontend/                   # React + Vite frontend
+├── datasets/                   # Sample datasets
+├── assets/                     # Static resources and SQL setup files
+├── scripts/                    # Utility scripts
+├── tests/                      # Test suite
+└── .github/workflows/          # CI/CD configuration
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Requirements
 
 - Python 3.11+
-- pip or conda
+- Node.js 20+
+- npm
 
 ### Installation
 
 ```bash
-# Clone the project
 git clone <repository-url>
 cd ra_edu_toolkit
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
+python3 -m venv .venv
+source .venv/bin/activate
 
-# Install backend dependencies
 pip install -r requirements.txt
 
-# Install frontend dependencies
-pip install -r requirements-frontend.txt
+cd frontend
+npm install
+cd ..
 
-# Set up environment configuration
 cp .env.example .env
-# Edit .env with your preferred settings
 ```
+
+Important: use the project virtual environment when starting the backend. The backend code uses modern Python typing syntax and will fail under older system Python versions.
 
 ### Environment Configuration
 
-The project uses environment variables for configuration. Copy `.env.example` to `.env` and customize as needed:
+Copy `.env.example` to `.env` and update values as needed:
 
 ```bash
 cp .env.example .env
 ```
 
-**Environment Variables**:
-- `BACKEND_BASE_URL` - Backend API base URL (default: `http://localhost:8000`)
-- `BACKEND_HOST` - Backend host address (default: `0.0.0.0`)
-- `BACKEND_PORT` - Backend port (default: `8000`)
-- `FRONTEND_BASE_URL` - Frontend URL used for OAuth redirects (default: `http://localhost:8501`)
-- `FRONTEND_HOST` - Frontend host address (default: `0.0.0.0`)
-- `FRONTEND_PORT` - Frontend port (default: `8501`)
-- `SUPABASE_URL` - Supabase project URL or project ref
-- `SUPABASE_ANON_KEY` - Supabase anon key (OAuth + token verification)
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (backend only)
-- `OAUTH_STATE_SECRET` - Secret used to sign OAuth state tokens (backend only)
-- `DEBUG` - Enable debug mode (default: `True`)
-- `RELOAD` - Enable auto-reload (default: `True`)
+Key variables:
 
-For production, use `.env.production` as a template and set `DEBUG=False` and `RELOAD=False`.
+- `BACKEND_BASE_URL` - Backend API base URL, default `http://localhost:8000`
+- `BACKEND_HOST` - Backend bind host, default `0.0.0.0`
+- `BACKEND_PORT` - Backend port, default `8000`
+- `FRONTEND_BASE_URL` - Frontend URL used for OAuth redirects, default `http://localhost:5173`
+- `FRONTEND_PORT` - Frontend dev server port, default `5173`
+- `CORS_ORIGINS` - Comma-separated allowed frontend origins for the backend
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_ANON_KEY` - Supabase anon key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `SUPABASE_USER_DATASETS_BUCKET` - User dataset storage bucket name
+- `OAUTH_STATE_SECRET` - Secret used to sign OAuth state tokens
+- `DEBUG` - Enable debug mode
+- `RELOAD` - Enable backend auto-reload
+
+For production, use `.env.production` as a starting point and set `DEBUG=False` and `RELOAD=False`.
+
+### Supabase Setup
 
 For Google login, user dataset metadata, and query mastery tracking:
+
 1. Enable Google provider in Supabase Authentication.
-2. Add redirect URL `http://localhost:8000/auth/google/callback` (or your backend URL).
-3. Run `assets/supabase_user_datasets_setup.sql` in Supabase SQL editor.
-   This provisions `user_datasets`, `default_datasets`, and `query_mastery`.
+2. Add redirect URL `http://localhost:8000/auth/google/callback` or your deployed backend callback URL.
+3. Run `assets/supabase_user_datasets_setup.sql` in the Supabase SQL editor.
 4. Create private storage buckets:
    - `ra-default-datasets`
-   - `ra-user-datasets` (or set `SUPABASE_USER_DATASETS_BUCKET`)
+   - `ra-user-datasets` or the bucket named in `SUPABASE_USER_DATASETS_BUCKET`
 5. Seed shared default datasets in `public.default_datasets`:
-   ```sql
-   insert into public.default_datasets (dataset_name, bucket_name, object_prefix)
-   values
-     ('Sales', 'ra-default-datasets', 'Sales'),
-     ('TestDB', 'ra-default-datasets', 'TestDB'),
-     ('University', 'ra-default-datasets', 'University')
-   on conflict (dataset_name) do update
-     set bucket_name = excluded.bucket_name,
-         object_prefix = excluded.object_prefix,
-         enabled = true;
-   ```
+
+```sql
+insert into public.default_datasets (dataset_name, bucket_name, object_prefix)
+values
+  ('Sales', 'ra-default-datasets', 'Sales'),
+  ('TestDB', 'ra-default-datasets', 'TestDB'),
+  ('University', 'ra-default-datasets', 'University')
+on conflict (dataset_name) do update
+  set bucket_name = excluded.bucket_name,
+      object_prefix = excluded.object_prefix,
+      enabled = true;
+```
+
 6. Upload CSV files and each dataset `catalog.json` to `ra-default-datasets` using the same prefixes.
 
 Dataset behavior:
+
 - `Sales`, `TestDB`, and `University` are shared datasets loaded from Supabase Storage.
 - User-imported datasets are stored in Supabase Storage under user prefixes.
-- Deleting a shared default dataset in UI hides it only for the current user.
+- Deleting a shared default dataset in the UI hides it only for the current user.
 
-### Starting Services
+## Starting Services
 
-#### Method 1: Development Mode (Recommended)
+### Method 1: Development Script
 
-Use the development server script to start both frontend and backend simultaneously:
+Start both services from the project root with the virtual environment active:
 
 ```bash
+source .venv/bin/activate
 python scripts/dev_server.py
 ```
 
-This will start:
-- Backend API: http://localhost:8000 (or your configured BACKEND_PORT)
-- Frontend Application: http://localhost:8501 (or your configured FRONTEND_PORT)
-- API Documentation: http://localhost:8000/docs
+This starts:
 
-#### Method 2: Start Separately
+- Backend API: `http://localhost:8000`
+- Frontend app: `http://localhost:5173`
+- API docs: `http://localhost:8000/docs`
 
-**Start Backend Service**:
+### Method 2: Start Separately
+
+Start the backend:
+
 ```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+source .venv/bin/activate
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-**Start Frontend Application**:
+Start the frontend:
+
 ```bash
-streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-#### Method 3: Using VS Code Launch Configurations
+Notes:
 
-Use the pre-configured VS Code launch configurations:
-1. Open VS Code
-2. Go to Run and Debug panel (F5)
-3. Select "Start Backend Server" or "Start Frontend App"
-4. Both configurations automatically load environment variables from `.env`
+- The Vite dev server proxies `/api` requests to `http://localhost:8000`.
+- If `localhost` binds to IPv6 on your machine and fails, use `127.0.0.1` explicitly as shown above.
 
-#### Method 4: Using CLI Tool
+### Method 3: CLI Tool
 
 ```bash
+source .venv/bin/activate
 python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Student))" University
 ```
 
-## 📚 Features
+## Features
 
-### 🗄️ Database Manager
-- Support for CSV/ZIP file import
-- Support for SQL script import
-- Database and table structure browsing
+### Database Manager
+
+- CSV and ZIP dataset import
+- SQL script import
+- Schema browsing
 - Data preview and statistics
-- Lazy-loaded table previews (loaded per database on demand) for faster page reruns
+- Lazy-loaded table previews
 
-### 🧮 Relational Algebra Exercises
+### Relational Algebra Exercises
+
 - Guided three-step practice flow
-- Database-aware pre-defined questions
+- Database-aware predefined questions
 - Custom expression workspace
 - Execution trace visualization
 
-### 🧠 SQL Exercises
-- Graded practice problem system
+### SQL Exercises
+
+- Graded practice problems
 - Instant feedback and scoring
 - Standard answer comparison
 - Learning progress tracking
 
-### 🔄 RA ↔ SQL Reference
+### RA ↔ SQL Reference
+
 - Side-by-side relational algebra and SQL solutions
 - Expected schema and result previews
 - Translation heuristics and learning tips
 
-### 🎯 Execution Process Visualization
+### Execution Process Visualization
+
 - Step-by-step execution tracking
 - Intermediate result display
-- Operation type statistics
-- Performance analysis
+- Operation statistics
+- Performance-oriented trace inspection
 
-## 🔧 Supported Relational Algebra Operations
+## Supported Relational Algebra Operations
 
-- **Projection (π)**: `π{attr1,attr2}(R)` - Select specific attributes
-- **Selection (σ)**: `σ{condition}(R)` - Filter rows based on conditions
-- **Rename (ρ)**: `ρ{old->new}(R)` - Rename attributes
-- **Join (⋈)**: `R ⋈ S` - Natural join
-- **Cartesian Product (×)**: `R × S` - Cartesian product
-- **Union (∪)**: `R ∪ S` - Union
-- **Difference (−)**: `R − S` - Difference
-- **Intersection (∩)**: `R ∩ S` - Intersection
+- `Projection (π)`: `π{attr1,attr2}(R)`
+- `Selection (σ)`: `σ{condition}(R)`
+- `Rename (ρ)`: `ρ{old->new}(R)`
+- `Join (⋈)`: `R ⋈ S`
+- `Cartesian Product (×)`: `R × S`
+- `Union (∪)`: `R ∪ S`
+- `Difference (−)`: `R − S`
+- `Intersection (∩)`: `R ∩ S`
 
-## 📖 Usage Examples
+## Usage Examples
 
-### Basic Query Examples
+### Query Examples
 
-```sql
--- Find names of computer science students
+```text
 π{name}(σ{major = 'CS'}(Students))
-
--- Find students enrolled in specific courses
 π{name}(Students ⋈ Takes ⋈ σ{course_id = 'CS101'}(Courses))
-
--- Find students with excellent grades
 π{name}(σ{grade >= 'A'}(Students ⋈ Takes))
 ```
 
-### API Usage Examples
+### Frontend API Client
 
-```python
-from frontend.utils.api_client import APIClient
+```ts
+import { api } from './frontend/src/lib/api'
 
-# Initialize client
-client = APIClient("http://localhost:8000")
-
-# Get database list
-databases = client.get_databases()
-
-# Execute query
-result = client.evaluate_query(
-    database="University",
-    query_id="custom",
-    expression="π{name}(σ{major = 'CS'}(Students))"
+const databases = await api.getDatabases()
+const result = await api.evaluateQuery(
+  'University',
+  'custom',
+  "π{name}(σ{major = 'CS'}(Students))",
 )
 ```
 
-## 🐳 Docker Deployment
+In local development, the frontend uses the Vite proxy and calls `/api` by default. For deployed builds, set `VITE_BACKEND_URL` at build time if the frontend should call a different backend origin.
+
+## Docker Deployment
 
 ### Build Images
 
 ```bash
-# Build backend image
 docker build -f Dockerfile.backend -t ra-toolkit-backend .
-
-# Build frontend image
 docker build -f Dockerfile.frontend -t ra-toolkit-frontend .
 ```
 
 ### Run Containers
 
+Backend:
+
 ```bash
-# Start backend service with environment variables
 docker run -d -p 8000:8000 \
   -e BACKEND_HOST=0.0.0.0 \
   -e BACKEND_PORT=8000 \
   -e DEBUG=false \
-  --name backend ra-toolkit-backend
-
-# Start frontend application with environment variables
-docker run -d -p 8501:8501 \
-  -e BACKEND_BASE_URL=http://backend:8000 \
-  -e FRONTEND_HOST=0.0.0.0 \
-  -e FRONTEND_PORT=8501 \
-  --name frontend ra-toolkit-frontend
+  --name ra-backend ra-toolkit-backend
 ```
 
-### Docker Compose (Alternative)
+Frontend:
 
-You can also use Docker Compose to manage multiple containers:
+```bash
+docker run -d -p 8080:80 \
+  --name ra-frontend ra-toolkit-frontend
+```
+
+Notes:
+
+- The production frontend image is a static Nginx container and listens on port `80` inside the container.
+- If the frontend must call a non-default backend origin, rebuild the frontend image with `--build-arg VITE_BACKEND_URL=https://your-api-domain`.
+
+### Docker Compose
+
+The included [docker-compose.yaml](/Users/danl/Library/CloudStorage/GoogleDrive-danl@ewu.edu/My%20Drive/RelationalAlgebra/ra_edu_toolkit/docker-compose.yaml:1) is configured for the existing GHCR images and maps:
+
+- Frontend to host port `8508`
+- Backend to host port `8507`
+
+Start it with:
 
 ```bash
 docker-compose up -d
 ```
 
-## 🌐 Production Deployment
+## Production Deployment
 
-### Server Configuration
+Set production environment variables for the backend:
 
-1. **Set up environment variables** on your server:
 ```bash
 export BACKEND_BASE_URL=https://your-api-domain.com
 export BACKEND_HOST=0.0.0.0
 export BACKEND_PORT=8000
-export FRONTEND_PORT=8501
+export FRONTEND_BASE_URL=https://your-frontend-domain.com
 export DEBUG=false
 export RELOAD=false
 ```
 
-2. **Or use a production .env file**:
+Or copy the production template:
+
 ```bash
 cp .env.production .env
-# Edit .env with production values
 ```
 
-3. **Start services** with production settings:
-```bash
-# Backend with production settings
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Then start the backend:
 
-# Frontend with production settings
-streamlit run frontend/app.py --server.port 8501
+```bash
+source .venv/bin/activate
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
-### GitHub Actions Deployment
+For the frontend, serve the built static assets through Nginx or deploy the `Dockerfile.frontend` image.
 
-The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that can be configured with secrets:
-- `BACKEND_BASE_URL`
-- `BACKEND_HOST`
-- `BACKEND_PORT`
-- `FRONTEND_PORT`
-- `DEBUG`
-- `RELOAD`
-
-## 🧪 Testing
+## Testing
 
 ```bash
-# Run all tests
 pytest
-
-# Run backend tests
 pytest tests/test_backend/
-
-# Run frontend tests
 pytest tests/test_frontend/
-
-# Generate test coverage report
 pytest --cov=backend --cov=frontend
 ```
 
-## 🔧 Development
+## Development
 
-### Code Formatting
+### Formatting and Linting
 
 ```bash
-# Format code
 black backend/ frontend/ scripts/
-
-# Sort imports
 isort backend/ frontend/ scripts/
-
-# Code linting
 flake8 backend/ frontend/ scripts/
+```
+
+Frontend-specific checks:
+
+```bash
+cd frontend
+npm run lint
 ```
 
 ### Adding New Features
 
-1. Add core logic in `backend/core/`
-2. Add API endpoints in `backend/routes/`
-3. Add UI components in `frontend/components/`
-4. Add new pages in `frontend/pages/`
-5. Update tests and documentation
+1. Add backend logic in `backend/`.
+2. Add or update API routes in `backend/routes/`.
+3. Add frontend components in `frontend/src/components/`.
+4. Add frontend pages in `frontend/src/pages/`.
+5. Update tests and documentation.
 
-### Environment Configuration in Development
+## API Documentation
 
-The project supports multiple environment configurations:
-- **`.env`** - Local development (automatically loaded)
-- **`.env.example`** - Template for other developers
-- **`.env.production`** - Production configuration template
-
-All configurations load environment variables using `python-dotenv` and respect the `.env` file when present.
-
-## 📄 API Documentation
-
-After starting the backend service, visit http://localhost:8000/docs to view the complete API documentation.
+After starting the backend, visit `http://localhost:8000/docs`.
 
 Main endpoints:
-- `GET /databases` - Get database list
-- `POST /databases/import/zip` - Import database from ZIP
-- `POST /databases/import/sql` - Import database from SQL
-- `GET /databases/{database}/queries` - Get query list
-- `POST /databases/{database}/queries/{query_id}/evaluate` - Evaluate query
 
-## 📝 License
+- `GET /databases`
+- `POST /databases/import/zip`
+- `POST /databases/import/sql`
+- `GET /databases/{database}/queries`
+- `POST /databases/{database}/queries/{query_id}/evaluate`
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License
 
----
-
-**Making relational algebra learning simple and fun!** 🎓✨
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

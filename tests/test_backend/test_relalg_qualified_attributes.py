@@ -64,3 +64,13 @@ def test_theta_join_uses_alias_qualified_conditions():
     assert len(rows) == 9
     assert {"student_name": "Zhang", "advisor_name": "Katz"} in rows
     assert {"student_name": "Shankar", "advisor_name": "Srinivasan"} in rows
+
+
+def test_natural_join_with_no_common_columns_and_empty_right_side_returns_no_rows():
+    ast = stepper.parse(
+        "pi{instructor_name}(rho{id->i_id, name->instructor_name}(instructor) ⋈ sigma{semester = 'Spring' AND year = 2010}(teaches))"
+    )
+    result = evaluator.eval(ast, _load_university_env(), [])
+
+    assert [c for c in result.columns if c != "_prov"] == ["instructor_name"]
+    assert result[["instructor_name"]].to_dict(orient="records") == []
