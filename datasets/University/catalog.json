@@ -1,7 +1,7 @@
 {
   "database": "University",
   "title": "University Relational Algebra Practice",
-  "description": "Thirty-seven practice queries that cover the major relational algebra operators on the university schema.",
+  "description": "Thirty-two practice queries that cover the major relational algebra operators on the university schema.",
   "questions": [
     {
       "id": "q01",
@@ -236,7 +236,7 @@
       ]
     },
     {
-      "id": "q15",
+      "id": "q13",
       "prompt": "Find ids and names of students who have not taken any course.",
       "difficulty": "intermediate",
       "solution": {
@@ -256,7 +256,7 @@
       ]
     },
     {
-      "id": "q16",
+      "id": "q14",
       "prompt": "Find student-course pairs where the student earned an A or a B.",
       "difficulty": "beginner",
       "solution": {
@@ -278,7 +278,7 @@
       ]
     },
     {
-      "id": "q17",
+      "id": "q15",
       "prompt": "Return the ids and names of people who appear in both student and instructor tables but have different names.",
       "difficulty": "intermediate",
       "solution": {
@@ -299,7 +299,7 @@
       ]
     },
     {
-      "id": "q18",
+      "id": "q16",
       "prompt": "Show each section together with the meeting day and start time.",
       "difficulty": "beginner",
       "solution": {
@@ -323,7 +323,7 @@
       ]
     },
     {
-      "id": "q19",
+      "id": "q17",
       "prompt": "Find the course_ids and section_ids of courses that were offered in Fall 2017 but not in Spring 2018.",
       "difficulty": "advanced",
       "solution": {
@@ -343,7 +343,7 @@
       ]
     },
     {
-      "id": "q20",
+      "id": "q18",
       "prompt": "Rename the prerequisite relation so that course_id becomes main_course and prereq_id becomes required_course.",
       "difficulty": "beginner",
       "solution": {
@@ -361,7 +361,7 @@
       ]
     },
     {
-      "id": "q21",
+      "id": "q19",
       "prompt": "Find the ids of students who have taken every Computer Science course (result may be empty).",
       "difficulty": "advanced",
       "solution": {
@@ -379,7 +379,7 @@
       ]
     },
     {
-      "id": "q22",
+      "id": "q20",
       "prompt": "List the building, room number and capacity of classrooms with capacity at least 80.",
       "difficulty": "beginner",
       "solution": {
@@ -399,7 +399,7 @@
       ]
     },
     {
-      "id": "q23",
+      "id": "q21",
       "prompt": "List instructors and their corresponding departments that the instructor's salary is highter than the department's budget.",
       "difficulty": "intermediate",
       "solution": {
@@ -421,7 +421,7 @@
       ]
     },
     {
-      "id": "q24",
+      "id": "q22",
       "prompt": "Find the ids and names of students that are not assigned an advisor.",
       "difficulty": "intermediate",
       "solution": {
@@ -440,7 +440,7 @@
       ]
     },
     {
-      "id": "q25",
+      "id": "q23",
       "prompt": "Retrieve the names of instructors who taught during Spring 2018.",
       "difficulty": "beginner",
       "solution": {
@@ -458,7 +458,7 @@
       ]
     },
     {
-      "id": "q26",
+      "id": "q24",
       "prompt": "List the courses (id and title) that have no prerequisites.",
       "difficulty": "intermediate",
       "solution": {
@@ -477,7 +477,7 @@
       ]
     },
     {
-      "id": "q27",
+      "id": "q25",
       "prompt": "Find student-advisor pairs where both are in the same department.",
       "difficulty": "advanced",
       "solution": {
@@ -492,12 +492,12 @@
       },
       "hints": [
         "selection",
-        "natural join",
+        "cartesian product",
         "rename"
       ]
     },
     {
-      "id": "q28",
+      "id": "q26",
       "prompt": "Return ids (together with couse_ids and grades) of students who have taken the same course more than once.",
       "difficulty": "advanced",
       "solution": {
@@ -518,34 +518,18 @@
       ]
     },
     {
-      "id": "q30",
-      "prompt": "Find departments that currently do not offer any course.",
+      "id": "q27",
+      "prompt": "Find the course_ids, semesters, and years of course sections that were taught in the Fall 2017 semester, or in the Spring 2018 semester, or in both.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{dept_name}(department) - pi{dept_name}(course)",
-        "sql": "SELECT dept_name FROM department\nEXCEPT\nSELECT dept_name FROM course;"
+        "relational_algebra": "pi{course_id, semester, year}(sigma{semester = 'Fall' AND year = 2017}(section)) UNION pi{course_id, semester, year}(sigma{semester = 'Spring' AND year = 2018}(section))",
+        "sql": "SELECT course_id, semester, year FROM section WHERE semester = 'Fall' AND year = 2017\nUNION\nSELECT course_id, semester, year FROM section WHERE semester = 'Spring' AND year = 2018;"
       },
       "expected_result": {
         "schema": [
-          "dept_name"
-        ]
-      },
-      "hints": [
-        "difference",
-        "projection"
-      ]
-    },
-    {
-      "id": "q31",
-      "prompt": "Find all courses taught in the Fall 2017 semester, or in the Spring 2018 semester, or in both.",
-      "difficulty": "intermediate",
-      "solution": {
-        "relational_algebra": "pi{course_id}(sigma{semester = 'Fall' AND year = 2017}(teaches)) UNION pi{course_id}(sigma{semester = 'Spring' AND year = 2018}(teaches))",
-        "sql": "SELECT course_id FROM teaches WHERE semester = 'Fall' AND year = 2017\nUNION\nSELECT course_id FROM teaches WHERE semester = 'Spring' AND year = 2018;"
-      },
-      "expected_result": {
-        "schema": [
-          "course_id"
+          "course_id",
+          "semester",
+          "year"
         ]
       },
       "hints": [
@@ -555,7 +539,7 @@
       ]
     },
     {
-      "id": "q32",
+      "id": "q28",
       "prompt": "Find each course title together with the title of its prerequisite course.",
       "difficulty": "advanced",
       "solution": {
@@ -576,49 +560,33 @@
       ]
     },
     {
-      "id": "q33",
-      "prompt": "Find the names of all instructors in the Physics department, along with the course_id of all courses they have taught.",
-      "difficulty": "intermediate",
-      "solution": {
-        "relational_algebra": "pi{instructor_name, course_id}(rho{name->instructor_name}(sigma{dept_name = 'Physics'}(instructor)) \u22c8 teaches)",
-        "sql": "SELECT DISTINCT inst.name AS instructor_name, te.course_id\nFROM instructor AS inst\nJOIN teaches AS te ON inst.id = te.id\nWHERE inst.dept_name = 'Physics';"
-      },
-      "expected_result": {
-        "schema": [
-          "instructor_name",
-          "course_id"
-        ]
-      },
-      "hints": [
-        "natural join",
-        "rename",
-        "selection"
-      ]
-    },
-    {
-      "id": "q34",
+      "id": "q29",
       "prompt": "Find the largest salary value in the university.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "gamma{MAX(salary)->largest_salary}(instructor)",
-        "sql": "SELECT MAX(salary) AS largest_salary FROM instructor;"
+        "relational_algebra": "π{salary}(instructor) - π{i1.salary}(σ{i1.salary < i2.salary}(ρi1(instructor) × ρi2(instructor)))",
+        "sql": "SELECT DISTINCT salary\nFROM instructor\nEXCEPT\nSELECT DISTINCT i1.salary\nFROM instructor AS i1, instructor AS i2\nWHERE i1.salary < i2.salary;"
       },
       "expected_result": {
         "schema": [
-          "largest_salary"
+          "salary"
         ]
       },
       "hints": [
-        "aggregation"
+        "difference",
+        "rename",
+        "cartesian product",
+        "selection",
+        "projection"
       ]
     },
     {
-      "id": "q35",
-      "prompt": "Find all courses taught in the Fall 2017 semester and also in the Spring 2018 semester.",
+      "id": "q30",
+      "prompt": "Find the course_ids of courses taught in the Fall 2017 semester and also in the Spring 2018 semester.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{course_id}(sigma{semester = 'Fall' AND year = 2017}(teaches)) INTERSECT pi{course_id}(sigma{semester = 'Spring' AND year = 2018}(teaches))",
-        "sql": "SELECT course_id FROM teaches WHERE semester = 'Fall' AND year = 2017\nINTERSECT\nSELECT course_id FROM teaches WHERE semester = 'Spring' AND year = 2018;"
+        "relational_algebra": "pi{course_id}(sigma{semester = 'Fall' AND year = 2017}(section)) INTERSECT pi{course_id}(sigma{semester = 'Spring' AND year = 2018}(section))",
+        "sql": "SELECT course_id FROM section WHERE semester = 'Fall' AND year = 2017\nINTERSECT\nSELECT course_id FROM section WHERE semester = 'Spring' AND year = 2018;"
       },
       "expected_result": {
         "schema": [
@@ -632,7 +600,7 @@
       ]
     },
     {
-      "id": "q36",
+      "id": "q31",
       "prompt": "Find the names of all instructors in the Comp. Sci. department together with the course titles of all the courses that the instructors teach.",
       "difficulty": "advanced",
       "solution": {
@@ -647,12 +615,12 @@
       },
       "hints": [
         "natural join",
-        "rename",
+        "cartesian product",
         "selection"
       ]
     },
     {
-      "id": "q37",
+      "id": "q32",
       "prompt": "Find the IDs of students who have taken all the courses taught by Instructor 'Crick'.",
       "difficulty": "advanced",
       "solution": {
