@@ -86,6 +86,6 @@ def test_database_manager_protects_default_dataset_actions():
     assert "PROTECTED_DEFAULT_DATASETS" in source
     assert '"sales"' in source
     assert '"university"' in source
-    assert '"testdb"' in source
+    assert '"testdb"' not in source
     assert "db_name.lower() in PROTECTED_DEFAULT_DATASETS" in source
     assert "show_action_button = not (" in source

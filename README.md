@@ -93,7 +93,6 @@ For Google login, user dataset metadata, and query mastery tracking:
 insert into public.default_datasets (dataset_name, bucket_name, object_prefix)
 values
   ('Sales', 'ra-default-datasets', 'Sales'),
-  ('TestDB', 'ra-default-datasets', 'TestDB'),
   ('University', 'ra-default-datasets', 'University')
 on conflict (dataset_name) do update
   set bucket_name = excluded.bucket_name,
@@ -105,7 +104,7 @@ on conflict (dataset_name) do update
 
 Dataset behavior:
 
-- `Sales`, `TestDB`, and `University` are shared datasets loaded from Supabase Storage.
+- `Sales` and `University` are shared datasets loaded from Supabase Storage.
 - User-imported datasets are stored in Supabase Storage under user prefixes.
 - Deleting a shared default dataset in the UI hides it only for the current user.
 

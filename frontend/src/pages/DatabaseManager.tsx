@@ -5,7 +5,7 @@ import Collapsible from '../components/Collapsible';
 import TablePreview from '../components/TablePreview';
 import { HardDrive, Upload, FileArchive, FileCode, Trash2, RefreshCw } from 'lucide-react';
 
-const PROTECTED = new Set(['sales', 'university', 'testdb']);
+const PROTECTED = new Set(['sales', 'university']);
 
 export default function DatabaseManager() {
   const zipFileInputId = useId();

@@ -4,16 +4,6 @@ interface Props {
 
 function Example({ database }: { database?: string }) {
   const db = (database ?? '').toLowerCase();
-  if (db === 'testdb') {
-    return (
-      <div className="space-y-1 text-sm font-mono">
-        <p className="text-slate-600">-- Names of CS majors</p>
-        <p><span className="text-[var(--color-op)]">π</span><span className="text-[var(--color-attr)]">{'{name}'}</span>(<span className="text-[var(--color-op)]">σ</span><span className="text-[var(--color-cond)]">{"{major = 'CS'}"}</span>(<span className="text-[var(--color-rel)]">students</span>))</p>
-        <p className="text-slate-600 mt-2">-- Students enrolled in C101 with grades</p>
-        <p><span className="text-[var(--color-op)]">π</span><span className="text-[var(--color-attr)]">{'{name, grade}'}</span>(<span className="text-[var(--color-rel)]">students</span> ⋈ <span className="text-[var(--color-rel)]">enroll</span> ⋈ <span className="text-[var(--color-op)]">σ</span><span className="text-[var(--color-cond)]">{"{cid = 'C101'}"}</span>(<span className="text-[var(--color-rel)]">courses</span>))</p>
-      </div>
-    );
-  }
   if (db === 'sales') {
     return (
       <div className="space-y-1 text-sm font-mono">
