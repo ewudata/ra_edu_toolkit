@@ -18,11 +18,32 @@ def _load_university_env():
     return env
 
 
+def _load_sales_env():
+    root = Path(__file__).resolve().parents[2] / "datasets" / "Sales"
+    env = {}
+    for csv_path in root.glob("*.csv"):
+        relation = csv_path.stem.lower()
+        df = pd.read_csv(csv_path).copy()
+        df.columns = [c.lower() for c in df.columns]
+        df["_prov"] = [[(relation, int(i))] for i in range(len(df))]
+        env[relation] = df
+    return env
+
+
 def _evaluate_ra(expression: str) -> list[dict[str, object]]:
     ast = stepper.parse(expression)
     result = evaluator.eval(ast, _load_university_env(), [])
     visible = [c for c in result.columns if c != "_prov"]
     return result[visible].to_dict(orient="records")
+
+
+def _evaluate_sales_ra(expression: str) -> list[dict[str, object]]:
+    ast = stepper.parse(expression)
+    result = evaluator.eval(ast, _load_sales_env(), [])
+    visible = [c for c in result.columns if c != "_prov"]
+    rows = result[visible].copy()
+    rows = rows.where(pd.notnull(rows), None)
+    return rows.to_dict(orient="records")
 
 
 def test_relational_algebra_accepts_bang_equals_and_angle_brackets_as_not_equal():
@@ -35,6 +56,19 @@ def test_relational_algebra_accepts_bang_equals_and_angle_brackets_as_not_equal(
 
     assert bang_equals == angle_brackets
     assert bang_equals
+
+
+def test_relational_algebra_selection_supports_is_null():
+    rows = _evaluate_sales_ra("pi{empl_num}(sigma{manager IS NULL}(salesreps))")
+
+    assert rows == [{"empl_num": 106}]
+
+
+def test_relational_algebra_selection_supports_is_not_null():
+    rows = _evaluate_sales_ra("pi{empl_num}(sigma{manager IS NOT NULL}(salesreps))")
+
+    assert rows
+    assert {"empl_num": 106} not in rows
 
 
 def test_sql_accepts_bang_equals_and_angle_brackets_as_not_equal(monkeypatch):

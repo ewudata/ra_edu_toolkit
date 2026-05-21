@@ -45,7 +45,7 @@ def _replace_identifiers(expr: str) -> str:
         if match:
             token = match.group(0)
             lowered = token.lower()
-            if lowered in ("and", "or", "not"):
+            if lowered in ("and", "or", "not", "is_null", "is_not_null"):
                 result.append(lowered)
             elif lowered == "true":
                 result.append("True")
@@ -60,11 +60,63 @@ def _replace_identifiers(expr: str) -> str:
     return "".join(result)
 
 
+def _is_null(value: Any) -> bool:
+    return bool(pd.isna(value))
+
+
+def _is_not_null(value: Any) -> bool:
+    return not _is_null(value)
+
+
+def _replace_null_predicates(expr: str) -> str:
+    result: List[str] = []
+    i = 0
+    n = len(expr)
+    ident = r"[A-Za-z_][A-Za-z0-9_.]*"
+    is_not_null_re = re.compile(rf"({ident})\s+IS\s+NOT\s+NULL\b", re.IGNORECASE)
+    is_null_re = re.compile(rf"({ident})\s+IS\s+NULL\b", re.IGNORECASE)
+
+    while i < n:
+        ch = expr[i]
+        if ch in "'\"":
+            quote = ch
+            j = i + 1
+            while j < n:
+                if expr[j] == "\\" and j + 1 < n:
+                    j += 2
+                    continue
+                if expr[j] == quote:
+                    j += 1
+                    break
+                j += 1
+            result.append(expr[i:j])
+            i = j
+            continue
+
+        match = is_not_null_re.match(expr, i)
+        if match:
+            result.append(f"is_not_null({match.group(1)})")
+            i = match.end()
+            continue
+
+        match = is_null_re.match(expr, i)
+        if match:
+            result.append(f"is_null({match.group(1)})")
+            i = match.end()
+            continue
+
+        result.append(ch)
+        i += 1
+
+    return "".join(result)
+
+
 def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
     py = cond
     py = re.sub(r"\bAND\b", "and", py, flags=re.IGNORECASE)
     py = re.sub(r"\bOR\b", "or", py, flags=re.IGNORECASE)
     py = re.sub(r"\bNOT\b", "not", py, flags=re.IGNORECASE)
+    py = _replace_null_predicates(py)
     py = py.replace("<>", "!=")
     # Only convert standalone equality operators; avoid touching >=, <=, !=, ==.
     py = re.sub(r"(?<![<>=!])=(?!=)", "==", py)
@@ -72,7 +124,13 @@ def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
     env_ci = {str(k).lower(): v for k, v in env.items()}
     py = _replace_identifiers(py)
     try:
-        return bool(builtins.eval(py, {"__builtins__": {}}, {"env": env_ci}))
+        return bool(
+            builtins.eval(
+                py,
+                {"__builtins__": {}},
+                {"env": env_ci, "is_null": _is_null, "is_not_null": _is_not_null},
+            )
+        )
     except Exception as e:
         print(f"Error evaluating condition: {e}")
         print(f"Condition: {cond}")

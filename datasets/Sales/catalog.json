@@ -101,7 +101,7 @@
     {
       "id": "q06",
       "prompt": "Return the offices whose sales exceed their targets.",
-      "difficulty": "intermediate",
+      "difficulty": "beginner",
       "solution": {
         "relational_algebra": "sigma{SALES > TARGET}(offices)",
         "sql": "SELECT * FROM offices WHERE SALES > TARGET;"
@@ -125,7 +125,7 @@
       "prompt": "List each customer together with the name of their assigned sales rep.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{COMPANY, REP_NAME}(customers ⋈ rho{EMPL_NUM->CUST_REP, NAME->REP_NAME}(salesreps))",
+        "relational_algebra": "π{COMPANY, NAME}(ρc(customers) ⋈{c.cust_rep = s.empl_num} ρs(salesreps))",
         "sql": "SELECT c.COMPANY, s.NAME AS REP_NAME\nFROM customers AS c\nJOIN salesreps AS s ON c.CUST_REP = s.EMPL_NUM;"
       },
       "expected_result": {
@@ -135,8 +135,9 @@
         ]
       },
       "hints": [
-        "natural join",
-        "rename"
+        "cartesian product",
+        "selection",
+        "projection"
       ]
     },
     {
