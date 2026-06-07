@@ -42,11 +42,11 @@
     },
     {
       "id": "q03",
-      "prompt": "Show each sales rep name together with their office number.",
+      "prompt": "Show each sales rep name together with their assigned office number.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{NAME, REP_OFFICE}(salesreps)",
-        "sql": "SELECT NAME, REP_OFFICE FROM salesreps;"
+        "relational_algebra": "pi{NAME, REP_OFFICE}(sigma{REP_OFFICE IS NOT NULL}(salesreps))",
+        "sql": "SELECT NAME, REP_OFFICE FROM salesreps WHERE REP_OFFICE IS NOT NULL;"
       },
       "expected_result": {
         "schema": [
@@ -125,7 +125,7 @@
       "prompt": "List each customer together with the name of their assigned sales rep.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "π{COMPANY, NAME}(ρc(customers) ⋈{c.cust_rep = s.empl_num} ρs(salesreps))",
+        "relational_algebra": "π{COMPANY, REP_NAME}(ρ{NAME->REP_NAME}(ρc(customers) ⋈{c.cust_rep = s.empl_num} ρs(salesreps)))",
         "sql": "SELECT c.COMPANY, s.NAME AS REP_NAME\nFROM customers AS c\nJOIN salesreps AS s ON c.CUST_REP = s.EMPL_NUM;"
       },
       "expected_result": {
@@ -145,7 +145,7 @@
       "prompt": "Show each order number with the company that placed it.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{ORDER_NUM, COMPANY}(orders ⋈ rho{CUST_NUM->CUST}(customers))",
+        "relational_algebra": "pi{ORDER_NUM, COMPANY}(orders ⋈ rho{cust_num->CUST}(customers))",
         "sql": "SELECT o.ORDER_NUM, c.COMPANY\nFROM orders AS o\nJOIN customers AS c ON o.CUST = c.CUST_NUM;"
       },
       "expected_result": {
@@ -164,7 +164,7 @@
       "prompt": "List orders together with the name of the sales rep who handled them.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{ORDER_NUM, REP_NAME, AMOUNT}(orders ⋈ rho{EMPL_NUM->REP, NAME->REP_NAME}(salesreps))",
+        "relational_algebra": "pi{ORDER_NUM, REP_NAME, AMOUNT}(orders ⋈ rho{empl_num->REP, name->REP_NAME}(salesreps))",
         "sql": "SELECT o.ORDER_NUM, s.NAME AS REP_NAME, o.AMOUNT\nFROM orders AS o\nJOIN salesreps AS s ON o.REP = s.EMPL_NUM;"
       },
       "expected_result": {
@@ -184,7 +184,7 @@
       "prompt": "Find customers served by reps who work in the Eastern region.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{COMPANY, REGION}(sigma{REGION = 'Eastern'}(customers ⋈ rho{EMPL_NUM->CUST_REP, REP_OFFICE->OFFICE}(salesreps) ⋈ offices))",
+        "relational_algebra": "pi{c.COMPANY, o.REGION}(sigma{o.REGION = 'Eastern'}(rho c(customers) ⋈{c.CUST_REP = s.EMPL_NUM} rho s(salesreps) ⋈{s.REP_OFFICE = o.OFFICE} rho o(offices)))",
         "sql": "SELECT c.COMPANY, o.REGION\nFROM customers AS c\nJOIN salesreps AS s ON c.CUST_REP = s.EMPL_NUM\nJOIN offices AS o ON s.REP_OFFICE = o.OFFICE\nWHERE o.REGION = 'Eastern';"
       },
       "expected_result": {
@@ -204,8 +204,8 @@
       "prompt": "Return office numbers that currently have no sales reps assigned.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{OFFICE}(offices) - pi{REP_OFFICE}(salesreps)",
-        "sql": "SELECT OFFICE FROM offices\nEXCEPT\nSELECT REP_OFFICE FROM salesreps;"
+        "relational_algebra": "pi{OFFICE}(offices) - pi{OFFICE}(rho{rep_office->OFFICE}(pi{REP_OFFICE}(sigma{REP_OFFICE IS NOT NULL}(salesreps))))",
+        "sql": "SELECT OFFICE FROM offices\nEXCEPT\nSELECT REP_OFFICE AS OFFICE FROM salesreps WHERE REP_OFFICE IS NOT NULL;"
       },
       "expected_result": {
         "schema": [
@@ -219,23 +219,16 @@
     },
     {
       "id": "q12",
-      "prompt": "Find sales reps who do not report to a manager.",
+      "prompt": "Find sales rep numbers and names for reps who do not report to a manager.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "sigma{MANAGER IS NULL}(salesreps)",
-        "sql": "SELECT * FROM salesreps WHERE MANAGER IS NULL;"
+        "relational_algebra": "pi{EMPL_NUM, NAME}(sigma{MANAGER IS NULL}(salesreps))",
+        "sql": "SELECT EMPL_NUM, NAME FROM salesreps WHERE MANAGER IS NULL;"
       },
       "expected_result": {
         "schema": [
           "EMPL_NUM",
-          "NAME",
-          "AGE",
-          "REP_OFFICE",
-          "TITLE",
-          "HIRE_DATE",
-          "MANAGER",
-          "QUOTA",
-          "SALES"
+          "NAME"
         ]
       },
       "hints": [
@@ -247,7 +240,7 @@
       "prompt": "List customers that have not placed any orders.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{CUST_NUM, COMPANY}(customers) - pi{CUST, COMPANY}(orders ⋈ rho{CUST_NUM->CUST}(customers))",
+        "relational_algebra": "pi{CUST_NUM, COMPANY}(customers) - pi{CUST_NUM, COMPANY}(rho{cust->CUST_NUM}(pi{CUST, COMPANY}(orders ⋈ rho{cust_num->CUST}(customers))))",
         "sql": "SELECT CUST_NUM, COMPANY FROM customers\nEXCEPT\nSELECT DISTINCT c.CUST_NUM, c.COMPANY\nFROM customers AS c\nJOIN orders AS o ON c.CUST_NUM = o.CUST;"
       },
       "expected_result": {
@@ -266,8 +259,8 @@
       "prompt": "Show products that have never been ordered.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{MFR_ID, PRODUCT_ID}(products) - pi{MFR, PRODUCT}(orders)",
-        "sql": "SELECT MFR_ID, PRODUCT_ID FROM products\nEXCEPT\nSELECT DISTINCT MFR, PRODUCT FROM orders;"
+        "relational_algebra": "pi{MFR_ID, PRODUCT_ID}(products) - pi{MFR_ID, PRODUCT_ID}(rho{mfr->MFR_ID, product->PRODUCT_ID}(pi{MFR, PRODUCT}(orders)))",
+        "sql": "SELECT MFR_ID, PRODUCT_ID FROM products\nEXCEPT\nSELECT DISTINCT MFR AS MFR_ID, PRODUCT AS PRODUCT_ID FROM orders;"
       },
       "expected_result": {
         "schema": [
@@ -285,7 +278,7 @@
       "prompt": "List each order with the description of the product ordered.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{ORDER_NUM, DESCRIPTION, QTY, AMOUNT}(orders ⋈ rho{MFR_ID->MFR, PRODUCT_ID->PRODUCT}(products))",
+        "relational_algebra": "pi{ORDER_NUM, DESCRIPTION, QTY, AMOUNT}(orders ⋈ rho{mfr_id->MFR, product_id->PRODUCT}(products))",
         "sql": "SELECT o.ORDER_NUM, p.DESCRIPTION, o.QTY, o.AMOUNT\nFROM orders AS o\nJOIN products AS p ON o.MFR = p.MFR_ID AND o.PRODUCT = p.PRODUCT_ID;"
       },
       "expected_result": {
@@ -306,7 +299,7 @@
       "prompt": "Show sales reps with the city of the office they work from.",
       "difficulty": "intermediate",
       "solution": {
-        "relational_algebra": "pi{NAME, CITY}(rho{REP_OFFICE->OFFICE}(salesreps) ⋈ offices)",
+        "relational_algebra": "pi{s.NAME, o.CITY}(rho s(salesreps) ⋈{s.REP_OFFICE = o.OFFICE} rho o(offices))",
         "sql": "SELECT s.NAME, o.CITY\nFROM salesreps AS s\nJOIN offices AS o ON s.REP_OFFICE = o.OFFICE;"
       },
       "expected_result": {
@@ -325,8 +318,8 @@
       "prompt": "Find pairs of different sales reps who share the same office.",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{REP_A, REP_B, OFFICE_A}(sigma{REP_A < REP_B AND OFFICE_A = OFFICE_B}(rho{NAME->REP_A, REP_OFFICE->OFFICE_A}(salesreps) × rho{NAME->REP_B, REP_OFFICE->OFFICE_B}(salesreps)))",
-        "sql": "SELECT s1.NAME AS REP_A, s2.NAME AS REP_B, s1.REP_OFFICE AS OFFICE\nFROM salesreps AS s1\nJOIN salesreps AS s2 ON s1.REP_OFFICE = s2.REP_OFFICE AND s1.NAME < s2.NAME;"
+        "relational_algebra": "pi{REP_A, REP_B, OFFICE_A}(sigma{REP_A < REP_B AND OFFICE_A = OFFICE_B}(rho{name->REP_A, rep_office->OFFICE_A}(salesreps) × rho{name->REP_B, rep_office->OFFICE_B}(salesreps)))",
+        "sql": "SELECT s1.NAME AS REP_A, s2.NAME AS REP_B, s1.REP_OFFICE AS OFFICE_A\nFROM salesreps AS s1\nJOIN salesreps AS s2 ON s1.REP_OFFICE = s2.REP_OFFICE AND s1.NAME < s2.NAME;"
       },
       "expected_result": {
         "schema": [
@@ -370,7 +363,7 @@
       "prompt": "Return the regions that currently have at least one customer (through their assigned rep's office).",
       "difficulty": "advanced",
       "solution": {
-        "relational_algebra": "pi{REGION}(customers ⋈ rho{EMPL_NUM->CUST_REP, REP_OFFICE->OFFICE}(salesreps) ⋈ offices)",
+        "relational_algebra": "pi{REGION}(customers ⋈ rho{empl_num->CUST_REP, rep_office->OFFICE}(salesreps) ⋈ offices)",
         "sql": "SELECT DISTINCT o.REGION\nFROM customers AS c\nJOIN salesreps AS s ON c.CUST_REP = s.EMPL_NUM\nJOIN offices AS o ON s.REP_OFFICE = o.OFFICE;"
       },
       "expected_result": {
@@ -388,7 +381,7 @@
       "prompt": "Rename the order relation so that ORDER_NUM becomes ORDER_ID and AMOUNT becomes TOTAL_VALUE.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "rho{ORDER_NUM->ORDER_ID, AMOUNT->TOTAL_VALUE}(orders)",
+        "relational_algebra": "pi{ORDER_ID, ORDER_DATE, CUST, REP, MFR, PRODUCT, QTY, TOTAL_VALUE}(rho{order_num->ORDER_ID, amount->TOTAL_VALUE}(orders))",
         "sql": "SELECT ORDER_NUM AS ORDER_ID, ORDER_DATE, CUST, REP, MFR, PRODUCT, QTY, AMOUNT AS TOTAL_VALUE FROM orders;"
       },
       "expected_result": {

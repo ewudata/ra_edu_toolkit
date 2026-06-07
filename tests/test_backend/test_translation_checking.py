@@ -96,3 +96,41 @@ def test_check_translation_sql_to_ra_compares_ra_against_sql_solution(monkeypatc
     assert response.status_code == 200
     assert response.json()["is_correct"] is True
     app.dependency_overrides.clear()
+
+
+def test_check_translation_ra_to_sql_returns_diff_for_numpy_scalar_rows(monkeypatch):
+    client = _client_with_user()
+    solution_sql = "SELECT OFFICE FROM offices EXCEPT SELECT REP_OFFICE AS OFFICE FROM salesreps"
+
+    monkeypatch.setattr(
+        evaluation.queries_service,
+        "get_query",
+        lambda database, query_id, user_id=None: SimpleNamespace(
+            solution=SimpleNamespace(
+                relational_algebra="pi{office}(offices) - pi{office}(salesreps)",
+                sql=solution_sql,
+            ),
+        ),
+    )
+
+    def evaluate_sql(sql, database, user_id=None):
+        if sql == solution_sql:
+            return SimpleNamespace(dataframe=pd.DataFrame({"office": [22]}))
+        return SimpleNamespace(dataframe=pd.DataFrame({"office": [11, 12, 13, 21, 22]}))
+
+    monkeypatch.setattr(evaluation.sql_service, "evaluate_sql", evaluate_sql, raising=False)
+
+    response = client.post(
+        "/databases/Sales/queries/q11/check-translation",
+        json={
+            "direction": "ra-to-sql",
+            "answer": "SELECT OFFICE FROM offices EXCEPT SELECT EMPL_NUM FROM salesreps;",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["is_correct"] is False
+    assert payload["schema_equal"] is True
+    assert sorted(row["office"] for row in payload["extra_rows"]) == [11, 12, 13, 21]
+    app.dependency_overrides.clear()

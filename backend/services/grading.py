@@ -44,6 +44,14 @@ def _rows_set(df: pd.DataFrame, schema: List[str]) -> set[tuple]:
     return set(tuples)
 
 
+def _to_response_value(value: object) -> object:
+    if pd.isna(value):
+        return None
+    if hasattr(value, "item"):
+        return value.item()
+    return value
+
+
 def _align_schema(
     student_df: pd.DataFrame, solution_df: pd.DataFrame
 ) -> tuple[pd.DataFrame, pd.DataFrame, bool, List[str], List[str]]:
@@ -96,7 +104,13 @@ def compare_results(
     extra = student_set - solution_set
 
     def tuples_to_dicts(items: set[tuple]) -> List[Dict[str, object]]:
-        return [dict(zip(solution_schema, values)) for values in items]
+        return [
+            {
+                column: _to_response_value(value)
+                for column, value in zip(solution_schema, values)
+            }
+            for values in items
+        ]
 
     matches = not missing and not extra
 
