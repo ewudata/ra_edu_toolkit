@@ -173,6 +173,11 @@ export interface MasteryResponse {
   query_ids: string[];
 }
 
+export interface LlmHintResponse {
+  hint: string;
+  model: string;
+}
+
 export interface RefreshSessionResponse {
   auth_token: string;
   auth_email: string;
@@ -219,6 +224,17 @@ export const api = {
   checkTranslation: (database: string, queryId: string, direction: 'ra-to-sql' | 'sql-to-ra', answer: string) =>
     request<TranslationCheckResult>('POST', `/databases/${database}/queries/${queryId}/check-translation`, {
       body: { direction, answer },
+    }),
+
+  generateHint: (
+    database: string,
+    queryId: string,
+    expression?: string,
+    error?: string,
+    direction?: 'ra-to-sql' | 'sql-to-ra',
+  ) =>
+    request<LlmHintResponse>('POST', `/databases/${database}/queries/${queryId}/llm/hint`, {
+      body: { expression: expression?.trim() || null, error: error?.trim() || null, direction: direction ?? null },
     }),
 
   evaluateCustomQuery: (database: string, expression: string) =>

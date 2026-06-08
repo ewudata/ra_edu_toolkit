@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from .routes import auth, databases, evaluation, queries
+from .routes import auth, databases, evaluation, llm, queries
 
 # Load environment variables
 load_dotenv()
@@ -25,6 +25,7 @@ app.include_router(databases.router)
 app.include_router(queries.router)
 app.include_router(evaluation.router)
 app.include_router(evaluation.custom_router)
+app.include_router(llm.router)
 app.include_router(auth.router)
 
 

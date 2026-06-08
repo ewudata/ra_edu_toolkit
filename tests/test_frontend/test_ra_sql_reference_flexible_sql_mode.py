@@ -16,7 +16,7 @@ def test_ra_sql_reference_offers_guided_and_freeform_sql_answer_modes():
     assert "raAnswerMode === 'freeform'" in source
 
 
-def test_ra_sql_reference_checks_ra_to_sql_answers_semantically():
+def test_ra_sql_reference_checks_answers_with_semantics_and_catalog_intent():
     source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
 
     assert "async function checkSqlAnswer()" in source
@@ -25,17 +25,22 @@ def test_ra_sql_reference_checks_ra_to_sql_answers_semantically():
     assert "api.checkTranslation(selectedDb, selectedQueryId, 'sql-to-ra', raAnswer)" in source
     assert "Correct: your SQL returns the same relation as the relational algebra expression." in source
     assert "even though it may use a different structure than the catalog answer." in source
-    assert "Free-form mode checks any complete RA expression for semantic equivalence." in source
+    assert "function fullSqlMatchesCatalogIntent(" in source
+    assert "function fullRaMatchesCatalogIntent(" in source
+    assert "const raAnswerAccepted" in source
+    assert "Free-form mode accepts complete RA expressions that match the catalog intent." in source
 
 
-def test_ra_sql_reference_marks_guided_clauses_correct_when_sql_is_semantically_correct():
+def test_ra_sql_reference_guided_sql_requires_clause_alignment():
     source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
 
     assert "type ClauseBadgeState = 'correct' | 'mismatch' | 'neutral';" in source
     assert "function getClauseBadgeState(" in source
-    assert "if (overallSqlCorrect && clauseAnswered) return 'correct';" in source
-    assert "Accepted as correct because the full SQL answer is semantically correct." in source
-    assert "If the full SQL answer is semantically correct, the guided clauses are marked correct as well" in source
+    assert "function getSqlClauseFeedback(" in source
+    assert "const guidedSqlClausesMatch" in source
+    assert "const sqlAnswerAccepted" in source
+    assert "Guided mode checks both the result relation and each catalog clause." in source
+    assert "if (overallSqlCorrect && clauseAnswered) return 'correct';" not in source
 
 
 def test_ra_sql_reference_hides_clause_feedback_until_sql_check_finishes():
@@ -74,3 +79,11 @@ def test_ra_sql_reference_handles_natural_join_without_creating_extra_join_claus
     assert "function splitJoinClause(joinClause: string): { keyword: string; body: string }" in source
     assert "keyword: match[1]!.toUpperCase()," in source
     assert "label: `${parsedJoin.keyword} clause ${index + 1}`," in source
+
+
+def test_guided_ra_placeholder_underscores_are_stripped_before_checking():
+    source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
+
+    assert "function stripGuidedRaPlaceholderUnderscores(value: string): string" in source
+    assert "stripGuidedRaPlaceholderUnderscores(studentRa).trim()" in source
+    assert "stripGuidedRaPlaceholderUnderscores(value)" in source

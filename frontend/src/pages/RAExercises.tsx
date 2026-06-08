@@ -71,6 +71,10 @@ export default function RAExercises() {
   const [showSolution, setShowSolution] = useState(false);
   const [solutionResult, setSolutionResult] = useState<EvaluationResult | null>(null);
   const [expectedComparisonResult, setExpectedComparisonResult] = useState<EvaluationResult | null>(null);
+  const [aiHint, setAiHint] = useState<string | null>(null);
+  const [aiHintModel, setAiHintModel] = useState<string | null>(null);
+  const [aiHintError, setAiHintError] = useState<string | null>(null);
+  const [aiHintLoading, setAiHintLoading] = useState(false);
 
   const [customExpr, setCustomExpr] = useState('');
   const [customResult, setCustomResult] = useState<EvaluationResult | null>(null);
@@ -97,6 +101,9 @@ export default function RAExercises() {
       setShowSolution(false);
       setSolutionResult(null);
       setExpectedComparisonResult(null);
+      setAiHint(null);
+      setAiHintModel(null);
+      setAiHintError(null);
     }
   }, [selectedDb]);
 
@@ -174,6 +181,9 @@ export default function RAExercises() {
     setShowSolution(false);
     setSolutionResult(null);
     setExpectedComparisonResult(null);
+    setAiHint(null);
+    setAiHintModel(null);
+    setAiHintError(null);
   }, [selectedQueryId, selectedDb]);
 
   const filteredQueries = (() => {
@@ -190,6 +200,9 @@ export default function RAExercises() {
     setExecuting(true);
     setResultError(null);
     setExpectedComparisonResult(null);
+    setAiHint(null);
+    setAiHintModel(null);
+    setAiHintError(null);
     try {
       const res = await api.evaluateQuery(selectedDb, selectedQueryId, solution.trim());
       setResult(res);
@@ -219,7 +232,35 @@ export default function RAExercises() {
     }
   }
 
+  async function handleGenerateHint() {
+    if (!selectedQueryId || !queryDetail) return;
+    setAiHintLoading(true);
+    setAiHintError(null);
+    try {
+      const res = await api.generateHint(
+        selectedDb,
+        selectedQueryId,
+        solution.trim() || undefined,
+        resultError || undefined,
+      );
+      setAiHint(res.hint);
+      setAiHintModel(res.model);
+    } catch (err) {
+      setAiHint(null);
+      setAiHintModel(null);
+      setAiHintError(String(err));
+    } finally {
+      setAiHintLoading(false);
+    }
+  }
+
   async function handleViewSolution() {
+    if (showSolution) {
+      setShowSolution(false);
+      setSolutionResult(null);
+      return;
+    }
+
     setShowSolution(true);
     const expr = queryDetail?.solution?.relational_algebra;
     if (!expr) return;
@@ -476,7 +517,12 @@ export default function RAExercises() {
                         <textarea
                           id={solutionTextareaId}
                           value={solution}
-                          onChange={(e) => setSolution(e.target.value)}
+                          onChange={(e) => {
+                            setSolution(e.target.value);
+                            setAiHint(null);
+                            setAiHintModel(null);
+                            setAiHintError(null);
+                          }}
                           className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
                         />
                         <div className="flex justify-center">
@@ -524,14 +570,37 @@ export default function RAExercises() {
                         <Lightbulb className="app-icon-glyph h-4 w-4" />
                         Solution help
                       </h3>
-                      <button
-                        type="button"
-                        onClick={handleViewSolution}
-                        className={secondaryButton}
-                      >
-                        <Eye className="w-4 h-4" />
-                        Show canonical solution and result
-                      </button>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={handleGenerateHint}
+                          disabled={aiHintLoading}
+                          className={primaryButton}
+                        >
+                          <Lightbulb className="w-4 h-4" />
+                          {aiHintLoading ? 'Generating hint...' : 'Get AI hint'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleViewSolution}
+                          className={secondaryButton}
+                        >
+                          <Eye className="w-4 h-4" />
+                          {showSolution ? 'Hide canonical solution and result' : 'Show canonical solution and result'}
+                        </button>
+                      </div>
+
+                      {aiHintError && <StatusBadge variant="error">Could not generate an AI hint: {aiHintError}</StatusBadge>}
+
+                      {aiHint && (
+                        <div className="rounded-[22px] border-2 border-[#cbeae3] bg-[#f7fcfa] p-4">
+                          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#3d6f67]">
+                            <Lightbulb className="h-4 w-4" />
+                            AI hint{aiHintModel ? <span className="text-xs font-medium text-[#667085]">({aiHintModel})</span> : null}
+                          </div>
+                          <p className="text-sm leading-6 text-[#344054]">{aiHint}</p>
+                        </div>
+                      )}
 
                       {showSolution && queryDetail.solution && (
                         <div className="space-y-3 rounded-[24px] border-2 border-[#d9c4a5] bg-[#fff9ef] p-5">
