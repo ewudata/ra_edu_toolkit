@@ -6,6 +6,8 @@ import re
 import sqlite3
 import zipfile
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Dict, List, Optional, Tuple
 
@@ -70,6 +72,8 @@ class DatasetLocation:
 
 _SCHEMA_PREVIEW_CACHE: Dict[Tuple[str, str, int], "DatabaseSchema"] = {}
 _DATABASE_ENV_CACHE: Dict[Tuple[str, str], Dict[str, pd.DataFrame]] = {}
+_BUNDLED_DEFAULT_DATASETS = ("Sales", "University")
+_DATASETS_ROOT = Path(__file__).resolve().parents[2] / "datasets"
 
 
 class SqlImportError(ValueError):
@@ -174,20 +178,88 @@ def _approximate_csv_row_count(raw: bytes) -> int:
     return max(line_count - 1, 0)
 
 
+def _bundled_default_names() -> Tuple[str, ...]:
+    configured = os.getenv("RA_BUNDLED_DEFAULT_DATASETS", "").strip()
+    names = (
+        [name.strip() for name in configured.split(",") if name.strip()]
+        if configured
+        else list(_BUNDLED_DEFAULT_DATASETS)
+    )
+    return tuple(name for name in names if (_DATASETS_ROOT / name).is_dir())
+
+
+def _bundled_default_root(database: str) -> Optional[Path]:
+    name = _normalise_database_name(database)
+    if name not in _bundled_default_names():
+        return None
+    root = _DATASETS_ROOT / name
+    return root if root.is_dir() else None
+
+
+def _list_local_table_names(root: Path) -> List[str]:
+    return sorted(path.stem.lower() for path in root.glob("*.csv") if path.is_file())
+
+
+def _local_default_row(name: str) -> DefaultDatasetRow:
+    return DefaultDatasetRow(
+        dataset_name=name,
+        bucket_name=os.getenv("SUPABASE_DEFAULT_DATASETS_BUCKET", "ra-default-datasets"),
+        object_prefix=name,
+        enabled=True,
+    )
+
+
+def _is_default_hidden_for_user(database: str, user_id: Optional[str]) -> bool:
+    if not user_id:
+        return False
+    row = _user_rows_by_name(user_id).get(_normalise_database_name(database))
+    return bool(row and row.source_type == "default" and row.hidden)
+
+
+@lru_cache(maxsize=1)
 def _default_rows_by_name() -> Dict[str, DefaultDatasetRow]:
+    bundled_rows = {
+        name: _local_default_row(name)
+        for name in _bundled_default_names()
+    }
+    use_remote_defaults = os.getenv("RA_USE_REMOTE_DEFAULT_DATASETS", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if bundled_rows and not use_remote_defaults:
+        return bundled_rows
     try:
         rows = list_default_datasets()
     except SupabaseDatasetError as exc:
+        if bundled_rows:
+            return bundled_rows
         raise FileNotFoundError(str(exc)) from exc
-    return {row.dataset_name: row for row in rows if row.enabled}
+    remote_rows = {row.dataset_name: row for row in rows if row.enabled}
+    return {**remote_rows, **bundled_rows}
 
 
+@lru_cache(maxsize=128)
 def _user_rows_by_name(user_id: str) -> Dict[str, UserDatasetRow]:
     try:
         rows = list_user_datasets(user_id)
     except SupabaseDatasetError as exc:
         raise FileNotFoundError(str(exc)) from exc
     return {row.database_name: row for row in rows}
+
+
+def clear_dataset_metadata_cache() -> None:
+    _default_rows_by_name.cache_clear()
+    _user_rows_by_name.cache_clear()
+
+
+def _load_local_relation_dataframe(path: Path, relation_name: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    df = df.copy()
+    df.columns = [c.lower() for c in df.columns]
+    df["_prov"] = [[(relation_name, int(i))] for i in range(len(df))]
+    return df
 
 
 def _list_table_names(bucket: str, prefix: str) -> List[str]:
@@ -261,7 +333,12 @@ def list_databases(user_id: Optional[str] = None) -> List[DatabaseSummary]:
     for name, row in default_rows.items():
         if name in hidden_defaults:
             continue
-        tables = _list_table_names(row.bucket_name, row.object_prefix)
+        local_root = _bundled_default_root(name)
+        tables = (
+            _list_local_table_names(local_root)
+            if local_root
+            else _list_table_names(row.bucket_name, row.object_prefix)
+        )
         summaries[name] = DatabaseSummary(name=name, tables=tables, is_default=True)
 
     for name, row in user_rows.items():
@@ -458,6 +535,7 @@ def create_database_from_zip(
         is_default=False,
         hidden=False,
     )
+    clear_dataset_metadata_cache()
     clear_schema_preview_cache(name)
     clear_database_env_cache(name)
     from . import sql as sql_service
@@ -506,6 +584,7 @@ def create_database_from_sql(
         is_default=False,
         hidden=False,
     )
+    clear_dataset_metadata_cache()
     clear_schema_preview_cache(name)
     clear_database_env_cache(name)
     from . import sql as sql_service
@@ -536,6 +615,7 @@ def delete_database(database: str, *, user_id: Optional[str] = None) -> None:
             is_default=True,
             hidden=True,
         )
+        clear_dataset_metadata_cache()
         clear_schema_preview_cache(name)
         clear_database_env_cache(name)
         from . import sql as sql_service
@@ -549,6 +629,7 @@ def delete_database(database: str, *, user_id: Optional[str] = None) -> None:
         except SupabaseStorageError as exc:
             raise FileNotFoundError(str(exc)) from exc
         delete_user_dataset_row(user_id, name)
+        clear_dataset_metadata_cache()
         clear_schema_preview_cache(name)
         clear_database_env_cache(name)
         from . import sql as sql_service
@@ -586,6 +667,18 @@ def load_database_env(
     if cached is not None:
         return _clone_database_env(cached)
 
+    local_root = _bundled_default_root(database)
+    if local_root and not _is_default_hidden_for_user(database, user_id):
+        csv_paths = sorted(path for path in local_root.glob("*.csv") if path.is_file())
+        if not csv_paths:
+            raise ValueError(f"Database '{database}' does not contain any CSV files")
+        env = {
+            path.stem.lower(): _load_local_relation_dataframe(path, path.stem.lower())
+            for path in csv_paths
+        }
+        _DATABASE_ENV_CACHE[key] = _clone_database_env(env)
+        return _clone_database_env(env)
+
     location = _resolve_location(database, user_id)
     names = storage_list_objects(location.bucket, location.prefix)
     csv_names = [name for name in names if PurePosixPath(name).suffix.lower() == ".csv"]
@@ -611,6 +704,37 @@ def get_database_schema(
     cached = _SCHEMA_PREVIEW_CACHE.get(key)
     if cached is not None:
         return cached
+
+    local_root = _bundled_default_root(database)
+    if local_root and not _is_default_hidden_for_user(database, user_id):
+        csv_paths = sorted(path for path in local_root.glob("*.csv") if path.is_file())
+        if not csv_paths:
+            raise ValueError(f"Database '{database}' does not contain any CSV files")
+
+        tables: List[TableSchema] = []
+        for path in csv_paths:
+            raw = path.read_bytes()
+            row_count = _approximate_csv_row_count(raw)
+            preview_df = pd.read_csv(io.BytesIO(raw), nrows=max(sample_rows, 0))
+            preview_df = preview_df.copy()
+            preview_df.columns = [c.lower() for c in preview_df.columns]
+            columns = [
+                ColumnSchema(name=col, dtype=str(preview_df[col].dtype))
+                for col in preview_df.columns
+            ]
+            preview_df = preview_df.where(pd.notnull(preview_df), None)
+            sample = preview_df.to_dict(orient="records")
+            tables.append(
+                TableSchema(
+                    name=path.stem.lower(),
+                    columns=columns,
+                    row_count=row_count,
+                    sample_rows=sample,
+                )
+            )
+        schema = DatabaseSchema(name=database, tables=tables)
+        _SCHEMA_PREVIEW_CACHE[key] = schema
+        return schema
 
     location = _resolve_location(database, user_id)
     names = storage_list_objects(location.bucket, location.prefix)
@@ -653,6 +777,30 @@ def get_table_schema(
     *,
     user_id: Optional[str] = None,
 ) -> TableSchema:
+    local_root = _bundled_default_root(database)
+    if local_root and not _is_default_hidden_for_user(database, user_id):
+        path = local_root / f"{relation.lower()}.csv"
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Relation '{relation}' not found in database '{database}'"
+            )
+        df = pd.read_csv(path)
+        df = df.copy()
+        df.columns = [c.lower() for c in df.columns]
+        columns = [
+            ColumnSchema(name=col, dtype=str(df[col].dtype))
+            for col in df.columns
+        ]
+        preview_df = df.head(sample_rows).copy()
+        preview_df = preview_df.where(pd.notnull(preview_df), None)
+        sample = preview_df.to_dict(orient="records")
+        return TableSchema(
+            name=relation.lower(),
+            columns=columns,
+            row_count=len(df),
+            sample_rows=sample,
+        )
+
     location = _resolve_location(database, user_id)
     relation_lower = relation.lower()
     object_name = f"{relation_lower}.csv"
@@ -684,6 +832,15 @@ def read_database_file_bytes(
     *,
     user_id: Optional[str] = None,
 ) -> bytes:
+    local_root = _bundled_default_root(database)
+    if local_root and not _is_default_hidden_for_user(database, user_id):
+        path = local_root / filename
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"File '{filename}' not found for database '{database}'"
+            )
+        return path.read_bytes()
+
     location = _resolve_location(database, user_id)
     object_path = _join_prefix(location.prefix, filename)
     try:

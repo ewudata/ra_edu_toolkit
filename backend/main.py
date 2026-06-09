@@ -26,6 +26,7 @@ app.include_router(queries.router)
 app.include_router(evaluation.router)
 app.include_router(evaluation.custom_router)
 app.include_router(llm.router)
+app.include_router(llm.database_router)
 app.include_router(auth.router)
 
 

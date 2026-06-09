@@ -192,8 +192,11 @@ function normalizeSelectItem(value: string, aliases: Map<string, string>): strin
 }
 
 function normalizeFromClause(value: string): string[] {
+  const joinPattern = /\b(?:natural\s+join|inner\s+join|left\s+join|right\s+join|full\s+join|cross\s+join|join)\b/i;
+
   return splitTopLevelCommaList(value)
-    .map((item) => item.match(/^([a-z_][a-z0-9_.]*)/i)?.[1]?.toLowerCase() ?? item)
+    .flatMap((item) => item.replace(/\s+(?:on|using)\s+.*$/i, '').split(joinPattern))
+    .map((item) => item.trim().match(/^([a-z_][a-z0-9_.]*)/i)?.[1]?.toLowerCase() ?? '')
     .filter(Boolean);
 }
 
@@ -288,6 +291,49 @@ function stripGuidedRaPlaceholderUnderscores(value: string): string {
     const next = fullText[offset + 1] ?? '';
     return /[A-Za-z0-9]/.test(prev) && /[A-Za-z0-9]/.test(next) ? match : '';
   });
+}
+
+function extractRaBraceArguments(expression: string | undefined): string[] {
+  if (!expression) return [];
+  const args: string[] = [];
+  for (const match of formatRaExpression(expression).matchAll(/\{([^{}]*)\}/g)) {
+    args.push(normalizeComparison(match[1] ?? ''));
+  }
+  return args;
+}
+
+function guidedRaHintMessage(
+  answerMode: RaAnswerMode,
+  studentAnswer: string,
+  sourceSql: string | undefined,
+  canonicalRa: string | undefined,
+  result: TranslationCheckResult | null,
+  intentMismatch: boolean,
+): string {
+  const expectedSlots = extractRaBraceArguments(canonicalRa);
+  const studentSlots = extractRaBraceArguments(studentAnswer);
+  const slotComparisons = expectedSlots.map((expected, index) => {
+    const student = studentSlots[index] ?? '';
+    const status = !student ? 'blank' : student === expected ? 'matches' : 'mismatch';
+    return `slot ${index + 1}: ${status}. Expected ${expected || '(empty)'}; student wrote ${student || '(blank)'}.`;
+  });
+
+  return [
+    'SQL-to-RA AI hint context. Read all parts together and focus on the main underlying mismatch.',
+    `Answer mode: ${answerMode}.`,
+    `Source SQL: ${sourceSql || '(unavailable)'}.`,
+    `Canonical RA for diagnosis only, do not reveal it: ${canonicalRa || '(unavailable)'}.`,
+    `Student RA: ${studentAnswer || '(blank)'}.`,
+    answerMode === 'guided' && slotComparisons.length
+      ? `Guided RA slot summary: ${slotComparisons.join(' ')}`
+      : '',
+    result
+      ? `Deterministic result summary: is_correct=${result.is_correct}; schema_equal=${result.schema_equal}; student_schema=${result.student_schema.join(', ') || '(none)'}; expected_schema=${result.expected_schema.join(', ') || '(none)'}; missing_rows_sample=${JSON.stringify(result.missing_rows.slice(0, 3))}; extra_rows_sample=${JSON.stringify(result.extra_rows.slice(0, 3))}.`
+      : '',
+    intentMismatch
+      ? 'The relational algebra returns the same rows on this dataset, but it does not match the catalog intent exactly.'
+      : 'The relational algebra is not equivalent to the source SQL on the current dataset.',
+  ].filter(Boolean).join(' ');
 }
 
 function formatSqlForDisplay(sql: string | undefined): string {
@@ -491,6 +537,44 @@ function getSqlClauseFeedback(groups: SqlClauseGroup[], answers: Record<string, 
       };
     });
   });
+}
+
+function guidedSqlClauseHintMessage(feedback: SqlClauseFeedback[]): string {
+  const priority = new Map([
+    ['FROM', 0],
+    ['JOIN', 1],
+    ['NATURAL JOIN', 1],
+    ['INNER JOIN', 1],
+    ['LEFT JOIN', 1],
+    ['RIGHT JOIN', 1],
+    ['FULL JOIN', 1],
+    ['CROSS JOIN', 1],
+    ['WHERE', 2],
+    ['HAVING', 3],
+    ['GROUP BY', 4],
+    ['OPERATOR', 5],
+    ['SELECT', 6],
+    ['ORDER BY', 7],
+  ]);
+  const describe = (item: SqlClauseFeedback): string => {
+    const status = !item.answered ? 'blank' : item.matches ? 'matches' : 'mismatch';
+    return `${item.clause.keyword}: ${status}. Expected ${item.clause.expectedBody}; student wrote ${item.userValue || '(blank)'}.`;
+  };
+  const mismatches = feedback
+    .filter((item) => !item.answered || !item.matches)
+    .sort((left, right) => (priority.get(left.clause.keyword) ?? 8) - (priority.get(right.clause.keyword) ?? 8));
+  const matches = feedback.filter((item) => item.answered && item.matches);
+
+  if (!mismatches.length) {
+    return 'The SQL returns the same rows on this dataset, but the guided clauses do not match the catalog intent.';
+  }
+
+  return [
+    'The SQL returns the same rows on this dataset, but the guided clauses do not match the catalog intent.',
+    'Review all clauses together and focus the hint on the highest-impact mismatch, especially FROM/JOIN before projection when present.',
+    `Mismatched or blank clauses: ${mismatches.map(describe).join(' ')}`,
+    matches.length ? `Clauses already matching: ${matches.map((item) => item.clause.keyword).join(', ')}.` : '',
+  ].filter(Boolean).join(' ');
 }
 
 function buildSqlFromClauseList(clauses: SqlClause[], answers: Record<string, string>): string {
@@ -1051,9 +1135,14 @@ export default function RASQLReference() {
         void generateTranslationAiHint(
           'sql-to-ra',
           raAnswer,
-          freeformRaIntentMismatch
-            ? 'The relational algebra expression returns the same rows on this dataset, but it does not match the catalog intent exactly. Check comparison operators, selected attributes, joins, renames, and set operations against the source SQL statement.'
-            : 'The submitted relational algebra expression is not equivalent to the source SQL statement on the current dataset.',
+          guidedRaHintMessage(
+            raAnswerMode,
+            raAnswer,
+            queryDetail?.solution?.sql,
+            queryDetail?.solution?.relational_algebra,
+            result,
+            freeformRaIntentMismatch,
+          ),
         );
       }
     } catch (error) {
@@ -1101,17 +1190,13 @@ export default function RASQLReference() {
           sqlAnswer,
           queryDetail?.solution?.sql,
           queryDetail?.solution?.relational_algebra,
-        );
+      );
       if (!result.is_correct || guidedClauseMismatch || freeformSqlIntentMismatch) {
-        const firstMismatch = sqlClauseFeedback.find((item) => !item.answered || !item.matches);
-        const guidedMismatchMessage = firstMismatch
-          ? `The SQL returns the same rows on this dataset, but the guided ${firstMismatch.clause.keyword} clause does not match the catalog intent. Expected ${firstMismatch.clause.keyword} ${firstMismatch.clause.expectedBody}; student wrote ${firstMismatch.userValue || '(blank)'}.`
-          : 'The SQL returns the same rows on this dataset, but the guided clauses do not match the catalog intent.';
         void generateTranslationAiHint(
           'ra-to-sql',
           sqlAnswer,
-          guidedClauseMismatch
-            ? guidedMismatchMessage
+          sqlAnswerMode === 'guided'
+            ? guidedSqlClauseHintMessage(sqlClauseFeedback)
             : freeformSqlIntentMismatch
               ? 'The SQL returns the same rows on this dataset, but it does not match the catalog intent exactly. Check comparison operators, selected attributes, joins, aliases, and set operations against the source relational algebra expression.'
               : 'The submitted SQL query is not equivalent to the source relational algebra expression on the current dataset.',

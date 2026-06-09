@@ -104,7 +104,7 @@ on conflict (dataset_name) do update
 
 Dataset behavior:
 
-- `Sales` and `University` are shared datasets loaded from Supabase Storage.
+- `Sales` and `University` are shared datasets loaded from the bundled `datasets/` directory by default for fast local catalog and schema access. Set `RA_USE_REMOTE_DEFAULT_DATASETS=true` to load shared defaults from Supabase Storage instead.
 - User-imported datasets are stored in Supabase Storage under user prefixes.
 - Deleting a shared default dataset in the UI hides it only for the current user.
 

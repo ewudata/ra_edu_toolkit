@@ -61,6 +61,13 @@ def test_ra_sql_reference_treats_alias_free_select_from_where_as_equivalent():
     assert "clauseMatchesCatalogClause(clause, userValue, userFromClause, expectedFromClause)" in source
 
 
+def test_ra_sql_reference_guided_from_clause_does_not_ignore_extra_joins():
+    source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
+
+    assert "const joinPattern = /\\b(?:natural\\s+join|inner\\s+join|left\\s+join|right\\s+join|full\\s+join|cross\\s+join|join)\\b/i;" in source
+    assert ".flatMap((item) => item.replace(/\\s+(?:on|using)\\s+.*$/i, '').split(joinPattern))" in source
+
+
 def test_ra_sql_reference_splits_multiple_join_clauses_for_guided_sql_and_expected_view():
     source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
 

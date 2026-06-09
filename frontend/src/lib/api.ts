@@ -178,6 +178,12 @@ export interface LlmHintResponse {
   model: string;
 }
 
+export interface LlmErrorExplanationResponse {
+  explanation: string;
+  hint: string;
+  model: string;
+}
+
 export interface RefreshSessionResponse {
   auth_token: string;
   auth_email: string;
@@ -235,6 +241,11 @@ export const api = {
   ) =>
     request<LlmHintResponse>('POST', `/databases/${database}/queries/${queryId}/llm/hint`, {
       body: { expression: expression?.trim() || null, error: error?.trim() || null, direction: direction ?? null },
+    }),
+
+  explainRaError: (database: string, expression: string) =>
+    request<LlmErrorExplanationResponse>('POST', `/databases/${database}/llm/explain-error`, {
+      body: { expression },
     }),
 
   evaluateCustomQuery: (database: string, expression: string) =>

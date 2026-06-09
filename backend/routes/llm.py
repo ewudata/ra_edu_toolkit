@@ -22,6 +22,24 @@ from ..services.exceptions import (
 )
 
 router = APIRouter(prefix="/databases/{database}/queries/{query_id}/llm", tags=["llm"])
+database_router = APIRouter(prefix="/databases/{database}/llm", tags=["llm"])
+
+RA_GRAMMAR_HELP = "\n".join(
+    [
+        "Projection: π{attr1, attr2}(Relation) or pi{attr1, attr2}(Relation)",
+        "Selection: σ{condition}(Relation) or sigma{condition}(Relation)",
+        "Rename: ρ{old->new}(Relation), rho{old->new}(Relation), or rho alias(Relation)",
+        "Natural join: R ⋈ S",
+        "Theta join: R ⋈{left_attr = right_attr} S",
+        "Set operations: R ∪ S, R - S, R ∩ S",
+        "Conditions use attributes, comparison operators, quoted strings, AND/OR, IS NULL, and IS NOT NULL.",
+        "Operator arguments use braces; relation inputs use parentheses.",
+    ]
+)
+
+
+def _sample_rows(rows: List[Dict[str, Any]], limit: int = 3) -> List[Dict[str, Any]]:
+    return rows[:limit]
 
 
 class HintRequest(BaseModel):
@@ -39,6 +57,23 @@ class HintRequest(BaseModel):
 
 
 class HintResponse(BaseModel):
+    hint: str
+    model: str
+
+
+class ErrorExplanationRequest(BaseModel):
+    expression: str
+
+    @field_validator("expression", mode="before")
+    @classmethod
+    def _strip_expression(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+
+class ErrorExplanationResponse(BaseModel):
+    explanation: str
     hint: str
     model: str
 
@@ -98,6 +133,7 @@ def _evaluation_context(
         "status": "evaluated",
         "student_schema": student_result.schema,
         "student_row_count": len(student_result.dataframe),
+        "student_rows_sample": _sample_rows(student_result.rows),
         "trace_ops": [str(step.get("op", "")) for step in student_result.trace],
         "request_error": request_error,
     }
@@ -117,6 +153,8 @@ def _evaluation_context(
                 "expected_row_count": len(solution_result.dataframe),
                 "missing_row_count": len(comparison.missing_rows),
                 "extra_row_count": len(comparison.extra_rows),
+                "missing_rows_sample": _sample_rows(comparison.missing_rows),
+                "extra_rows_sample": _sample_rows(comparison.extra_rows),
             }
         )
 
@@ -138,6 +176,10 @@ def _translation_context(
         "task": "translation_check",
         "direction": direction,
         "request_error": request_error,
+        "source_language": "relational_algebra" if direction == "ra-to-sql" else "sql",
+        "target_language": "sql" if direction == "ra-to-sql" else "relational_algebra",
+        "source_expression": solution_ra if direction == "ra-to-sql" else solution_sql,
+        "canonical_target_expression": solution_sql if direction == "ra-to-sql" else solution_ra,
     }
     if not answer:
         return context
@@ -195,6 +237,8 @@ def _translation_context(
         "expected_row_count": len(expected_result.dataframe),
         "missing_row_count": len(comparison.missing_rows),
         "extra_row_count": len(comparison.extra_rows),
+        "missing_rows_sample": _sample_rows(comparison.missing_rows),
+        "extra_rows_sample": _sample_rows(comparison.extra_rows),
     }
 
 
@@ -257,3 +301,69 @@ def generate_hint(
         ) from exc
 
     return HintResponse(hint=response.hint, model=response.model)
+
+
+@database_router.post("/explain-error", response_model=ErrorExplanationResponse)
+def explain_error(
+    database: str,
+    payload: ErrorExplanationRequest,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> ErrorExplanationResponse:
+    if not payload.expression:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Expression must be provided.",
+        )
+
+    try:
+        schema = _schema_context(database, user["id"])
+        try:
+            relalg_service.evaluate_expression(
+                payload.expression,
+                database,
+                user_id=user["id"],
+            )
+        except ParseError as exc:
+            error_context = {
+                "type": "parse_error",
+                "message": exc.message,
+                "line": exc.line,
+                "column": exc.column,
+                "context": exc.context,
+            }
+        except EvaluationError as exc:
+            error_context = {
+                "type": "evaluation_error",
+                "message": str(exc),
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Expression evaluates successfully; there is no RA error to explain.",
+            )
+
+        response = llm_service.explain_ra_error(
+            database=database,
+            expression=payload.expression,
+            error_context=error_context,
+            schema=schema,
+            grammar_help=RA_GRAMMAR_HELP,
+        )
+    except DatabaseNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except llm_service.LlmConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    except llm_service.LlmProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+
+    return ErrorExplanationResponse(
+        explanation=response.explanation,
+        hint=response.hint,
+        model=response.model,
+    )

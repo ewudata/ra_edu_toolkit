@@ -68,6 +68,7 @@ export default function RAExercises() {
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [resultError, setResultError] = useState<string | null>(null);
   const [executing, setExecuting] = useState(false);
+  const [showEvaluationTrace, setShowEvaluationTrace] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [solutionResult, setSolutionResult] = useState<EvaluationResult | null>(null);
   const [expectedComparisonResult, setExpectedComparisonResult] = useState<EvaluationResult | null>(null);
@@ -96,6 +97,7 @@ export default function RAExercises() {
       setQueryDetail(null);
       setResult(null);
       setResultError(null);
+      setShowEvaluationTrace(false);
       setCustomResult(null);
       setCustomError(null);
       setShowSolution(false);
@@ -177,10 +179,12 @@ export default function RAExercises() {
     api.getQueryDetail(selectedDb, selectedQueryId).then(setQueryDetail).catch(() => {});
     setResult(null);
     setResultError(null);
+    setShowEvaluationTrace(false);
     setSolution('');
     setShowSolution(false);
     setSolutionResult(null);
     setExpectedComparisonResult(null);
+    setShowEvaluationTrace(false);
     setAiHint(null);
     setAiHintModel(null);
     setAiHintError(null);
@@ -198,8 +202,10 @@ export default function RAExercises() {
     e.preventDefault();
     if (!solution.trim() || !selectedQueryId) return;
     setExecuting(true);
+    setResult(null);
     setResultError(null);
     setExpectedComparisonResult(null);
+    setShowEvaluationTrace(false);
     setAiHint(null);
     setAiHintModel(null);
     setAiHintError(null);
@@ -221,6 +227,7 @@ export default function RAExercises() {
     e.preventDefault();
     if (!customExpr.trim()) return;
     setCustomExecuting(true);
+    setCustomResult(null);
     setCustomError(null);
     try {
       const res = await api.evaluateCustomQuery(selectedDb, customExpr.trim());
@@ -500,12 +507,19 @@ export default function RAExercises() {
                 {queryDetail && (
                   <div className="space-y-4">
                     <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-                      <div className="rounded-[26px] border-2 border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_6px_0_0_#f4e4c7] space-y-2">
-                        <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Prompt:</span> {queryDetail.prompt}</p>
-                        <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
-                        {queryDetail.hints?.length ? (
-                          <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Hint:</span> {queryDetail.hints.join(', ')}</p>
-                        ) : null}
+                      <div className="rounded-[26px] border-2 border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_6px_0_0_#f4e4c7]">
+                        <div className="space-y-2">
+                          <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Prompt:</span> {queryDetail.prompt}</p>
+                          <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
+                          {queryDetail.hints?.length ? (
+                            <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Hint:</span> {queryDetail.hints.join(', ')}</p>
+                          ) : null}
+                        </div>
+                        <div className="mt-5">
+                          <Collapsible title="RA syntax help">
+                            <SyntaxHelp database={selectedDb} />
+                          </Collapsible>
+                        </div>
                       </div>
 
                       <form onSubmit={handleExecute} className="rounded-[26px] border-2 border-[#d7b79f] bg-[#fbe7df] p-5 shadow-[0_6px_0_0_#f2d2c4] space-y-3">
@@ -519,9 +533,10 @@ export default function RAExercises() {
                           value={solution}
                           onChange={(e) => {
                             setSolution(e.target.value);
-                            setAiHint(null);
-                            setAiHintModel(null);
+                            setResult(null);
+                            setExpectedComparisonResult(null);
                             setAiHintError(null);
+                            setShowEvaluationTrace(false);
                           }}
                           className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
                         />
@@ -531,13 +546,11 @@ export default function RAExercises() {
                             {executing ? 'Evaluating...' : 'Evaluate Expression'}
                           </button>
                         </div>
-                        <Collapsible title="RA syntax help">
-                          <SyntaxHelp database={selectedDb} />
-                        </Collapsible>
+                        {resultError && (
+                          <StatusBadge variant="error">Could not evaluate your expression: {resultError}</StatusBadge>
+                        )}
                       </form>
                     </div>
-
-                    {resultError && <StatusBadge variant="error">Could not evaluate your expression: {resultError}</StatusBadge>}
 
                     {result && (
                       <div className={`${blockCardSoft} space-y-6`}>
@@ -561,14 +574,13 @@ export default function RAExercises() {
                             ) : <p className="text-sm text-[#7c5433] italic">Expected result not available for this query.</p>}
                           </div>
                         </div>
-                        <TraceViewer trace={result.trace} title="Evaluation Trace for Your Expression" />
                       </div>
                     )}
 
                     <div className={`${blockCardSoft} space-y-4`}>
                       <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
                         <Lightbulb className="app-icon-glyph h-4 w-4" />
-                        Solution help
+                        Help center
                       </h3>
                       <div className="flex flex-wrap gap-3">
                         <button
@@ -578,7 +590,16 @@ export default function RAExercises() {
                           className={primaryButton}
                         >
                           <Lightbulb className="w-4 h-4" />
-                          {aiHintLoading ? 'Generating hint...' : 'Get AI hint'}
+                          {aiHintLoading ? 'Generating hint...' : 'Get hint'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowEvaluationTrace((visible) => !visible)}
+                          disabled={!result}
+                          className={secondaryButton}
+                        >
+                          <Rows3 className="w-4 h-4" />
+                          {showEvaluationTrace ? 'Hide evaluation trace' : 'Show evaluation trace'}
                         </button>
                         <button
                           type="button"
@@ -586,9 +607,15 @@ export default function RAExercises() {
                           className={secondaryButton}
                         >
                           <Eye className="w-4 h-4" />
-                          {showSolution ? 'Hide canonical solution and result' : 'Show canonical solution and result'}
+                          {showSolution ? 'Hide canonical solution' : 'Show canonical solution'}
                         </button>
                       </div>
+
+                      {showEvaluationTrace && result && (
+                        <div className="space-y-3 rounded-[24px] border-2 border-[#d9c4a5] bg-[#fff9ef] p-5">
+                          <TraceViewer trace={result.trace} title="Evaluation Trace for Your Expression" />
+                        </div>
+                      )}
 
                       {aiHintError && <StatusBadge variant="error">Could not generate an AI hint: {aiHintError}</StatusBadge>}
 
@@ -658,7 +685,10 @@ export default function RAExercises() {
               <textarea
                 id={customExprTextareaId}
                 value={customExpr}
-                onChange={(e) => setCustomExpr(e.target.value)}
+                onChange={(e) => {
+                  setCustomExpr(e.target.value);
+                  setCustomResult(null);
+                }}
                 className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
               />
               <div className="flex justify-center">
@@ -670,9 +700,10 @@ export default function RAExercises() {
               <Collapsible title="RA syntax help">
                 <SyntaxHelp database={selectedDb} />
               </Collapsible>
+              {customError && (
+                <StatusBadge variant="error">Could not evaluate the expression: {customError}</StatusBadge>
+              )}
             </form>
-
-            {customError && <StatusBadge variant="error">Could not evaluate the expression: {customError}</StatusBadge>}
 
             {customResult && (
               <div className={`${blockCardSoft} space-y-4`}>
