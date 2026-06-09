@@ -14,6 +14,6 @@ def test_parse_error_lists_user_facing_natural_join_aliases():
     message = exc_info.value.message
     assert "Expected one of:" in message
     assert "⋈, natural_join, natjoin, or njoin" in message
-    assert "For natural join, use ⋈, natural_join, natjoin, or njoin." in message
+    assert "For natural join, use ⋈, natural_join, natjoin, or njoin; aliases are case-insensitive." in message
     assert "* JOIN" not in message
     assert "Expected one of: JOIN" not in message

@@ -16,3 +16,9 @@ def test_ra_sql_translation_uses_explicit_natural_join_aliases():
     assert "this.matchKeyword('natjoin')" in source
     assert "this.matchKeyword('njoin')" in source
     assert "this.matchKeyword('join')" not in source
+
+
+def test_ra_sql_translation_operator_aliases_are_case_insensitive():
+    source = Path("frontend/src/lib/raSqlTranslation.ts").read_text(encoding="utf-8")
+
+    assert "candidate.toLowerCase() !== keyword.toLowerCase()" in source

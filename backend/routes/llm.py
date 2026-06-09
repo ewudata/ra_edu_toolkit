@@ -26,12 +26,13 @@ database_router = APIRouter(prefix="/databases/{database}/llm", tags=["llm"])
 
 RA_GRAMMAR_HELP = "\n".join(
     [
-        "Projection: π{attr1, attr2}(Relation) or pi{attr1, attr2}(Relation)",
-        "Selection: σ{condition}(Relation) or sigma{condition}(Relation)",
-        "Rename: ρ{old->new}(Relation), rho{old->new}(Relation), or rho alias(Relation)",
-        "Natural join: R ⋈ S; accepted aliases: ⋈, natural_join, natjoin, njoin",
+        "Projection: π{attr1, attr2}(Relation) or pi{attr1, attr2}(Relation); textual aliases are case-insensitive",
+        "Selection: σ{condition}(Relation) or sigma{condition}(Relation); textual aliases are case-insensitive",
+        "Rename: ρ{old->new}(Relation), rho{old->new}(Relation), or rho alias(Relation); textual aliases are case-insensitive",
+        "Natural join: R ⋈ S; accepted aliases: ⋈, natural_join, natjoin, njoin; textual aliases are case-insensitive",
         "Theta join: R ⋈{left_attr = right_attr} S",
-        "Set operations: R ∪ S, R - S, R ∩ S",
+        "Set operations: R ∪ S, R - S, R ∩ S; union, diff, and intersect aliases are case-insensitive",
+        "Product and division: R × S or R ÷ S; cross, x, and div aliases are case-insensitive",
         "Conditions use attributes, comparison operators, quoted strings, AND/OR, IS NULL, and IS NOT NULL.",
         "Operator arguments use braces; relation inputs use parentheses.",
     ]

@@ -76,6 +76,30 @@ def test_natural_join_accepts_clear_text_aliases():
         assert ast.theta is None
 
 
+def test_textual_operator_aliases_are_case_insensitive():
+    ast = stepper.parse("Pi{name}(sIgMa{dept_name = 'Comp. Sci.'}(RhO st(student)))")
+
+    assert isinstance(ast, AST.Projection)
+    assert isinstance(ast.sub, AST.Selection)
+    assert isinstance(ast.sub.sub, AST.Rename)
+
+
+def test_binary_textual_operator_aliases_are_case_insensitive():
+    cases = [
+        ("student NaTuRaL_jOiN takes", AST.Join),
+        ("student NaTjOiN takes", AST.Join),
+        ("student NjOiN takes", AST.Join),
+        ("student CrOsS takes", AST.Product),
+        ("student UnIoN student", AST.Union),
+        ("student DiFf student", AST.Difference),
+        ("student InTeRsEcT student", AST.Intersection),
+        ("student DiV student", AST.Division),
+    ]
+
+    for expression, node_type in cases:
+        assert isinstance(stepper.parse(expression), node_type)
+
+
 def test_bare_join_is_not_a_natural_join_alias():
     with pytest.raises(Exception):
         stepper.parse("student join takes")

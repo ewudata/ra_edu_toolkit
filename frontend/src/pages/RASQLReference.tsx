@@ -4,13 +4,12 @@ import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import DataTable from '../components/DataTable';
 import TablePreview from '../components/TablePreview';
-import { sortQueries, difficultyIcon, difficultyLabel } from '../lib/difficulty';
+import { sortQueries, difficultyIcon } from '../lib/difficulty';
 import { translateRaToSql, translateSqlToRa, TranslationError } from '../lib/raSqlTranslation';
 import {
   BookOpen,
   Check,
   Database as DatabaseIcon,
-  Filter,
   LayoutList,
   Lightbulb,
   Pencil,
@@ -1297,88 +1296,106 @@ export default function RASQLReference() {
       </section>
 
       {selectedDb && selectedDbInfo && (
-        <section className="grid gap-5 xl:grid-cols-[1.05fr_1.3fr]">
-          <div className={`${blockCard} space-y-4`}>
+        <section className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className={`${blockCard} space-y-4 xl:sticky xl:top-32 xl:self-start`}>
             <div className="flex items-center gap-3">
-              <div className="app-icon-tile-soft flex h-11 w-11 items-center justify-center rounded-[16px]">
+              <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
                 <DatabaseIcon className="app-icon-glyph-soft h-5 w-5" />
               </div>
               <div>
                 <p className={sectionLabel}>Schema Panel</p>
-                <h2 className={sectionTitle}>Active database: {selectedDb}</h2>
+                <h2 className="text-lg font-semibold text-[#3f4761]">{selectedDb}</h2>
               </div>
             </div>
-            <p className="text-sm leading-6 text-[#475467]">
-              Keep the schema visible while you translate. Seeing tables and sample rows makes the RA-to-SQL mapping much easier to reason about.
-            </p>
-            <Collapsible title={`Browse tables in ${selectedDb}`}>
+            <Collapsible title={`${selectedDbInfo.table_count} tables`} quiet>
               <div className="space-y-0.5">
                 {selectedDbInfo.tables.map((tableName) => (
                   <TablePreview key={tableName} tableName={tableName} metadata={schemaMap[tableName]} />
                 ))}
               </div>
             </Collapsible>
-          </div>
 
-          <div className={`${blockCard} space-y-4`}>
-            <div className="space-y-2">
+            <div className="space-y-3 border-t border-[#e5e7eb] pt-4">
               <p className={sectionLabel}>Practice Mode</p>
-              <h2 className={sectionTitle}>Choose how you want to work</h2>
-              <p className="text-sm leading-6 text-[#475467]">
-                Use the catalog when you want guided practice with canonical answers and equivalence checks. Use the custom translator when you want to experiment with your own RA and SQL and see the system's best automatic translation.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
-                <div className="flex items-center gap-3">
-                  <div className="app-icon-tile flex h-10 w-10 items-center justify-center rounded-[14px]">
-                    <LayoutList className="app-icon-glyph h-4 w-4" />
-                  </div>
-                  <h3 className="font-semibold text-[#3f4761]">Guided Catalog Practice</h3>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[#475467]">
-                  Work from curated prompts in the selected database. Inspect the expected result, submit an answer, and compare your work against the canonical query for that dataset.
-                </p>
-                <p className="mt-2 text-xs leading-5 text-[#667085]">
-                  Best for: structured practice, checking correctness, and learning standard RA/SQL patterns.
-                </p>
+              <div className="grid gap-2">
                 {queries.length > 0 ? (
                   <button
                     onClick={() => setMode('catalog')}
-                    className={`mt-4 ${mode === 'catalog' ? secondaryButton : primaryButton}`}
+                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition-colors ${
+                      mode === 'catalog'
+                        ? 'border-[#87d7c8] bg-[#f3fbf8] text-[#214c45]'
+                        : 'border-[#e4e7f2] bg-white/78 text-[#3d6f67] hover:bg-[#f8fcfb]'
+                    }`}
                   >
-                    Open Catalog Translation
+                    <LayoutList className="app-icon-glyph h-4 w-4" />
+                    Catalog practice
                   </button>
                 ) : (
-                  <p className="mt-4 text-sm italic text-[#667085]">This database does not have a translation catalog yet.</p>
+                  <p className="text-sm leading-6 text-[#667085]">This database does not have a translation catalog yet.</p>
                 )}
-              </div>
-              <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
-                <div className="flex items-center gap-3">
-                  <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
-                    <Pencil className="app-icon-glyph-soft h-4 w-4" />
-                  </div>
-                  <h3 className="font-semibold text-[#3f4761]">Custom Auto-Translator</h3>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[#475467]">
-                  Enter your own RA or SQL and let the page translate it automatically while previewing evaluation results for each side.
-                </p>
-                <p className="mt-2 text-xs leading-5 text-[#667085]">
-                  Best for: trying ideas quickly, debugging expressions, and exploring supported translation patterns. Automatic translation is helpful, but not guaranteed to match one canonical form.
-                </p>
                 <button
                   onClick={() => setMode('custom')}
-                  className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
+                  className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition-colors ${
+                    mode === 'custom'
+                      ? 'border-[#87d7c8] bg-[#f3fbf8] text-[#214c45]'
+                      : 'border-[#e4e7f2] bg-white/78 text-[#3d6f67] hover:bg-[#f8fcfb]'
+                  }`}
                 >
-                  Open Custom Translator
+                  <Pencil className="app-icon-glyph-soft h-4 w-4" />
+                  Custom translator
                 </button>
               </div>
             </div>
-          </div>
-        </section>
-      )}
 
-      {selectedDb && mode === 'catalog' && (
+            {mode === 'catalog' && (
+              <div className="space-y-4 border-t border-[#e5e7eb] pt-4">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#3d6f67]">Operators</h3>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {OPERATOR_OPTIONS.map(([key, label]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleOp(key)}
+                        aria-pressed={selectedOps.has(key)}
+                        className={`rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                          selectedOps.has(key)
+                            ? 'border-[#87d7c8] bg-[#e7f7f2] text-[#214c45]'
+                            : 'border-[#d7eee7] bg-white/72 text-[#3d6f67] hover:bg-[#f8fcfb]'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-[#e5e7eb] pt-4">
+              <Collapsible title="Translation tips" quiet>
+                <div className="space-y-2 text-sm text-[#475467]">
+                  <p><strong className="text-[#344054]">Selection:</strong> σ maps to WHERE.</p>
+                  <p><strong className="text-[#344054]">Projection:</strong> π maps most closely to SELECT DISTINCT.</p>
+                  <p><strong className="text-[#344054]">Rename:</strong> ρ maps to aliases and AS.</p>
+                  <p><strong className="text-[#344054]">Set operations:</strong> union, difference, and intersection map to UNION, EXCEPT, and INTERSECT.</p>
+                </div>
+              </Collapsible>
+            </div>
+          </aside>
+
+          <div className="min-w-0 space-y-5">
+            {!mode && (
+              <section className={`${blockCard} space-y-2`}>
+                <p className={sectionLabel}>Workspace</p>
+                <h2 className={sectionTitle}>Choose a translation mode</h2>
+                <p className="max-w-2xl text-sm leading-6 text-[#475467]">
+                  Use catalog practice for guided RA and SQL drills, or use the custom translator to experiment freely.
+                </p>
+              </section>
+            )}
+
+      {mode === 'catalog' && (
         <section className={`${blockCard} space-y-5`}>
           <div className="flex items-center gap-3">
             <div className="app-icon-tile flex h-11 w-11 items-center justify-center rounded-[16px] shadow-[0_4px_0_0_rgba(203,234,227,0.9)]">
@@ -1395,33 +1412,6 @@ export default function RASQLReference() {
           ) : (
             <>
               <div className={`${blockCardSoft} space-y-4`}>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <Filter className="h-4 w-4 text-[#615a96]" />
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Operator filters</h3>
-                      <p className="mt-1 text-sm text-[#475467]">Filter the catalog by the relational algebra operators used in each prompt.</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {OPERATOR_OPTIONS.map(([key, label]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => toggleOp(key)}
-                        aria-pressed={selectedOps.has(key)}
-                        className={`rounded-2xl border-2 px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                          selectedOps.has(key)
-                            ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]'
-                            : 'border-[#cbeae3] bg-[#f7fcfa] text-[#3d6f67] hover:bg-[#edf8f6]'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="space-y-2">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1477,11 +1467,8 @@ export default function RASQLReference() {
 
               {!queryDetail ? null : (
                 <div className="space-y-4">
-                  <div className={`${blockCardSoft} space-y-2`}>
-                    <p className="text-base text-[#344054]">{queryDetail.prompt}</p>
-                    <p className="text-sm text-[#667085]">
-                      <span className="font-semibold text-[#475467]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}
-                    </p>
+                  <div className="rounded-[24px] border border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_8px_18px_rgba(151,103,59,0.08)]">
+                    <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Prompt:</span> {queryDetail.prompt}</p>
                   </div>
 
                   <div className={`grid gap-4 ${practiceDirection === 'ra-to-sql' ? 'xl:grid-cols-[0.95fr_1.05fr]' : 'xl:grid-cols-[0.95fr_1.05fr]'}`}>
@@ -1508,10 +1495,8 @@ export default function RASQLReference() {
                           <pre className="app-code overflow-x-auto p-4 text-sm text-[#344054]">
                             {formatRaExpression(queryDetail.solution?.relational_algebra)}
                           </pre>
-                          <div className="space-y-4">
-                            <div>
-                              <p className="mb-2 text-sm font-semibold text-[#344054]">Result preview</p>
-                              <p className="mb-3 text-sm text-[#475467]">Rows returned: {traceResult?.row_count ?? '—'}</p>
+                          <div className="space-y-3">
+                            <Collapsible title={`Source output${traceResult ? ` (${traceResult.row_count} rows)` : ''}`} quiet>
                               {traceLoading ? (
                                 <p className="text-sm italic text-[#667085]">Loading output preview...</p>
                               ) : traceResult?.rows.length ? (
@@ -1519,12 +1504,11 @@ export default function RASQLReference() {
                               ) : (
                                 <p className="text-sm italic text-[#667085]">No rows returned.</p>
                               )}
-                            </div>
+                            </Collapsible>
                             {activeQueryRows ? (
-                              <div>
-                                <p className="mb-2 text-sm font-semibold text-[#344054]">Expected result</p>
+                              <Collapsible title={`Expected output (${activeQueryRows.length} rows)`} quiet>
                                 {activeQueryRows.length > 0 ? <DataTable rows={activeQueryRows} compact maxHeight="15rem" /> : <p className="text-sm italic text-[#667085]">Expected result returns no rows.</p>}
-                              </div>
+                              </Collapsible>
                             ) : null}
                           </div>
                         </>
@@ -1536,10 +1520,8 @@ export default function RASQLReference() {
                           <pre className="app-code overflow-x-auto p-4 text-sm text-[#344054]">
                             {formatSqlForDisplay(queryDetail.solution?.sql)}
                           </pre>
-                          <div className="space-y-4">
-                            <div>
-                              <p className="mb-2 text-sm font-semibold text-[#344054]">Result preview</p>
-                              <p className="mb-3 text-sm text-[#475467]">Rows returned: {traceResult?.row_count ?? '—'}</p>
+                          <div className="space-y-3">
+                            <Collapsible title={`Source output${traceResult ? ` (${traceResult.row_count} rows)` : ''}`} quiet>
                               {traceLoading ? (
                                 <p className="text-sm italic text-[#667085]">Loading output preview...</p>
                               ) : traceResult?.rows.length ? (
@@ -1547,7 +1529,7 @@ export default function RASQLReference() {
                               ) : (
                                 <p className="text-sm italic text-[#667085]">No rows returned.</p>
                               )}
-                            </div>
+                            </Collapsible>
                           </div>
                         </>
                       )}
@@ -1660,8 +1642,8 @@ export default function RASQLReference() {
 
                                   {revealSqlAnswers ? (
                                     <div className="mt-2.5 rounded-2xl border border-[#ead7b8] bg-[#fffaf1] px-3 py-2">
-                                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c5433]">Expected</p>
-                                      <div className="mt-1 space-y-1 font-mono text-xs text-[#5c3b1f]">
+                                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5433]">EXPECTED</p>
+                                      <div className="mt-1.5 space-y-0.5 font-mono text-sm leading-6 text-[#5c3b1f]">
                                         {group.clauses.map((clause) => (
                                           <p key={clause.id}>
                                             <span className="font-semibold">{clause.keyword}</span> {clause.expectedBody}
@@ -1691,6 +1673,14 @@ export default function RASQLReference() {
                                 placeholder="Write a complete SQL query here."
                                 className="min-h-[180px] w-full resize-y rounded-2xl border border-[#d7deef] bg-white px-4 py-3 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
                               />
+                              {revealSqlAnswers ? (
+                                <div className="rounded-2xl border border-[#ead7b8] bg-[#fffaf1] px-3 py-2">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5433]">EXPECTED</p>
+                                  <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap font-mono text-sm leading-6 text-[#5c3b1f]">
+                                    {formatSqlForDisplay(queryDetail.solution?.sql)}
+                                  </pre>
+                                </div>
+                              ) : null}
                               <p className="text-xs leading-5 text-[#667085]">
                                 Use this mode when your SQL is correct but does not follow the catalog&apos;s clause layout exactly.
                               </p>
@@ -1810,10 +1800,10 @@ export default function RASQLReference() {
 
                             {revealRaAnswer ? (
                               <div className="mt-2.5 rounded-2xl border border-[#ead7b8] bg-[#fffaf1] px-3 py-2">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c5433]">Expected</p>
-                                <p className="mt-1 font-mono text-xs text-[#5c3b1f]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c5433]">EXPECTED</p>
+                                <pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap font-mono text-sm leading-6 text-[#5c3b1f]">
                                   {formatRaExpression(queryDetail.solution?.relational_algebra)}
-                                </p>
+                                </pre>
                               </div>
                             ) : null}
                           </div>
@@ -1909,7 +1899,7 @@ export default function RASQLReference() {
         </section>
       )}
 
-      {selectedDb && mode === 'custom' && (
+      {mode === 'custom' && (
         <section className={`${blockCard} space-y-5`}>
           <div className="flex items-center gap-3">
             <div className="app-icon-tile flex h-11 w-11 items-center justify-center rounded-[16px] shadow-[0_4px_0_0_rgba(203,234,227,0.9)]">
@@ -2018,21 +2008,9 @@ export default function RASQLReference() {
           ) : null}
         </section>
       )}
-
-      {selectedDb ? (
-        <div className={blockCard}>
-          <Collapsible title="Translation Tips">
-            <div className="space-y-1.5 text-sm text-[#475467]">
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Start with structure:</strong> Outline the relational algebra operators required, then identify their SQL counterparts.</span></p>
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Selection ↔ WHERE:</strong> Translate selections (σ) into WHERE clauses.</span></p>
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Projection ↔ SELECT DISTINCT:</strong> Projections (π) remove duplicates, so they map most closely to <code>SELECT DISTINCT</code> column lists.</span></p>
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Rename ↔ AS / ρ:</strong> Simple SQL aliases such as <code>id AS student_id</code> translate to relational renaming (ρ), and RA rename can translate back through SQL aliases.</span></p>
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Joins:</strong> Natural joins map to <code>NATURAL JOIN</code>, while theta joins map to <code>JOIN ... ON ...</code>.</span></p>
-              <p className="flex items-start gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#74c8b8]" /> <span><strong className="text-[#344054]">Set operations:</strong> Union, difference, and intersection correspond to UNION, EXCEPT, and INTERSECT.</span></p>
-            </div>
-          </Collapsible>
-        </div>
-      ) : null}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

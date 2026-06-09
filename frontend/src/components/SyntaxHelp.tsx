@@ -26,15 +26,15 @@ function Example({ database }: { database?: string }) {
 
 export default function SyntaxHelp({ database }: Props) {
   const ops = [
-    { symbol: 'π', name: 'Projection', usage: 'π{attr1,attr2}(R)', aliases: 'pi, PI' },
-    { symbol: 'σ', name: 'Selection', usage: 'σ{condition}(R)', aliases: 'sigma, SIGMA' },
+    { symbol: 'π', name: 'Projection', usage: 'π{attr1,attr2}(R)', aliases: 'pi' },
+    { symbol: 'σ', name: 'Selection', usage: 'σ{condition}(R)', aliases: 'sigma' },
     { symbol: 'ρ', name: 'Rename', usage: 'ρ alias(R) or ρ{old->new}(R)', aliases: 'rho' },
-    { symbol: '⋈', name: 'Natural Join', usage: 'R ⋈ S', aliases: '⋈, natural_join, natjoin, njoin' },
-    { symbol: '×', name: 'Cartesian Product', usage: 'R × S', aliases: 'x, X, cross, CROSS' },
-    { symbol: '∪', name: 'Union', usage: 'R ∪ S', aliases: 'union, UNION' },
-    { symbol: '−', name: 'Difference', usage: 'R − S', aliases: '-, diff, DIFF' },
-    { symbol: '∩', name: 'Intersection', usage: 'R ∩ S', aliases: 'intersect, INTERSECT' },
-    { symbol: '÷', name: 'Division', usage: 'R ÷ S', aliases: '/, div, DIV' },
+    { symbol: '⋈', name: 'Natural Join', usage: 'R ⋈ S', aliases: 'natural_join, natjoin, njoin' },
+    { symbol: '×', name: 'Cartesian Product', usage: 'R × S', aliases: 'x or cross' },
+    { symbol: '∪', name: 'Union', usage: 'R ∪ S', aliases: 'union' },
+    { symbol: '−', name: 'Difference', usage: 'R − S', aliases: '-, diff' },
+    { symbol: '∩', name: 'Intersection', usage: 'R ∩ S', aliases: 'intersect' },
+    { symbol: '÷', name: 'Division', usage: 'R ÷ S', aliases: '/, div' },
   ];
 
   return (
@@ -46,7 +46,7 @@ export default function SyntaxHelp({ database }: Props) {
             <span className="font-bold text-[var(--color-op)]">{op.symbol}</span>{' '}
             <span className="font-semibold text-[#5c3b1f]">{op.name}</span>:{' '}
             <code className="rounded-lg border border-[#ead7b8] bg-[#fff7eb] px-1.5 py-0.5 text-xs font-mono">{op.usage}</code>{' '}
-            <span className="text-xs text-[#7c5433]">Accepted aliases: {op.aliases}</span>
+            <span className="text-xs text-[#7c5433]">Alias: {op.aliases}</span>
           </li>
         ))}
       </ul>

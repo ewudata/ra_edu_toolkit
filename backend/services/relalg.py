@@ -12,18 +12,18 @@ from . import datasets
 from .exceptions import EvaluationError, ParseError
 
 _EXPECTED_TOKEN_LABELS = {
-    "JOIN": "⋈, natural_join, natjoin, or njoin",
-    "PRODUCT": "×, x, or cross",
-    "UNION": "∪ or union",
-    "DIFF": "−, -, or diff",
-    "INTERSECT": "∩ or intersect",
-    "DIV": "÷, /, or div",
+    "JOIN": "⋈, natural_join, natjoin, or njoin (aliases are case-insensitive)",
+    "PRODUCT": "×, x, or cross (aliases are case-insensitive)",
+    "UNION": "∪ or union (case-insensitive)",
+    "DIFF": "−, -, or diff (case-insensitive)",
+    "INTERSECT": "∩ or intersect (case-insensitive)",
+    "DIV": "÷, /, or div (case-insensitive)",
     "RPAR": ")",
     "LPAR": "(",
     "NAME": "a relation or attribute name",
-    "PI": "π or pi",
-    "SIGMA": "σ or sigma",
-    "RHO": "ρ or rho",
+    "PI": "π or pi (case-insensitive)",
+    "SIGMA": "σ or sigma (case-insensitive)",
+    "RHO": "ρ or rho (case-insensitive)",
 }
 
 _EXPECTED_TOKEN_ORDER = [
@@ -68,7 +68,7 @@ def _friendly_parse_message(exc: LarkError) -> str:
         if expected:
             message += f" Expected one of: {expected}."
         if str(value).lower() == "join":
-            message += " For natural join, use ⋈, natural_join, natjoin, or njoin."
+            message += " For natural join, use ⋈, natural_join, natjoin, or njoin; aliases are case-insensitive."
         return message
 
     message = str(exc).strip()

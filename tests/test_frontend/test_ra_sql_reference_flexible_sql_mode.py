@@ -16,6 +16,24 @@ def test_ra_sql_reference_offers_guided_and_freeform_sql_answer_modes():
     assert "raAnswerMode === 'freeform'" in source
 
 
+def test_ra_sql_reference_freeform_sql_can_reveal_canonical_sql():
+    source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
+
+    assert "EXPECTED" in source
+    assert "formatSqlForDisplay(queryDetail.solution?.sql)" in source
+    assert "revealSqlAnswers ? (" in source
+    assert "Show Canonical SQL" in source
+
+
+def test_ra_sql_reference_canonical_sql_and_ra_use_matching_expected_style():
+    source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
+
+    assert source.count("EXPECTED") >= 3
+    assert "formatSqlForDisplay(queryDetail.solution?.sql)" in source
+    assert "formatRaExpression(queryDetail.solution?.relational_algebra)" in source
+    assert "whitespace-pre-wrap font-mono text-sm leading-6 text-[#5c3b1f]" in source
+
+
 def test_ra_sql_reference_checks_answers_with_semantics_and_catalog_intent():
     source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
 

@@ -37,6 +37,43 @@ const OPERATOR_ALIASES: Record<string, Set<string>> = {
   rename: new Set(['rename', 'renaming', 'rho', 'ρ']),
 };
 
+const OPERATOR_DISPLAY: Record<string, { symbol: string; aliases: string }> = {
+  selection: { symbol: 'σ', aliases: 'sigma' },
+  select: { symbol: 'σ', aliases: 'sigma' },
+  sigma: { symbol: 'σ', aliases: 'sigma' },
+  'σ': { symbol: 'σ', aliases: 'sigma' },
+  project: { symbol: 'π', aliases: 'pi' },
+  projection: { symbol: 'π', aliases: 'pi' },
+  pi: { symbol: 'π', aliases: 'pi' },
+  'π': { symbol: 'π', aliases: 'pi' },
+  rename: { symbol: 'ρ', aliases: 'rho' },
+  renaming: { symbol: 'ρ', aliases: 'rho' },
+  rho: { symbol: 'ρ', aliases: 'rho' },
+  'ρ': { symbol: 'ρ', aliases: 'rho' },
+  intersection: { symbol: '∩', aliases: 'intersect' },
+  union: { symbol: '∪', aliases: 'union' },
+  difference: { symbol: '−', aliases: '-, diff' },
+  'set difference': { symbol: '−', aliases: '-, diff' },
+  'cartesian product': { symbol: '×', aliases: 'x or cross' },
+  product: { symbol: '×', aliases: 'x or cross' },
+  'natural join': { symbol: '⋈', aliases: 'natural_join, natjoin, njoin' },
+  join: { symbol: '⋈', aliases: 'natural_join, natjoin, njoin' },
+  division: { symbol: '÷', aliases: '/, div' },
+};
+
+function operatorHintDisplays(hints: string[] | undefined): string[] {
+  const seen = new Set<string>();
+  return (hints ?? []).flatMap((hint) => {
+    const key = hint.trim().toLowerCase();
+    if (!key) return [];
+    const display = OPERATOR_DISPLAY[key] ?? { symbol: hint.trim(), aliases: key };
+    const label = `${display.symbol} (${display.aliases})`;
+    if (seen.has(label)) return [];
+    seen.add(label);
+    return [label];
+  });
+}
+
 function queryMatchesOps(query: Query, ops: Set<string>): boolean {
   const hints = (query.hints ?? []).map((h) => h.toLowerCase()).join(' ');
   return [...ops].every((op) => {
@@ -500,12 +537,14 @@ export default function RAExercises() {
 
                 {queryDetail && (
                   <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-[minmax(240px,0.75fr)_minmax(0,1.25fr)]">
+                    <div className="space-y-4">
                       <div className="rounded-[24px] border border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_8px_18px_rgba(151,103,59,0.08)]">
                         <div className="space-y-2">
                           <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Prompt:</span> {queryDetail.prompt}</p>
-                          {queryDetail.hints?.length ? (
-                            <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Hint:</span> {queryDetail.hints.join(', ')}</p>
+                          {operatorHintDisplays(queryDetail.hints).length ? (
+                            <p className="text-sm text-[#6d4b31]">
+                              <span className="font-semibold text-[#5c3b1f]">Operators:</span> {operatorHintDisplays(queryDetail.hints).join(', ')}
+                            </p>
                           ) : null}
                         </div>
                       </div>
