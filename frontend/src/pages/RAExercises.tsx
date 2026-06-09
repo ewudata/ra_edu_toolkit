@@ -6,7 +6,7 @@ import TablePreview from '../components/TablePreview';
 import DataTable from '../components/DataTable';
 import TraceViewer from '../components/TraceViewer';
 import SyntaxHelp from '../components/SyntaxHelp';
-import { sortQueries, difficultyIcon, difficultyLabel } from '../lib/difficulty';
+import { sortQueries, difficultyIcon } from '../lib/difficulty';
 import {
   Database as DatabaseIcon,
   LayoutList,
@@ -68,7 +68,7 @@ export default function RAExercises() {
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [resultError, setResultError] = useState<string | null>(null);
   const [executing, setExecuting] = useState(false);
-  const [showEvaluationTrace, setShowEvaluationTrace] = useState(false);
+  const [supportPanel, setSupportPanel] = useState<'hint' | 'trace' | 'solution' | null>(null);
   const [showSolution, setShowSolution] = useState(false);
   const [solutionResult, setSolutionResult] = useState<EvaluationResult | null>(null);
   const [expectedComparisonResult, setExpectedComparisonResult] = useState<EvaluationResult | null>(null);
@@ -97,7 +97,7 @@ export default function RAExercises() {
       setQueryDetail(null);
       setResult(null);
       setResultError(null);
-      setShowEvaluationTrace(false);
+      setSupportPanel(null);
       setCustomResult(null);
       setCustomError(null);
       setShowSolution(false);
@@ -179,12 +179,12 @@ export default function RAExercises() {
     api.getQueryDetail(selectedDb, selectedQueryId).then(setQueryDetail).catch(() => {});
     setResult(null);
     setResultError(null);
-    setShowEvaluationTrace(false);
+    setSupportPanel(null);
     setSolution('');
     setShowSolution(false);
     setSolutionResult(null);
     setExpectedComparisonResult(null);
-    setShowEvaluationTrace(false);
+    setSupportPanel(null);
     setAiHint(null);
     setAiHintModel(null);
     setAiHintError(null);
@@ -205,7 +205,7 @@ export default function RAExercises() {
     setResult(null);
     setResultError(null);
     setExpectedComparisonResult(null);
-    setShowEvaluationTrace(false);
+    setSupportPanel(null);
     setAiHint(null);
     setAiHintModel(null);
     setAiHintError(null);
@@ -252,6 +252,7 @@ export default function RAExercises() {
       );
       setAiHint(res.hint);
       setAiHintModel(res.model);
+      setSupportPanel('hint');
     } catch (err) {
       setAiHint(null);
       setAiHintModel(null);
@@ -262,13 +263,15 @@ export default function RAExercises() {
   }
 
   async function handleViewSolution() {
-    if (showSolution) {
+    if (supportPanel === 'solution' && showSolution) {
       setShowSolution(false);
       setSolutionResult(null);
+      setSupportPanel(null);
       return;
     }
 
     setShowSolution(true);
+    setSupportPanel('solution');
     const expr = queryDetail?.solution?.relational_algebra;
     if (!expr) return;
     try {
@@ -350,129 +353,120 @@ export default function RAExercises() {
         </section>
 
         {selectedDb && selectedDbInfo && (
-          <>
-            <section className="grid gap-5 xl:grid-cols-[1.05fr_1.3fr]">
-              <div className={`${blockCard} space-y-4`}>
+          <section className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+              <aside className={`${blockCard} space-y-4 xl:sticky xl:top-32 xl:self-start`}>
                 <div className="flex items-center gap-3">
-                  <div className="app-icon-tile-soft flex h-11 w-11 items-center justify-center rounded-[16px]">
+                  <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
                     <DatabaseIcon className="app-icon-glyph-soft h-5 w-5" />
                   </div>
                   <div>
                     <p className={sectionLabel}>Schema Panel</p>
-                    <h2 className={sectionTitle}>Active database: {selectedDb}</h2>
+                    <h2 className="text-lg font-semibold text-[#3f4761]">{selectedDb}</h2>
                   </div>
                 </div>
-                <p className="text-sm leading-6 text-[#475467]">
-                  Review available relations before solving. This keeps the schema visible as a study aid instead of burying it below the exercise workflow.
-                </p>
-                <Collapsible title={`Browse tables in ${selectedDb}`}>
+                <Collapsible title={`${selectedDbInfo.table_count} tables`} quiet>
                   <div className="space-y-0.5">
                     {selectedDbInfo.tables.map((t) => (
                       <TablePreview key={t} tableName={t} metadata={schemaMap[t]} />
                     ))}
                   </div>
                 </Collapsible>
-              </div>
 
-              <div className={`${blockCard} space-y-4`}>
-                <div className="space-y-2">
+                <div className="space-y-3 border-t border-[#e5e7eb] pt-4">
                   <p className={sectionLabel}>Practice Mode</p>
-                  <h2 className={sectionTitle}>Choose how you want to work</h2>
-                  <p className="text-sm leading-6 text-[#475467]">
-                    Use structured catalog practice when you want targeted prompts, or switch to open writing mode to test an expression directly.
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
-                    <div className="flex items-center gap-3">
-                      <div className="app-icon-tile flex h-10 w-10 items-center justify-center rounded-[14px]">
-                        <LayoutList className="app-icon-glyph h-4 w-4" />
-                      </div>
-                      <h3 className="font-semibold text-[#3f4761]">Pre-defined Queries</h3>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-[#475467]">Work through catalog prompts and narrow them by operator family or mastery status.</p>
-                    {!queriesLoaded ? (
-                      <p className="mt-4 text-sm italic text-[#667085]">Loading query catalog...</p>
-                    ) : queries.length > 0 ? (
+                  <div className="grid gap-2">
+                    {queriesLoaded && queries.length > 0 && (
                       <button
                         onClick={() => setMode('operators')}
-                        className={`mt-4 ${mode === 'operators' ? secondaryButton : primaryButton}`}
+                        className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition-colors ${
+                          mode === 'operators'
+                            ? 'border-[#87d7c8] bg-[#f3fbf8] text-[#214c45]'
+                            : 'border-[#e4e7f2] bg-white/78 text-[#3d6f67] hover:bg-[#f8fcfb]'
+                        }`}
                       >
-                        Open Catalog Practice
+                        <LayoutList className="app-icon-glyph h-4 w-4" />
+                        Catalog practice
                       </button>
-                    ) : (
-                      <p className="mt-4 text-sm italic text-[#667085]">This is a user database, so the system does not provide a pre-defined query catalog to browse.</p>
                     )}
-                  </div>
-                  <div className="rounded-[22px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.86)] p-5 shadow-[0_8px_20px_rgba(123,128,173,0.06)]">
-                    <div className="flex items-center gap-3">
-                      <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
-                        <Pencil className="app-icon-glyph-soft h-4 w-4" />
-                      </div>
-                      <h3 className="font-semibold text-[#3f4761]">User-defined Queries</h3>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-[#475467]">Evaluate any relational algebra expression directly against the selected database.</p>
-                    <button
+                    {!queriesLoaded && <p className="text-sm italic text-[#667085]">Loading query catalog...</p>}
+                    {queriesLoaded && queries.length === 0 && (
+                      <p className="text-sm leading-6 text-[#667085]">No catalog prompts are available for this user database.</p>
+                    )}
+                      <button
                       onClick={() => setMode('custom')}
-                      className={`mt-4 ${mode === 'custom' ? secondaryButton : primaryButton}`}
-                    >
-                      Open Custom Evaluator
-                    </button>
+                      className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition-colors ${
+                        mode === 'custom'
+                          ? 'border-[#87d7c8] bg-[#f3fbf8] text-[#214c45]'
+                          : 'border-[#e4e7f2] bg-white/78 text-[#3d6f67] hover:bg-[#f8fcfb]'
+                      }`}
+                      >
+                      <Pencil className="app-icon-glyph-soft h-4 w-4" />
+                      Custom evaluator
+                      </button>
                   </div>
                 </div>
-              </div>
-            </section>
-          </>
-        )}
+
+                {mode === 'operators' && (
+                  <div className="space-y-4 border-t border-[#e5e7eb] pt-4">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#3d6f67]">Operators</h3>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {OPERATOR_OPTIONS.map(([key, label]) => (
+                          <button
+                            type="button"
+                            key={key}
+                            onClick={() => toggleOp(key)}
+                            aria-pressed={selectedOps.has(key)}
+                            className={`rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                              selectedOps.has(key) ? 'border-[#87d7c8] bg-[#e7f7f2] text-[#214c45]' : 'border-[#d7eee7] bg-white/72 text-[#3d6f67] hover:bg-[#f8fcfb]'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#3d6f67]">Progress</h3>
+                      <div className="mt-2 grid gap-2">
+                        {(['unmastered', 'all', 'mastered'] as const).map((f) => (
+                          <label key={f} className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#d7eee7] bg-white/72 px-2.5 py-2 text-sm font-medium text-[#3d6f67]">
+                            <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-[#74c8b8]" />
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </aside>
+
+              <div className="min-w-0 space-y-5">
+                {!mode && (
+                  <section className={`${blockCard} space-y-2`}>
+                    <p className={sectionLabel}>Workspace</p>
+                    <h2 className={sectionTitle}>Choose a practice mode</h2>
+                    <p className="max-w-2xl text-sm leading-6 text-[#475467]">
+                      Use the rail on the left to start catalog practice or evaluate a custom expression.
+                    </p>
+                  </section>
+                )}
 
         {mode === 'operators' && (
-          <section className={`${blockCard} space-y-5`}>
-            <div className="flex items-center gap-3">
-              <div className="app-icon-tile flex h-11 w-11 items-center justify-center rounded-[16px] shadow-[0_4px_0_0_rgba(203,234,227,0.9)]">
+          <section className={`${blockCard} space-y-4`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+              <div className="app-icon-tile flex h-10 w-10 items-center justify-center rounded-[14px]">
                 <Filter className="app-icon-glyph h-5 w-5" />
               </div>
               <div>
-                <p className={sectionLabel}>Catalog Filters</p>
+                <p className={sectionLabel}>Catalog Practice</p>
                 <h2 className={sectionTitle}>Pre-defined Queries</h2>
               </div>
             </div>
-
-            <div className={`${blockCardSoft} space-y-4`}>
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Operator group</h3>
-                <p className="mt-1 text-sm text-[#475467]">Select one or more operator families to create a focused practice set.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {OPERATOR_OPTIONS.map(([key, label]) => (
-                  <button
-                    type="button"
-                    key={key}
-                    onClick={() => toggleOp(key)}
-                    aria-pressed={selectedOps.has(key)}
-                    className={`rounded-2xl border-2 px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                      selectedOps.has(key) ? 'border-[#87d7c8] bg-[linear-gradient(135deg,#8ddfd2_0%,#8ee0a2_100%)] text-[#214c45]' : 'border-[#cbeae3] bg-[#f7fcfa] text-[#3d6f67] hover:bg-[#edf8f6]'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className={`${blockCardSoft} space-y-4`}>
-              <div className="flex flex-wrap items-center gap-4">
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#3d6f67]">Progress view</h3>
-                  <p className="mt-1 text-sm text-[#475467]">Show all prompts, only prompts you still need to solve, or prompts you have already mastered.</p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {(['all', 'unmastered', 'mastered'] as const).map((f) => (
-                    <label key={f} className="flex items-center gap-2 rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] px-3 py-2 text-sm font-medium cursor-pointer text-[#3d6f67]">
-                      <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-[#74c8b8]" />
-                      {f.charAt(0).toUpperCase() + f.slice(1)}
-                    </label>
-                  ))}
-                </div>
+              <div className="rounded-full border border-[#d7eee7] bg-white/76 px-3 py-1 text-xs font-semibold text-[#3d6f67]">
+                {filteredQueries.length} matching prompts
               </div>
             </div>
 
@@ -506,28 +500,22 @@ export default function RAExercises() {
 
                 {queryDetail && (
                   <div className="space-y-4">
-                    <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-                      <div className="rounded-[26px] border-2 border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_6px_0_0_#f4e4c7]">
+                    <div className="grid gap-4 md:grid-cols-[minmax(240px,0.75fr)_minmax(0,1.25fr)]">
+                      <div className="rounded-[24px] border border-[#d8c39a] bg-[#fff8eb] p-5 shadow-[0_8px_18px_rgba(151,103,59,0.08)]">
                         <div className="space-y-2">
                           <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Prompt:</span> {queryDetail.prompt}</p>
-                          <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Difficulty:</span> {difficultyLabel(queryDetail.difficulty)}</p>
                           {queryDetail.hints?.length ? (
                             <p className="text-sm text-[#6d4b31]"><span className="font-semibold text-[#5c3b1f]">Hint:</span> {queryDetail.hints.join(', ')}</p>
                           ) : null}
                         </div>
-                        <div className="mt-5">
-                          <Collapsible title="RA syntax help">
-                            <SyntaxHelp database={selectedDb} />
-                          </Collapsible>
-                        </div>
                       </div>
 
-                      <form onSubmit={handleExecute} className="rounded-[26px] border-2 border-[#d7b79f] bg-[#fbe7df] p-5 shadow-[0_6px_0_0_#f2d2c4] space-y-3">
-                        <h3 className="flex items-center gap-2 text-base font-semibold text-[#5c3b1f]">
+                      <form onSubmit={handleExecute} className={`${blockCardSoft} space-y-3`}>
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-[#3f4761]">
                           <Pencil className="app-icon-glyph h-4 w-4" />
                           Your expression
                         </h3>
-                        <label htmlFor={solutionTextareaId} className="text-sm text-[#7b5a42]">Write the relational algebra expression that answers this prompt:</label>
+                        <label htmlFor={solutionTextareaId} className="text-sm font-medium text-[#3d6f67]">Write the relational algebra expression that answers this prompt:</label>
                         <textarea
                           id={solutionTextareaId}
                           value={solution}
@@ -536,7 +524,7 @@ export default function RAExercises() {
                             setResult(null);
                             setExpectedComparisonResult(null);
                             setAiHintError(null);
-                            setShowEvaluationTrace(false);
+                            setSupportPanel(null);
                           }}
                           className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
                         />
@@ -551,6 +539,10 @@ export default function RAExercises() {
                         )}
                       </form>
                     </div>
+
+                    <Collapsible title="RA syntax help" quiet>
+                      <SyntaxHelp database={selectedDb} />
+                    </Collapsible>
 
                     {result && (
                       <div className={`${blockCardSoft} space-y-6`}>
@@ -587,40 +579,42 @@ export default function RAExercises() {
                           type="button"
                           onClick={handleGenerateHint}
                           disabled={aiHintLoading}
-                          className={primaryButton}
+                          className={supportPanel === 'hint' ? primaryButton : secondaryButton}
                         >
                           <Lightbulb className="w-4 h-4" />
                           {aiHintLoading ? 'Generating hint...' : 'Get hint'}
                         </button>
                         <button
                           type="button"
-                          onClick={() => setShowEvaluationTrace((visible) => !visible)}
+                          onClick={() => {
+                            setSupportPanel((panel) => panel === 'trace' ? null : 'trace');
+                          }}
                           disabled={!result}
-                          className={secondaryButton}
+                          className={supportPanel === 'trace' ? primaryButton : secondaryButton}
                         >
                           <Rows3 className="w-4 h-4" />
-                          {showEvaluationTrace ? 'Hide evaluation trace' : 'Show evaluation trace'}
+                          {supportPanel === 'trace' ? 'Hide evaluation trace' : 'Show evaluation trace'}
                         </button>
                         <button
                           type="button"
                           onClick={handleViewSolution}
-                          className={secondaryButton}
+                          className={supportPanel === 'solution' ? primaryButton : secondaryButton}
                         >
                           <Eye className="w-4 h-4" />
-                          {showSolution ? 'Hide canonical solution' : 'Show canonical solution'}
+                          {supportPanel === 'solution' ? 'Hide canonical solution' : 'Show canonical solution'}
                         </button>
                       </div>
 
-                      {showEvaluationTrace && result && (
-                        <div className="space-y-3 rounded-[24px] border-2 border-[#d9c4a5] bg-[#fff9ef] p-5">
+                      {supportPanel === 'trace' && result && (
+                        <div className="space-y-3 rounded-2xl border border-[#d9c4a5] bg-[#fff9ef] p-4">
                           <TraceViewer trace={result.trace} title="Evaluation Trace for Your Expression" />
                         </div>
                       )}
 
                       {aiHintError && <StatusBadge variant="error">Could not generate an AI hint: {aiHintError}</StatusBadge>}
 
-                      {aiHint && (
-                        <div className="rounded-[22px] border-2 border-[#cbeae3] bg-[#f7fcfa] p-4">
+                      {supportPanel === 'hint' && aiHint && (
+                        <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-4">
                           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#3d6f67]">
                             <Lightbulb className="h-4 w-4" />
                             AI hint{aiHintModel ? <span className="text-xs font-medium text-[#667085]">({aiHintModel})</span> : null}
@@ -629,8 +623,8 @@ export default function RAExercises() {
                         </div>
                       )}
 
-                      {showSolution && queryDetail.solution && (
-                        <div className="space-y-3 rounded-[24px] border-2 border-[#d9c4a5] bg-[#fff9ef] p-5">
+                      {supportPanel === 'solution' && showSolution && queryDetail.solution && (
+                        <div className="space-y-3 rounded-2xl border border-[#d9c4a5] bg-[#fff9ef] p-4">
                           {queryDetail.solution.relational_algebra && (
                             <div>
                               <h3 className={resultHeader}>
@@ -720,6 +714,9 @@ export default function RAExercises() {
               </div>
             )}
           </section>
+        )}
+              </div>
+            </section>
         )}
     </div>
   );

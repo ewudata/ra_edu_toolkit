@@ -26,7 +26,7 @@ export default function TablePreview({ tableName, metadata }: Props) {
   const rowCountLabel = metadata.row_count != null ? `${metadata.row_count} rows` : 'Schema available';
 
   return (
-    <div className="rounded-[20px] border border-[#e8efe7] bg-white/70 px-3 py-2 shadow-[0_6px_18px_rgba(24,39,75,0.04)]">
+    <div className="rounded-2xl border border-[#e8efe7] bg-white/68 px-3 py-2">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -40,11 +40,11 @@ export default function TablePreview({ tableName, metadata }: Props) {
             <span className="font-medium text-[#5c3b1f]">{tableName}</span>
             <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7c5433]">{rowCountLabel}</span>
           </div>
-          <p className="mt-1 text-xs text-[#8b6a50]">
+          <p className="mt-0.5 text-xs text-[#8b6a50]">
             {open ? 'Hide schema and sample rows' : 'Show schema and sample rows'}
           </p>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-full border border-[#e1c8aa] bg-[#fff7eb] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#7c5433]">
+        <span className="hidden items-center gap-1 rounded-full border border-[#e1c8aa] bg-[#fff7eb] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#7c5433] sm:inline-flex">
           <Eye aria-hidden="true" className="h-3.5 w-3.5" />
           Preview
         </span>
@@ -52,7 +52,7 @@ export default function TablePreview({ tableName, metadata }: Props) {
       </button>
 
       {open && (
-        <div id={panelId} className="mt-3 ml-5 rounded-[20px] border-2 border-[#e1c8aa] bg-[#fffaf1] p-3 shadow-[0_10px_24px_rgba(151,103,59,0.12)]">
+        <div id={panelId} className="mt-3 rounded-2xl border border-[#e1c8aa] bg-[#fffaf1] p-3">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
             <p className="font-semibold uppercase tracking-[0.12em] text-[#7c5433]">
               Row count: {metadata.row_count ?? 'Unknown'}
