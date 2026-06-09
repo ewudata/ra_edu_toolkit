@@ -18,7 +18,6 @@ import {
 
 type WorkspaceMode = 'catalog' | 'custom' | null;
 type PracticeDirection = 'ra-to-sql' | 'sql-to-ra';
-type CustomEditedSide = 'ra' | 'sql' | null;
 type SqlAnswerMode = 'guided' | 'freeform';
 type RaAnswerMode = 'guided' | 'freeform';
 type PersistedReferenceState = {
@@ -35,7 +34,6 @@ type PersistedReferenceState = {
   freeformSqlAnswer: string;
   customRa: string;
   customSql: string;
-  customEditedSide: CustomEditedSide;
 };
 
 type SqlClause = {
@@ -99,7 +97,6 @@ function loadPersistedReferenceState(): PersistedReferenceState | null {
       freeformSqlAnswer: typeof parsed.freeformSqlAnswer === 'string' ? parsed.freeformSqlAnswer : '',
       customRa: typeof parsed.customRa === 'string' ? parsed.customRa : '',
       customSql: typeof parsed.customSql === 'string' ? parsed.customSql : '',
-      customEditedSide: parsed.customEditedSide === 'ra' || parsed.customEditedSide === 'sql' ? parsed.customEditedSide : null,
     };
   } catch {
     return null;
@@ -666,7 +663,8 @@ export default function RASQLReference() {
   const [studentRa, setStudentRa] = useState(persistedState?.studentRa ?? '');
   const [customRa, setCustomRa] = useState(persistedState?.customRa ?? '');
   const [customSql, setCustomSql] = useState(persistedState?.customSql ?? '');
-  const [customEditedSide, setCustomEditedSide] = useState<CustomEditedSide>(persistedState?.customEditedSide ?? null);
+  const [customRaTranslating, setCustomRaTranslating] = useState(false);
+  const [customSqlTranslating, setCustomSqlTranslating] = useState(false);
   const [customTranslationError, setCustomTranslationError] = useState<string | null>(null);
   const [customTranslationWarning, setCustomTranslationWarning] = useState<string | null>(null);
   const [customRaResult, setCustomRaResult] = useState<EvaluationResult | null>(null);
@@ -696,6 +694,27 @@ export default function RASQLReference() {
   const [translationAiHintModel, setTranslationAiHintModel] = useState<string | null>(null);
   const [translationAiHintLoading, setTranslationAiHintLoading] = useState(false);
   const [translationAiHintError, setTranslationAiHintError] = useState<string | null>(null);
+  const [customRaErrorExplanation, setCustomRaErrorExplanation] = useState<string | null>(null);
+  const [customRaErrorExplanationHint, setCustomRaErrorExplanationHint] = useState<string | null>(null);
+  const [customRaErrorExplanationModel, setCustomRaErrorExplanationModel] = useState<string | null>(null);
+  const [customRaErrorExplanationLoading, setCustomRaErrorExplanationLoading] = useState(false);
+  const [raCheckErrorExplanation, setRaCheckErrorExplanation] = useState<string | null>(null);
+  const [raCheckErrorExplanationHint, setRaCheckErrorExplanationHint] = useState<string | null>(null);
+  const [raCheckErrorExplanationModel, setRaCheckErrorExplanationModel] = useState<string | null>(null);
+  const [raCheckErrorExplanationLoading, setRaCheckErrorExplanationLoading] = useState(false);
+  const [sqlCheckErrorExplanation, setSqlCheckErrorExplanation] = useState<string | null>(null);
+  const [sqlCheckErrorExplanationHint, setSqlCheckErrorExplanationHint] = useState<string | null>(null);
+  const [sqlCheckErrorExplanationModel, setSqlCheckErrorExplanationModel] = useState<string | null>(null);
+  const [sqlCheckErrorExplanationLoading, setSqlCheckErrorExplanationLoading] = useState(false);
+  const [customSqlErrorExplanation, setCustomSqlErrorExplanation] = useState<string | null>(null);
+  const [customSqlErrorExplanationHint, setCustomSqlErrorExplanationHint] = useState<string | null>(null);
+  const [customSqlErrorExplanationModel, setCustomSqlErrorExplanationModel] = useState<string | null>(null);
+  const [customSqlErrorExplanationLoading, setCustomSqlErrorExplanationLoading] = useState(false);
+  const [customTranslationExplanation, setCustomTranslationExplanation] = useState<string | null>(null);
+  const [customTranslationExplanationHint, setCustomTranslationExplanationHint] = useState<string | null>(null);
+  const [customTranslationExplanationModel, setCustomTranslationExplanationModel] = useState<string | null>(null);
+  const [customTranslationExplanationLoading, setCustomTranslationExplanationLoading] = useState(false);
+  const [customLastEvaluated, setCustomLastEvaluated] = useState<'ra' | 'sql' | null>(null);
 
   useEffect(() => {
     api.healthCheck().then(() => setBackendOk(true)).catch(() => setBackendOk(false));
@@ -744,7 +763,6 @@ export default function RASQLReference() {
         freeformSqlAnswer,
         customRa,
         customSql,
-        customEditedSide,
       } satisfies PersistedReferenceState),
     );
   }, [
@@ -761,7 +779,6 @@ export default function RASQLReference() {
     freeformSqlAnswer,
     customRa,
     customSql,
-    customEditedSide,
   ]);
 
   useEffect(() => {
@@ -794,15 +811,33 @@ export default function RASQLReference() {
     setTranslationAiHintError(null);
     setCustomRa('');
     setCustomSql('');
-    setCustomEditedSide(null);
     setCustomTranslationError(null);
     setCustomTranslationWarning(null);
     setCustomRaResult(null);
     setCustomRaLoading(false);
+    setCustomRaTranslating(false);
     setCustomRaError(null);
+    setCustomRaErrorExplanation(null);
+    setCustomRaErrorExplanationHint(null);
+    setCustomRaErrorExplanationModel(null);
+    setCustomRaErrorExplanationLoading(false);
     setCustomSqlResult(null);
     setCustomSqlLoading(false);
+    setCustomSqlTranslating(false);
     setCustomSqlError(null);
+    setCustomSqlErrorExplanation(null);
+    setCustomSqlErrorExplanationHint(null);
+    setCustomSqlErrorExplanationModel(null);
+    setCustomSqlErrorExplanationLoading(false);
+    setCustomTranslationExplanation(null);
+    setCustomTranslationExplanationHint(null);
+    setCustomTranslationExplanationModel(null);
+    setCustomTranslationExplanationLoading(false);
+    setCustomLastEvaluated(null);
+    setSqlCheckErrorExplanation(null);
+    setSqlCheckErrorExplanationHint(null);
+    setSqlCheckErrorExplanationModel(null);
+    setSqlCheckErrorExplanationLoading(false);
   }, [selectedDb]);
 
   const queryDetail = selectedQueryId ? details[selectedQueryId] ?? null : null;
@@ -849,6 +884,10 @@ export default function RASQLReference() {
     setSqlCheckResult(null);
     setSqlCheckError(null);
     setSqlCheckLoading(false);
+    setSqlCheckErrorExplanation(null);
+    setSqlCheckErrorExplanationHint(null);
+    setSqlCheckErrorExplanationModel(null);
+    setSqlCheckErrorExplanationLoading(false);
     setRaChecked(false);
     setRevealRaAnswer(false);
     setRaStartedEditing(false);
@@ -856,6 +895,10 @@ export default function RASQLReference() {
     setStudentRa('');
     setRaCheckResult(null);
     setRaCheckError(null);
+    setRaCheckErrorExplanation(null);
+    setRaCheckErrorExplanationHint(null);
+    setRaCheckErrorExplanationModel(null);
+    setRaCheckErrorExplanationLoading(false);
     setRaCheckLoading(false);
     setTranslationAiHint(null);
     setTranslationAiHintModel(null);
@@ -868,132 +911,6 @@ export default function RASQLReference() {
     if (filteredQueries.some((query) => query.id === selectedQueryId)) return;
     setSelectedQueryId('');
   }, [filteredQueries, selectedQueryId]);
-
-  useEffect(() => {
-    if (customEditedSide !== 'ra') return;
-    if (!customRa.trim()) {
-      setCustomSql('');
-      setCustomTranslationError(null);
-      setCustomTranslationWarning(null);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      try {
-        const result = translateRaToSql(customRa, translatorSchema);
-        setCustomSql(result.translated);
-        setCustomTranslationError(null);
-        setCustomTranslationWarning(result.warning ?? null);
-      } catch (error) {
-        setCustomTranslationWarning(null);
-        setCustomTranslationError(
-          error instanceof TranslationError || error instanceof Error
-            ? error.message
-            : 'Unable to translate the relational algebra expression.',
-        );
-      }
-    }, 250);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [customEditedSide, customRa, translatorSchema]);
-
-  useEffect(() => {
-    if (customEditedSide !== 'sql') return;
-    if (!customSql.trim()) {
-      setCustomRa('');
-      setCustomTranslationError(null);
-      setCustomTranslationWarning(null);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      try {
-        const result = translateSqlToRa(customSql);
-        setCustomRa(result.translated);
-        setCustomTranslationError(null);
-        setCustomTranslationWarning(result.warning ?? null);
-      } catch (error) {
-        setCustomTranslationWarning(null);
-        setCustomTranslationError(
-          error instanceof TranslationError || error instanceof Error
-            ? error.message
-            : 'Unable to translate the SQL statement.',
-        );
-      }
-    }, 250);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [customEditedSide, customSql]);
-
-  useEffect(() => {
-    if (!selectedDb) return;
-    if (!customRa.trim()) {
-      setCustomRaResult(null);
-      setCustomRaLoading(false);
-      setCustomRaError(null);
-      return;
-    }
-
-    let cancelled = false;
-    const timeoutId = window.setTimeout(() => {
-      setCustomRaLoading(true);
-      setCustomRaError(null);
-      api.evaluateCustomQuery(selectedDb, customRa.trim())
-        .then((result) => {
-          if (cancelled) return;
-          setCustomRaResult(result);
-        })
-        .catch((error) => {
-          if (cancelled) return;
-          setCustomRaResult(null);
-          setCustomRaError(formatCheckError(error));
-        })
-        .finally(() => {
-          if (cancelled) return;
-          setCustomRaLoading(false);
-        });
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [selectedDb, customRa]);
-
-  useEffect(() => {
-    if (!selectedDb) return;
-    if (!customSql.trim()) {
-      setCustomSqlResult(null);
-      setCustomSqlLoading(false);
-      setCustomSqlError(null);
-      return;
-    }
-
-    let cancelled = false;
-    const timeoutId = window.setTimeout(() => {
-      setCustomSqlLoading(true);
-      setCustomSqlError(null);
-      api.evaluateCustomSqlQuery(selectedDb, customSql.trim())
-        .then((result) => {
-          if (cancelled) return;
-          setCustomSqlResult(result);
-        })
-        .catch((error) => {
-          if (cancelled) return;
-          setCustomSqlResult(null);
-          setCustomSqlError(formatCheckError(error));
-        })
-        .finally(() => {
-          if (cancelled) return;
-          setCustomSqlLoading(false);
-        });
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [selectedDb, customSql]);
 
   useEffect(() => {
     if (practiceDirection !== 'sql-to-ra' || !queryDetail) return;
@@ -1029,6 +946,9 @@ export default function RASQLReference() {
     setSqlChecked(false);
     setSqlCheckResult(null);
     setSqlCheckError(null);
+    setSqlCheckErrorExplanation(null);
+    setSqlCheckErrorExplanationHint(null);
+    setSqlCheckErrorExplanationModel(null);
     setTranslationAiHint(null);
     setTranslationAiHintModel(null);
     setTranslationAiHintError(null);
@@ -1099,6 +1019,132 @@ export default function RASQLReference() {
     }
   }
 
+  async function handleTranslateRa() {
+    if (!customRa.trim() || !selectedDb) return;
+    setCustomLastEvaluated('ra');
+    setCustomRaTranslating(true);
+    setCustomTranslationError(null);
+    setCustomTranslationWarning(null);
+    setCustomTranslationExplanation(null);
+    setCustomTranslationExplanationHint(null);
+    setCustomTranslationExplanationModel(null);
+    setCustomTranslationExplanationLoading(false);
+    setCustomRaResult(null);
+    setCustomRaError(null);
+    setCustomRaErrorExplanation(null);
+    setCustomRaErrorExplanationHint(null);
+    setCustomRaErrorExplanationModel(null);
+    setCustomRaErrorExplanationLoading(false);
+    setCustomSqlResult(null);
+    setCustomSqlError(null);
+    setCustomSqlErrorExplanation(null);
+    setCustomSqlErrorExplanationHint(null);
+    setCustomSqlErrorExplanationModel(null);
+    setCustomSqlErrorExplanationLoading(false);
+    try {
+      const translated = translateRaToSql(customRa.trim(), translatorSchema);
+      setCustomSql(translated.translated);
+      setCustomTranslationWarning(translated.warning ?? null);
+    } catch (error) {
+      setCustomTranslationError(
+        error instanceof TranslationError || error instanceof Error
+          ? error.message
+          : 'Unable to translate the relational algebra expression.',
+      );
+      setCustomTranslationExplanationLoading(true);
+      api.explainRaError(selectedDb, customRa.trim())
+        .then((res) => {
+          setCustomTranslationExplanation(res.explanation);
+          setCustomTranslationExplanationHint(res.hint);
+          setCustomTranslationExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => setCustomTranslationExplanationLoading(false));
+      setCustomRaTranslating(false);
+      return;
+    }
+    try {
+      const result = await api.evaluateCustomQuery(selectedDb, customRa.trim());
+      setCustomRaResult(result);
+    } catch (error) {
+      setCustomRaError(formatCheckError(error));
+      setCustomRaErrorExplanationLoading(true);
+      api.explainRaError(selectedDb, customRa.trim())
+        .then((res) => {
+          setCustomRaErrorExplanation(res.explanation);
+          setCustomRaErrorExplanationHint(res.hint);
+          setCustomRaErrorExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => setCustomRaErrorExplanationLoading(false));
+    } finally {
+      setCustomRaTranslating(false);
+    }
+  }
+
+  async function handleTranslateSql() {
+    if (!customSql.trim() || !selectedDb) return;
+    setCustomLastEvaluated('sql');
+    setCustomSqlTranslating(true);
+    setCustomTranslationError(null);
+    setCustomTranslationWarning(null);
+    setCustomTranslationExplanation(null);
+    setCustomTranslationExplanationHint(null);
+    setCustomTranslationExplanationModel(null);
+    setCustomTranslationExplanationLoading(false);
+    setCustomSqlResult(null);
+    setCustomSqlError(null);
+    setCustomSqlErrorExplanation(null);
+    setCustomSqlErrorExplanationHint(null);
+    setCustomSqlErrorExplanationModel(null);
+    setCustomSqlErrorExplanationLoading(false);
+    setCustomRaResult(null);
+    setCustomRaError(null);
+    setCustomRaErrorExplanation(null);
+    setCustomRaErrorExplanationHint(null);
+    setCustomRaErrorExplanationModel(null);
+    setCustomRaErrorExplanationLoading(false);
+    try {
+      const translated = translateSqlToRa(customSql.trim());
+      setCustomRa(translated.translated);
+      setCustomTranslationWarning(translated.warning ?? null);
+    } catch (error) {
+      setCustomTranslationError(
+        error instanceof TranslationError || error instanceof Error
+          ? error.message
+          : 'Unable to translate the SQL statement.',
+      );
+      setCustomTranslationExplanationLoading(true);
+      api.explainSqlError(selectedDb, customSql.trim())
+        .then((res) => {
+          setCustomTranslationExplanation(res.explanation);
+          setCustomTranslationExplanationHint(res.hint);
+          setCustomTranslationExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => setCustomTranslationExplanationLoading(false));
+      setCustomSqlTranslating(false);
+      return;
+    }
+    try {
+      const result = await api.evaluateCustomSqlQuery(selectedDb, customSql.trim());
+      setCustomSqlResult(result);
+    } catch (error) {
+      setCustomSqlError(formatCheckError(error));
+      setCustomSqlErrorExplanationLoading(true);
+      api.explainSqlError(selectedDb, customSql.trim())
+        .then((res) => {
+          setCustomSqlErrorExplanation(res.explanation);
+          setCustomSqlErrorExplanationHint(res.hint);
+          setCustomSqlErrorExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => setCustomSqlErrorExplanationLoading(false));
+    } finally {
+      setCustomSqlTranslating(false);
+    }
+  }
+
   async function checkRaAnswer() {
     if (!selectedDb || !selectedQueryId) return;
     const raAnswer = raAnswerMode === 'guided'
@@ -1119,6 +1165,10 @@ export default function RASQLReference() {
     setRaChecked(true);
     setRaCheckLoading(true);
     setRaCheckError(null);
+    setRaCheckErrorExplanation(null);
+    setRaCheckErrorExplanationHint(null);
+    setRaCheckErrorExplanationModel(null);
+    setRaCheckErrorExplanationLoading(false);
     setTranslationAiHint(null);
     setTranslationAiHintModel(null);
     setTranslationAiHintError(null);
@@ -1148,6 +1198,18 @@ export default function RASQLReference() {
       if (raCheckRequestIdRef.current !== requestId) return;
       setRaCheckResult(null);
       setRaCheckError(formatCheckError(error));
+      setRaCheckErrorExplanationLoading(true);
+      api.explainRaError(selectedDb, raAnswer)
+        .then((res) => {
+          if (raCheckRequestIdRef.current !== requestId) return;
+          setRaCheckErrorExplanation(res.explanation);
+          setRaCheckErrorExplanationHint(res.hint);
+          setRaCheckErrorExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (raCheckRequestIdRef.current === requestId) setRaCheckErrorExplanationLoading(false);
+        });
     } finally {
       if (raCheckRequestIdRef.current === requestId) {
         setRaCheckLoading(false);
@@ -1175,6 +1237,10 @@ export default function RASQLReference() {
     setSqlChecked(false);
     setSqlCheckLoading(true);
     setSqlCheckError(null);
+    setSqlCheckErrorExplanation(null);
+    setSqlCheckErrorExplanationHint(null);
+    setSqlCheckErrorExplanationModel(null);
+    setSqlCheckErrorExplanationLoading(false);
     setTranslationAiHint(null);
     setTranslationAiHintModel(null);
     setTranslationAiHintError(null);
@@ -1204,6 +1270,15 @@ export default function RASQLReference() {
     } catch (error) {
       setSqlCheckResult(null);
       setSqlCheckError(formatCheckError(error));
+      setSqlCheckErrorExplanationLoading(true);
+      api.explainSqlError(selectedDb, sqlAnswer)
+        .then((res) => {
+          setSqlCheckErrorExplanation(res.explanation);
+          setSqlCheckErrorExplanationHint(res.hint);
+          setSqlCheckErrorExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => setSqlCheckErrorExplanationLoading(false));
     } finally {
       setSqlCheckLoading(false);
       setSqlChecked(true);
@@ -1665,6 +1740,9 @@ export default function RASQLReference() {
                                   setSqlChecked(false);
                                   setSqlCheckResult(null);
                                   setSqlCheckError(null);
+                                  setSqlCheckErrorExplanation(null);
+                                  setSqlCheckErrorExplanationHint(null);
+                                  setSqlCheckErrorExplanationModel(null);
                                   setTranslationAiHint(null);
                                   setTranslationAiHintModel(null);
                                   setTranslationAiHintError(null);
@@ -1695,15 +1773,6 @@ export default function RASQLReference() {
                               {revealSqlAnswers ? 'Hide Canonical SQL' : 'Show Canonical SQL'}
                             </button>
                           </div>
-                          {sqlAnswerMode === 'guided' ? (
-                            <p className="text-xs leading-5 text-[#667085]">
-                              Guided mode checks both the result relation and each catalog clause. Use free-form mode when you want to write a complete SQL query without scaffold fields.
-                            </p>
-                          ) : (
-                            <p className="text-xs leading-5 text-[#667085]">
-                              Free-form mode skips the scaffold fields, but still checks whether your full SQL matches the catalog intent.
-                            </p>
-                          )}
                         </>
                       ) : (
                         <>
@@ -1745,57 +1814,52 @@ export default function RASQLReference() {
                             </button>
                           </div>
                           <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
-                            <div className="flex items-start gap-2.5">
-                              <span className="min-w-[88px] rounded-xl border border-[#cbeae3] bg-[#f3fbf8] px-2.5 py-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#3d6f67]">
-                                RA
-                              </span>
-                              <div className="flex flex-1 items-start gap-2">
-                                {raAnswerMode === 'guided' ? (
-                                  <textarea
-                                    ref={raInputRef}
-                                    value={studentRa}
-                                    onChange={(e) => updateStudentRa(e.target.value)}
-                                    aria-label="Relational algebra answer"
-                                    placeholder="π{_____}(σ{_____}(relation))"
-                                    className="min-h-[72px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
-                                  />
-                                ) : (
-                                  <textarea
-                                    value={freeformRaAnswer}
-                                    onChange={(e) => {
-                                      setFreeformRaAnswer(e.target.value);
-                                      setRaChecked(false);
-                                      setRaCheckResult(null);
-                                      setRaCheckError(null);
-                                      setTranslationAiHint(null);
-                                      setTranslationAiHintModel(null);
-                                      setTranslationAiHintError(null);
-                                    }}
-                                    aria-label="Full relational algebra answer"
-                                    placeholder="Write a complete relational algebra expression here."
-                                    className="min-h-[140px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
-                                  />
-                                )}
-                                {raChecked ? (
-                                  <span className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                                    raCheckLoading
-                                      ? 'bg-[#f4f5f7] text-[#667085]'
-                                      : raAnswerAccepted
-                                      ? 'bg-[#e8faf4] text-[#166534]'
-                                      : currentRaAnswerText
-                                        ? 'bg-[#fff1f2] text-[#be123c]'
-                                        : 'bg-[#f4f5f7] text-[#667085]'
-                                  }`}>
-                                    {raCheckLoading
-                                      ? null
-                                      : raAnswerAccepted
-                                      ? <Check className="h-4 w-4" />
-                                      : currentRaAnswerText
-                                        ? <X className="h-4 w-4" />
-                                        : null}
-                                  </span>
-                                ) : null}
-                              </div>
+                            <div className="flex items-start gap-2">
+                              {raAnswerMode === 'guided' ? (
+                                <textarea
+                                  ref={raInputRef}
+                                  value={studentRa}
+                                  onChange={(e) => updateStudentRa(e.target.value)}
+                                  aria-label="Relational algebra answer"
+                                  placeholder="π{_____}(σ{_____}(relation))"
+                                  className="min-h-[72px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
+                                />
+                              ) : (
+                                <textarea
+                                  value={freeformRaAnswer}
+                                  onChange={(e) => {
+                                    setFreeformRaAnswer(e.target.value);
+                                    setRaChecked(false);
+                                    setRaCheckResult(null);
+                                    setRaCheckError(null);
+                                    setTranslationAiHint(null);
+                                    setTranslationAiHintModel(null);
+                                    setTranslationAiHintError(null);
+                                  }}
+                                  aria-label="Full relational algebra answer"
+                                  placeholder="Write a complete relational algebra expression here."
+                                  className="min-h-[140px] flex-1 resize-y rounded-2xl border border-[#d7deef] bg-white px-3 py-2 font-mono text-sm leading-6 text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
+                                />
+                              )}
+                              {raChecked ? (
+                                <span className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                                  raCheckLoading
+                                    ? 'bg-[#f4f5f7] text-[#667085]'
+                                    : raAnswerAccepted
+                                    ? 'bg-[#e8faf4] text-[#166534]'
+                                    : currentRaAnswerText
+                                      ? 'bg-[#fff1f2] text-[#be123c]'
+                                      : 'bg-[#f4f5f7] text-[#667085]'
+                                }`}>
+                                  {raCheckLoading
+                                    ? null
+                                    : raAnswerAccepted
+                                    ? <Check className="h-4 w-4" />
+                                    : currentRaAnswerText
+                                      ? <X className="h-4 w-4" />
+                                      : null}
+                                </span>
+                              ) : null}
                             </div>
 
                             {revealRaAnswer ? (
@@ -1816,18 +1880,45 @@ export default function RASQLReference() {
                               {revealRaAnswer ? 'Hide Canonical RA' : 'Show Canonical RA'}
                             </button>
                           </div>
-                          <p className="text-xs leading-5 text-[#667085]">
-                            Guided mode gives you the canonical RA skeleton. Free-form mode accepts complete RA expressions that match the catalog intent.
-                          </p>
                         </>
                       )}
 
                       {practiceDirection === 'sql-to-ra' && raCheckError ? (
-                        <StatusBadge variant="error">{raCheckError}</StatusBadge>
+                        <div className="space-y-2">
+                          <StatusBadge variant="error">{raCheckError}</StatusBadge>
+                          {(raCheckErrorExplanationLoading || raCheckErrorExplanation) && (
+                            <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
+                              {raCheckErrorExplanationLoading ? (
+                                <p className="text-sm text-[#667085]">Explaining error...</p>
+                              ) : (
+                                <>
+                                  <p className="text-sm text-[#344054]">{raCheckErrorExplanation}</p>
+                                  {raCheckErrorExplanationHint && <p className="text-sm text-[#3d6f67]">{raCheckErrorExplanationHint}</p>}
+                                  {raCheckErrorExplanationModel && <p className="text-xs text-[#667085]">{raCheckErrorExplanationModel}</p>}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ) : null}
 
                       {practiceDirection === 'ra-to-sql' && sqlCheckError ? (
-                        <StatusBadge variant="error">{sqlCheckError}</StatusBadge>
+                        <div className="space-y-2">
+                          <StatusBadge variant="error">{sqlCheckError}</StatusBadge>
+                          {(sqlCheckErrorExplanationLoading || sqlCheckErrorExplanation) && (
+                            <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
+                              {sqlCheckErrorExplanationLoading ? (
+                                <p className="text-sm text-[#667085]">Explaining error...</p>
+                              ) : (
+                                <>
+                                  <p className="text-sm text-[#344054]">{sqlCheckErrorExplanation}</p>
+                                  {sqlCheckErrorExplanationHint && <p className="text-sm text-[#3d6f67]">{sqlCheckErrorExplanationHint}</p>}
+                                  {sqlCheckErrorExplanationModel && <p className="text-xs text-[#667085]">{sqlCheckErrorExplanationModel}</p>}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ) : null}
 
                       {practiceDirection === 'ra-to-sql' && sqlCheckResult ? (
@@ -1912,7 +2003,7 @@ export default function RASQLReference() {
           </div>
 
           <p className="text-sm leading-6 text-[#475467]">
-            Edit either side and the page will translate it into the other notation automatically after a short pause.
+            Write an expression on either side, then click the translate button to convert it and see the result against the selected database.
           </p>
 
           <div className="grid gap-4 xl:grid-cols-2">
@@ -1921,40 +2012,21 @@ export default function RASQLReference() {
               <textarea
                 id={customRaTextareaId}
                 value={customRa}
-                onChange={(e) => {
-                  setCustomEditedSide('ra');
-                  setCustomTranslationError(null);
-                  setCustomTranslationWarning(null);
-                  setCustomRa(e.target.value);
-                }}
+                onChange={(e) => setCustomRa(e.target.value)}
                 placeholder="π{name}(σ{dept_name = 'Comp. Sci.'}(student))"
                 className="h-44 w-full resize-y rounded-2xl border border-[#d7deef] bg-white px-4 py-3 font-mono text-sm text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
               />
               <p className="text-xs leading-5 text-[#667085]">
                 Supported RA operators here: projection, selection, rename, join, product, union, difference, and intersection.
               </p>
-
-              <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
-                <p className="text-sm font-semibold text-[#344054]">Result preview</p>
-                <p className="mt-1 text-xs text-[#667085]">
-                  {customRaResult ? `Rows returned: ${customRaResult.row_count}` : 'This RA expression is evaluated against the selected database.'}
-                </p>
-                <div className="mt-3">
-                  {customRaLoading ? (
-                    <p className="text-sm italic text-[#667085]">Evaluating the RA expression...</p>
-                  ) : customRaError ? (
-                    <StatusBadge variant="warning">{customRaError}</StatusBadge>
-                  ) : customRaResult ? (
-                    customRaResult.rows.length ? (
-                      <DataTable rows={customRaResult.rows} columns={customRaResult.schema_eval} compact maxHeight="15rem" />
-                    ) : (
-                      <p className="text-sm italic text-[#667085]">No rows returned.</p>
-                    )
-                  ) : (
-                    <p className="text-sm italic text-[#667085]">Enter a relational algebra expression to preview its result.</p>
-                  )}
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => { void handleTranslateRa(); }}
+                disabled={customRaTranslating || !customRa.trim() || !selectedDb}
+                className={primaryButton}
+              >
+                {customRaTranslating ? 'Translating...' : 'Translate to SQL'}
+              </button>
             </div>
 
             <div className={`${blockCardSoft} space-y-3`}>
@@ -1962,50 +2034,109 @@ export default function RASQLReference() {
               <textarea
                 id={customSqlTextareaId}
                 value={customSql}
-                onChange={(e) => {
-                  setCustomEditedSide('sql');
-                  setCustomTranslationError(null);
-                  setCustomTranslationWarning(null);
-                  setCustomSql(e.target.value);
-                }}
+                onChange={(e) => setCustomSql(e.target.value)}
                 placeholder="SELECT name FROM student WHERE dept_name = 'Comp. Sci.';"
                 className="h-44 w-full resize-y rounded-2xl border border-[#d7deef] bg-white px-4 py-3 font-mono text-sm text-[#344054] focus:border-[#74c8b8] focus:outline-none focus:ring-4 focus:ring-[#d9f3ee]"
               />
               <p className="text-xs leading-5 text-[#667085]">
                 Best-supported SQL shape: <code>SELECT ... FROM ... JOIN ... WHERE ...</code>, plus <code>UNION</code>, <code>EXCEPT</code>, and <code>INTERSECT</code>.
               </p>
-
-              <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5">
-                <p className="text-sm font-semibold text-[#344054]">Result preview</p>
-                <p className="mt-1 text-xs text-[#667085]">
-                  {customSqlResult ? `Rows returned: ${customSqlResult.row_count}` : 'This SQL statement is evaluated against the selected database.'}
-                </p>
-                <div className="mt-3">
-                  {customSqlLoading ? (
-                    <p className="text-sm italic text-[#667085]">Evaluating SQL...</p>
-                  ) : customSqlError ? (
-                    <StatusBadge variant="warning">{customSqlError}</StatusBadge>
-                  ) : customSqlResult ? (
-                    customSqlResult.rows.length ? (
-                      <DataTable rows={customSqlResult.rows} columns={customSqlResult.schema_eval} compact maxHeight="15rem" />
-                    ) : (
-                      <p className="text-sm italic text-[#667085]">No rows returned.</p>
-                    )
-                  ) : (
-                    <p className="text-sm italic text-[#667085]">Enter a SQL statement to preview its result.</p>
-                  )}
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => { void handleTranslateSql(); }}
+                disabled={customSqlTranslating || !customSql.trim() || !selectedDb}
+                className={primaryButton}
+              >
+                {customSqlTranslating ? 'Translating...' : 'Translate to RA'}
+              </button>
             </div>
           </div>
 
-          {customTranslationError ? (
-            <StatusBadge variant="warning">{customTranslationError}</StatusBadge>
-          ) : null}
-
-          {!customTranslationError && customTranslationWarning ? (
-            <StatusBadge variant="info">{customTranslationWarning}</StatusBadge>
-          ) : null}
+          <div className="rounded-[18px] border border-[#d7deef] bg-white/85 p-3.5 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-[#344054]">Result preview</p>
+              <p className="mt-1 text-xs text-[#667085]">
+                {customRaResult
+                  ? `Relational algebra — ${customRaResult.row_count} rows returned`
+                  : customSqlResult
+                    ? `SQL statement — ${customSqlResult.row_count} rows returned`
+                    : customLastEvaluated === 'ra'
+                      ? 'Relational algebra expression'
+                      : customLastEvaluated === 'sql'
+                        ? 'SQL statement'
+                        : 'Click a translate button to evaluate your expression against the database.'}
+              </p>
+            </div>
+            {customTranslationWarning && !customTranslationError ? (
+              <StatusBadge variant="info">{customTranslationWarning}</StatusBadge>
+            ) : null}
+            {customTranslationError ? (
+              <div className="space-y-2">
+                <StatusBadge variant="warning">{customTranslationError}</StatusBadge>
+                {(customTranslationExplanationLoading || customTranslationExplanation) && (
+                  <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
+                    {customTranslationExplanationLoading ? (
+                      <p className="text-sm text-[#667085]">Explaining error...</p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-[#344054]">{customTranslationExplanation}</p>
+                        {customTranslationExplanationHint && <p className="text-sm text-[#3d6f67]">{customTranslationExplanationHint}</p>}
+                        {customTranslationExplanationModel && <p className="text-xs text-[#667085]">{customTranslationExplanationModel}</p>}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (customRaTranslating || customSqlTranslating) ? (
+              <p className="text-sm italic text-[#667085]">Evaluating...</p>
+            ) : customRaError ? (
+              <div className="space-y-2">
+                <StatusBadge variant="warning">{customRaError}</StatusBadge>
+                {(customRaErrorExplanationLoading || customRaErrorExplanation) && (
+                  <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
+                    {customRaErrorExplanationLoading ? (
+                      <p className="text-sm text-[#667085]">Explaining error...</p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-[#344054]">{customRaErrorExplanation}</p>
+                        {customRaErrorExplanationHint && <p className="text-sm text-[#3d6f67]">{customRaErrorExplanationHint}</p>}
+                        {customRaErrorExplanationModel && <p className="text-xs text-[#667085]">{customRaErrorExplanationModel}</p>}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : customSqlError ? (
+              <div className="space-y-2">
+                <StatusBadge variant="warning">{customSqlError}</StatusBadge>
+                {(customSqlErrorExplanationLoading || customSqlErrorExplanation) && (
+                  <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
+                    {customSqlErrorExplanationLoading ? (
+                      <p className="text-sm text-[#667085]">Explaining error...</p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-[#344054]">{customSqlErrorExplanation}</p>
+                        {customSqlErrorExplanationHint && <p className="text-sm text-[#3d6f67]">{customSqlErrorExplanationHint}</p>}
+                        {customSqlErrorExplanationModel && <p className="text-xs text-[#667085]">{customSqlErrorExplanationModel}</p>}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : customRaResult ? (
+              customRaResult.rows.length ? (
+                <DataTable rows={customRaResult.rows} columns={customRaResult.schema_eval} compact maxHeight="15rem" />
+              ) : (
+                <p className="text-sm italic text-[#667085]">No rows returned.</p>
+              )
+            ) : customSqlResult ? (
+              customSqlResult.rows.length ? (
+                <DataTable rows={customSqlResult.rows} columns={customSqlResult.schema_eval} compact maxHeight="15rem" />
+              ) : (
+                <p className="text-sm italic text-[#667085]">No rows returned.</p>
+              )
+            ) : null}
+          </div>
         </section>
       )}
           </div>

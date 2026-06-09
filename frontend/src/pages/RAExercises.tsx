@@ -104,6 +104,10 @@ export default function RAExercises() {
   const [solution, setSolution] = useState('');
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [resultError, setResultError] = useState<string | null>(null);
+  const [errorExplanation, setErrorExplanation] = useState<string | null>(null);
+  const [errorExplanationHint, setErrorExplanationHint] = useState<string | null>(null);
+  const [errorExplanationModel, setErrorExplanationModel] = useState<string | null>(null);
+  const [errorExplanationLoading, setErrorExplanationLoading] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [supportPanel, setSupportPanel] = useState<'hint' | 'trace' | 'solution' | null>(null);
   const [showSolution, setShowSolution] = useState(false);
@@ -117,6 +121,10 @@ export default function RAExercises() {
   const [customExpr, setCustomExpr] = useState('');
   const [customResult, setCustomResult] = useState<EvaluationResult | null>(null);
   const [customError, setCustomError] = useState<string | null>(null);
+  const [customErrorExplanation, setCustomErrorExplanation] = useState<string | null>(null);
+  const [customErrorExplanationHint, setCustomErrorExplanationHint] = useState<string | null>(null);
+  const [customErrorExplanationModel, setCustomErrorExplanationModel] = useState<string | null>(null);
+  const [customErrorExplanationLoading, setCustomErrorExplanationLoading] = useState(false);
   const [customExecuting, setCustomExecuting] = useState(false);
 
   useEffect(() => {
@@ -134,9 +142,17 @@ export default function RAExercises() {
       setQueryDetail(null);
       setResult(null);
       setResultError(null);
+      setErrorExplanation(null);
+      setErrorExplanationHint(null);
+      setErrorExplanationModel(null);
+      setErrorExplanationLoading(false);
       setSupportPanel(null);
       setCustomResult(null);
       setCustomError(null);
+      setCustomErrorExplanation(null);
+      setCustomErrorExplanationHint(null);
+      setCustomErrorExplanationModel(null);
+      setCustomErrorExplanationLoading(false);
       setShowSolution(false);
       setSolutionResult(null);
       setExpectedComparisonResult(null);
@@ -216,6 +232,10 @@ export default function RAExercises() {
     api.getQueryDetail(selectedDb, selectedQueryId).then(setQueryDetail).catch(() => {});
     setResult(null);
     setResultError(null);
+    setErrorExplanation(null);
+    setErrorExplanationHint(null);
+    setErrorExplanationModel(null);
+    setErrorExplanationLoading(false);
     setSupportPanel(null);
     setSolution('');
     setShowSolution(false);
@@ -241,6 +261,10 @@ export default function RAExercises() {
     setExecuting(true);
     setResult(null);
     setResultError(null);
+    setErrorExplanation(null);
+    setErrorExplanationHint(null);
+    setErrorExplanationModel(null);
+    setErrorExplanationLoading(false);
     setExpectedComparisonResult(null);
     setSupportPanel(null);
     setAiHint(null);
@@ -255,6 +279,15 @@ export default function RAExercises() {
       }
     } catch (err) {
       setResultError(String(err));
+      setErrorExplanationLoading(true);
+      api.explainRaError(selectedDb, solution.trim())
+        .then((res) => {
+          setErrorExplanation(res.explanation);
+          setErrorExplanationHint(res.hint);
+          setErrorExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => setErrorExplanationLoading(false));
     } finally {
       setExecuting(false);
     }
@@ -266,11 +299,24 @@ export default function RAExercises() {
     setCustomExecuting(true);
     setCustomResult(null);
     setCustomError(null);
+    setCustomErrorExplanation(null);
+    setCustomErrorExplanationHint(null);
+    setCustomErrorExplanationModel(null);
+    setCustomErrorExplanationLoading(false);
     try {
       const res = await api.evaluateCustomQuery(selectedDb, customExpr.trim());
       setCustomResult(res);
     } catch (err) {
       setCustomError(String(err));
+      setCustomErrorExplanationLoading(true);
+      api.explainRaError(selectedDb, customExpr.trim())
+        .then((res) => {
+          setCustomErrorExplanation(res.explanation);
+          setCustomErrorExplanationHint(res.hint);
+          setCustomErrorExplanationModel(res.model);
+        })
+        .catch(() => {})
+        .finally(() => setCustomErrorExplanationLoading(false));
     } finally {
       setCustomExecuting(false);
     }
@@ -576,6 +622,19 @@ export default function RAExercises() {
                         {resultError && (
                           <StatusBadge variant="error">Could not evaluate your expression: {resultError}</StatusBadge>
                         )}
+                        {(errorExplanationLoading || errorExplanation) && (
+                          <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
+                            {errorExplanationLoading ? (
+                              <p className="text-sm text-[#667085]">Explaining error...</p>
+                            ) : (
+                              <>
+                                <p className="text-sm text-[#344054]">{errorExplanation}</p>
+                                {errorExplanationHint && <p className="text-sm text-[#3d6f67]">{errorExplanationHint}</p>}
+                                {errorExplanationModel && <p className="text-xs text-[#667085]">{errorExplanationModel}</p>}
+                              </>
+                            )}
+                          </div>
+                        )}
                       </form>
                     </div>
 
@@ -735,6 +794,19 @@ export default function RAExercises() {
               </Collapsible>
               {customError && (
                 <StatusBadge variant="error">Could not evaluate the expression: {customError}</StatusBadge>
+              )}
+              {(customErrorExplanationLoading || customErrorExplanation) && (
+                <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
+                  {customErrorExplanationLoading ? (
+                    <p className="text-sm text-[#667085]">Explaining error...</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-[#344054]">{customErrorExplanation}</p>
+                      {customErrorExplanationHint && <p className="text-sm text-[#3d6f67]">{customErrorExplanationHint}</p>}
+                      {customErrorExplanationModel && <p className="text-xs text-[#667085]">{customErrorExplanationModel}</p>}
+                    </>
+                  )}
+                </div>
               )}
             </form>
 

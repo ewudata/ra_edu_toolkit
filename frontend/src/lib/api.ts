@@ -248,6 +248,11 @@ export const api = {
       body: { expression },
     }),
 
+  explainSqlError: (database: string, sql: string) =>
+    request<LlmErrorExplanationResponse>('POST', `/databases/${database}/llm/explain-sql-error`, {
+      body: { sql },
+    }),
+
   evaluateCustomQuery: (database: string, expression: string) =>
     request<EvaluationResult>('POST', `/databases/${database}/evaluate`, { body: { expression } }),
 

@@ -73,6 +73,17 @@ class ErrorExplanationRequest(BaseModel):
         return value
 
 
+class SqlErrorExplanationRequest(BaseModel):
+    sql: str
+
+    @field_validator("sql", mode="before")
+    @classmethod
+    def _strip_sql(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+
 class ErrorExplanationResponse(BaseModel):
     explanation: str
     hint: str
@@ -349,6 +360,59 @@ def explain_error(
             error_context=error_context,
             schema=schema,
             grammar_help=RA_GRAMMAR_HELP,
+        )
+    except DatabaseNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except llm_service.LlmConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    except llm_service.LlmProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+
+    return ErrorExplanationResponse(
+        explanation=response.explanation,
+        hint=response.hint,
+        model=response.model,
+    )
+
+
+@database_router.post("/explain-sql-error", response_model=ErrorExplanationResponse)
+def explain_sql_error(
+    database: str,
+    payload: SqlErrorExplanationRequest,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> ErrorExplanationResponse:
+    if not payload.sql:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="SQL must be provided.",
+        )
+
+    try:
+        schema = _schema_context(database, user["id"])
+        try:
+            sql_service.evaluate_sql(payload.sql, database, user_id=user["id"])
+        except EvaluationError as exc:
+            error_context = {
+                "type": "evaluation_error",
+                "message": str(exc),
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="SQL executes successfully; there is no error to explain.",
+            )
+
+        response = llm_service.explain_sql_error(
+            database=database,
+            sql=payload.sql,
+            error_context=error_context,
+            schema=schema,
         )
     except DatabaseNotFound as exc:
         raise HTTPException(

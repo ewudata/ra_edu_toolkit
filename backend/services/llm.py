@@ -286,3 +286,72 @@ def explain_ra_error(
         hint=_limit_words(hint, 30),
         model=model,
     )
+
+
+def explain_sql_error(
+    *,
+    database: str,
+    sql: str,
+    error_context: Dict[str, Any],
+    schema: List[Dict[str, Any]],
+) -> ErrorExplanationResponse:
+    base_url, api_key, model = _require_config()
+
+    system_prompt = (
+        "You are a database education tutor. Explain SQL execution errors in student-friendly language. "
+        "Do not grade correctness or provide a full solution. Return valid JSON with exactly two string keys: "
+        "\"explanation\" and \"hint\". Keep each value to one short sentence, maximum 25 words each."
+    )
+    user_prompt = "\n".join(
+        [
+            f"Database: {database}",
+            "Schema:",
+            _format_schema(schema),
+            f"Student SQL: {sql}",
+            f"Deterministic error context: {error_context}",
+            "",
+            "Return JSON only.",
+        ]
+    )
+    prompt_log_message = (
+        "Explaining SQL error with LLM prompt\n"
+        f"model={model}\n"
+        f"database={database}\n"
+        "system_prompt:\n"
+        f"{system_prompt}\n"
+        "user_prompt:\n"
+        f"{user_prompt}"
+    )
+    logger.info(prompt_log_message)
+    uvicorn_logger.info(prompt_log_message)
+
+    payload = _chat_completion(
+        base_url=base_url,
+        api_key=api_key,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+    content = _choice_text(
+        payload,
+        empty_message="LLM provider returned an empty SQL error explanation.",
+    )
+
+    try:
+        parsed = json.loads(content)
+        explanation = str(parsed.get("explanation") or "").strip()
+        hint = str(parsed.get("hint") or "").strip()
+    except (TypeError, ValueError, AttributeError):
+        explanation = content
+        hint = "Review the SQL syntax and table/column names before trying again."
+
+    if not explanation:
+        explanation = "The SQL statement could not be executed."
+    if not hint:
+        hint = "Check the table and column names against the schema."
+
+    return ErrorExplanationResponse(
+        explanation=_limit_words(explanation, 30),
+        hint=_limit_words(hint, 30),
+        model=model,
+    )
