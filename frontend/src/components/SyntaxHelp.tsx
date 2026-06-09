@@ -29,7 +29,7 @@ export default function SyntaxHelp({ database }: Props) {
     { symbol: 'π', name: 'Projection', usage: 'π{attr1,attr2}(R)', aliases: 'pi, PI' },
     { symbol: 'σ', name: 'Selection', usage: 'σ{condition}(R)', aliases: 'sigma, SIGMA' },
     { symbol: 'ρ', name: 'Rename', usage: 'ρ alias(R) or ρ{old->new}(R)', aliases: 'rho' },
-    { symbol: '⋈', name: 'Natural Join', usage: 'R ⋈ S', aliases: 'join, JOIN' },
+    { symbol: '⋈', name: 'Natural Join', usage: 'R ⋈ S', aliases: '⋈, natural_join, natjoin, njoin' },
     { symbol: '×', name: 'Cartesian Product', usage: 'R × S', aliases: 'x, X, cross, CROSS' },
     { symbol: '∪', name: 'Union', usage: 'R ∪ S', aliases: 'union, UNION' },
     { symbol: '−', name: 'Difference', usage: 'R − S', aliases: '-, diff, DIFF' },

@@ -1,7 +1,9 @@
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
+from backend.core import ra_ast as AST
 from backend.core import evaluator, stepper
 
 
@@ -55,7 +57,7 @@ def test_qualified_rename_sources_are_accepted_as_syntactic_sugar():
 
 def test_theta_join_uses_alias_qualified_conditions():
     ast = stepper.parse(
-        "pi{student_name, advisor_name}((rho{name->student_name}(rho st(student)) join{st.id = adv.s_id} rho adv(advisor)) join{adv.i_id = inst.id} rho{name->advisor_name}(rho inst(instructor)))"
+        "pi{student_name, advisor_name}((rho{name->student_name}(rho st(student)) ⋈{st.id = adv.s_id} rho adv(advisor)) ⋈{adv.i_id = inst.id} rho{name->advisor_name}(rho inst(instructor)))"
     )
     result = evaluator.eval(ast, _load_university_env(), [])
 
@@ -64,6 +66,19 @@ def test_theta_join_uses_alias_qualified_conditions():
     assert len(rows) == 9
     assert {"student_name": "Zhang", "advisor_name": "Katz"} in rows
     assert {"student_name": "Shankar", "advisor_name": "Srinivasan"} in rows
+
+
+def test_natural_join_accepts_clear_text_aliases():
+    for alias in ("natural_join", "natjoin", "njoin"):
+        ast = stepper.parse(f"student {alias} takes")
+
+        assert isinstance(ast, AST.Join)
+        assert ast.theta is None
+
+
+def test_bare_join_is_not_a_natural_join_alias():
+    with pytest.raises(Exception):
+        stepper.parse("student join takes")
 
 
 def test_natural_join_with_no_common_columns_and_empty_right_side_returns_no_rows():

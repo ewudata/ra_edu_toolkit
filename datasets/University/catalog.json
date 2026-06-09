@@ -1,7 +1,7 @@
 {
   "database": "University",
   "title": "University Relational Algebra Practice",
-  "description": "Thirty-two practice queries that cover the major relational algebra operators on the university schema.",
+  "description": "Thirty-two practice queries that cover the major relational algebra operators, including natural joins (⋈), on the university schema.",
   "questions": [
     {
       "id": "q01",

@@ -11,6 +11,71 @@ from ..core import stepper as stepper_mod
 from . import datasets
 from .exceptions import EvaluationError, ParseError
 
+_EXPECTED_TOKEN_LABELS = {
+    "JOIN": "⋈, natural_join, natjoin, or njoin",
+    "PRODUCT": "×, x, or cross",
+    "UNION": "∪ or union",
+    "DIFF": "−, -, or diff",
+    "INTERSECT": "∩ or intersect",
+    "DIV": "÷, /, or div",
+    "RPAR": ")",
+    "LPAR": "(",
+    "NAME": "a relation or attribute name",
+    "PI": "π or pi",
+    "SIGMA": "σ or sigma",
+    "RHO": "ρ or rho",
+}
+
+_EXPECTED_TOKEN_ORDER = [
+    "JOIN",
+    "PRODUCT",
+    "UNION",
+    "DIFF",
+    "INTERSECT",
+    "DIV",
+    "RPAR",
+    "LPAR",
+    "NAME",
+    "PI",
+    "SIGMA",
+    "RHO",
+]
+
+
+def _friendly_expected_tokens(expected: object) -> str:
+    if not expected:
+        return ""
+
+    expected_set = {str(token) for token in expected}
+    ordered = [token for token in _EXPECTED_TOKEN_ORDER if token in expected_set]
+    ordered.extend(sorted(expected_set - set(ordered)))
+    labels = [_EXPECTED_TOKEN_LABELS.get(token, token.lower()) for token in ordered]
+    return ", ".join(labels)
+
+
+def _friendly_parse_message(exc: LarkError) -> str:
+    line = getattr(exc, "line", None)
+    column = getattr(exc, "column", None)
+    expected = _friendly_expected_tokens(getattr(exc, "expected", None))
+    token = getattr(exc, "token", None)
+
+    if token is not None:
+        value = getattr(token, "value", str(token))
+        if line is not None and column is not None:
+            message = f'Unexpected token "{value}" at line {line}, column {column}.'
+        else:
+            message = f'Unexpected token "{value}".'
+        if expected:
+            message += f" Expected one of: {expected}."
+        if str(value).lower() == "join":
+            message += " For natural join, use ⋈, natural_join, natjoin, or njoin."
+        return message
+
+    message = str(exc).strip()
+    for token, label in _EXPECTED_TOKEN_LABELS.items():
+        message = message.replace(f"* {token}", f"* {label}")
+    return message
+
 
 @dataclass
 class EvaluationResult:
@@ -42,7 +107,7 @@ def _format_parse_error(expression: str, exc: LarkError) -> ParseError:
             context = exc.get_context(expression)  # type: ignore[arg-type]
         except Exception:  # pragma: no cover - fallback only
             context = None
-    message = str(exc).strip()
+    message = _friendly_parse_message(exc)
     return ParseError(
         message=message,
         expression=expression,

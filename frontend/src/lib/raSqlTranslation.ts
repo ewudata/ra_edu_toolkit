@@ -212,7 +212,12 @@ class RaParser {
   }
 
   private matchJoin(): boolean {
-    return this.matchSymbol('⋈') || this.matchKeyword('join');
+    return (
+      this.matchSymbol('⋈')
+      || this.matchKeyword('natural_join')
+      || this.matchKeyword('natjoin')
+      || this.matchKeyword('njoin')
+    );
   }
 
   private matchDiff(): boolean {

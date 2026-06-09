@@ -29,7 +29,7 @@ RA_GRAMMAR_HELP = "\n".join(
         "Projection: π{attr1, attr2}(Relation) or pi{attr1, attr2}(Relation)",
         "Selection: σ{condition}(Relation) or sigma{condition}(Relation)",
         "Rename: ρ{old->new}(Relation), rho{old->new}(Relation), or rho alias(Relation)",
-        "Natural join: R ⋈ S",
+        "Natural join: R ⋈ S; accepted aliases: ⋈, natural_join, natjoin, njoin",
         "Theta join: R ⋈{left_attr = right_attr} S",
         "Set operations: R ∪ S, R - S, R ∩ S",
         "Conditions use attributes, comparison operators, quoted strings, AND/OR, IS NULL, and IS NOT NULL.",

@@ -1,7 +1,7 @@
 {
   "database": "Sales",
   "title": "Sales Relational Algebra Practice",
-  "description": "Twenty practice queries on the sales schema covering selections, joins, set operations, renaming, and division-style reasoning.",
+  "description": "Twenty practice queries on the sales schema covering selections, natural joins (⋈), theta joins, set operations, renaming, and division-style reasoning.",
   "questions": [
     {
       "id": "q01",

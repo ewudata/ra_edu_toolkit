@@ -195,7 +195,7 @@ python scripts/run_cli.py "π{name}(σ{major = 'CS'}(Student))" University
 - `Projection (π)`: `π{attr1,attr2}(R)`
 - `Selection (σ)`: `σ{condition}(R)`
 - `Rename (ρ)`: `ρ{old->new}(R)`
-- `Join (⋈)`: `R ⋈ S`
+- `Natural Join (⋈)`: `R ⋈ S` aliases: `⋈`, `natural_join`, `natjoin`, `njoin`
 - `Cartesian Product (×)`: `R × S`
 - `Union (∪)`: `R ∪ S`
 - `Difference (−)`: `R − S`

@@ -16,7 +16,7 @@
   },
   "join": {
     "what": "Combines rows from two relations.",
-    "how": "Natural join on common names or theta condition.",
+    "how": "Natural join on common names with ⋈, natural_join, natjoin, or njoin; theta join uses ⋈{condition}.",
     "why": "Relate entities across tables."
   },
   "product": {

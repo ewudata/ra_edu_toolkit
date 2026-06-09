@@ -18,7 +18,7 @@ rename_pair: NAME "->" NAME
 PI.2: "π" | "pi" | "PI"
 SIGMA.2: "σ" | "sigma" | "SIGMA"
 RHO.2: "ρ" | "rho" | "RHO"
-JOIN.2: "⋈" | "join" | "JOIN"
+JOIN.2: "⋈" | "natural_join" | "NATURAL_JOIN" | "natjoin" | "NATJOIN" | "njoin" | "NJOIN"
 PRODUCT.2: "×" | "x" | "X" | "cross" | "CROSS"
 UNION.2: "∪" | "union" | "UNION"
 DIFF.2: "−" | "-" | "diff" | "DIFF"
