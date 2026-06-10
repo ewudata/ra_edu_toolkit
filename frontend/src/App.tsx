@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import DatabaseManager from './pages/DatabaseManager';
 import RAExercises from './pages/RAExercises';
 import RASQLReference from './pages/RASQLReference';
+import ProgressDashboard from './pages/ProgressDashboard';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
             <Route path="databases" element={<ProtectedRoute><DatabaseManager /></ProtectedRoute>} />
             <Route path="ra-exercises" element={<ProtectedRoute><RAExercises /></ProtectedRoute>} />
             <Route path="ra-sql-reference" element={<ProtectedRoute><RASQLReference /></ProtectedRoute>} />
+            <Route path="progress" element={<ProtectedRoute><ProgressDashboard /></ProtectedRoute>} />
           </Route>
         </Routes>
       </AuthProvider>

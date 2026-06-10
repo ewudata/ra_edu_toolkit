@@ -101,6 +101,7 @@ export interface Database {
   table_count: number;
   tables: string[];
   is_default?: boolean;
+  has_catalog?: boolean;
 }
 
 export interface TableColumn {
@@ -174,6 +175,20 @@ export interface MasteryResponse {
   query_ids: string[];
 }
 
+export interface OperatorProgressItem {
+  operator: string;
+  total: number;
+  mastered: number;
+  attempted: number;
+}
+
+export interface OperatorProgressResponse {
+  items: OperatorProgressItem[];
+  total_queries: number;
+  attempted_queries: number;
+  mastered_queries: number;
+}
+
 export interface LlmHintResponse {
   hint: string;
   model: string;
@@ -229,6 +244,9 @@ export const api = {
 
   getQueryMastery: (database: string) =>
     request<MasteryResponse>('GET', `/databases/${database}/queries/mastery`),
+
+  getOperatorProgress: (database: string) =>
+    request<OperatorProgressResponse>('GET', `/databases/${database}/queries/operator-progress`),
 
   evaluateQuery: (database: string, queryId: string, expression: string) =>
     request<EvaluationResult>('POST', `/databases/${database}/queries/${queryId}/evaluate`, { body: { expression } }),

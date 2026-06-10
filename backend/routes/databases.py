@@ -18,14 +18,16 @@ class DatabaseSummaryResponse(BaseModel):
     tables: List[str]
     table_count: int
     is_default: bool = False
+    has_catalog: bool = False
 
     @classmethod
-    def from_summary(cls, summary: DatabaseSummary) -> "DatabaseSummaryResponse":
+    def from_summary(cls, summary: DatabaseSummary, has_catalog: bool = False) -> "DatabaseSummaryResponse":
         return cls(
             name=summary.name,
             tables=summary.tables,
             table_count=summary.table_count,
             is_default=summary.is_default,
+            has_catalog=has_catalog,
         )
 
 
@@ -75,7 +77,16 @@ def list_available_databases(
         databases = datasets.list_databases(user_id=user["id"])
     except FileNotFoundError as exc:  # pragma: no cover - infrastructure issue
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return [DatabaseSummaryResponse.from_summary(db) for db in databases]
+
+    result = []
+    for db in databases:
+        try:
+            queries_service.list_queries(db.name, user_id=user["id"])
+            has_catalog = True
+        except Exception:
+            has_catalog = False
+        result.append(DatabaseSummaryResponse.from_summary(db, has_catalog=has_catalog))
+    return result
 
 
 @router.post(

@@ -35,3 +35,38 @@ def list_mastered_query_ids(*, user_id: str, database_name: str) -> set[str]:
     if not isinstance(payload, list):
         return set()
     return {str(item.get("query_id") or "") for item in payload if item.get("query_id")}
+
+
+def record_query_attempt(
+    *, user_id: str, database_name: str, query_id: str, is_correct: bool
+) -> None:
+    _request_json(
+        "POST",
+        f"{_supabase_url()}/rest/v1/query_attempts",
+        headers={
+            **_service_headers(),
+            "Content-Type": "application/json",
+        },
+        json_body={
+            "user_id": user_id,
+            "database_name": database_name,
+            "query_id": query_id,
+            "is_correct": is_correct,
+        },
+    )
+
+
+def list_attempted_query_ids(*, user_id: str, database_name: str) -> set[str]:
+    payload = _request_json(
+        "GET",
+        f"{_supabase_url()}/rest/v1/query_attempts",
+        headers=_service_headers(),
+        params={
+            "select": "query_id",
+            "user_id": f"eq.{user_id}",
+            "database_name": f"eq.{database_name}",
+        },
+    )
+    if not isinstance(payload, list):
+        return set()
+    return {str(item.get("query_id") or "") for item in payload if item.get("query_id")}

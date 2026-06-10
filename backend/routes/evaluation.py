@@ -20,7 +20,7 @@ from ..services.exceptions import (
     ParseError,
     QueryNotFound,
 )
-from ..services.learning_progress import upsert_query_mastery
+from ..services.learning_progress import record_query_attempt, upsert_query_mastery
 
 router = APIRouter(
     prefix="/databases/{database}/queries/{query_id}", tags=["evaluation"]
@@ -120,7 +120,13 @@ def evaluate_query_expression(
         )
         comparison = grading_service.compare_results(evaluation, solution_result)
         is_correct = comparison.matches
-        if comparison.matches:
+        record_query_attempt(
+            user_id=user["id"],
+            database_name=database,
+            query_id=query_id,
+            is_correct=is_correct,
+        )
+        if is_correct:
             upsert_query_mastery(
                 user_id=user["id"],
                 database_name=database,

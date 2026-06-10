@@ -67,6 +67,18 @@ create table if not exists public.query_mastery (
     unique (user_id, database_name, query_id)
 );
 
+create table if not exists public.query_attempts (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    database_name text not null,
+    query_id text not null,
+    is_correct boolean not null,
+    attempted_at timestamptz not null default now()
+);
+
+create index if not exists query_attempts_user_idx
+    on public.query_attempts (user_id, database_name, query_id);
+
 create index if not exists user_datasets_user_idx
     on public.user_datasets (user_id, database_name);
 
@@ -107,6 +119,7 @@ for each row execute function public.set_updated_at();
 alter table public.user_datasets enable row level security;
 alter table public.default_datasets enable row level security;
 alter table public.query_mastery enable row level security;
+alter table public.query_attempts enable row level security;
 
 drop policy if exists "user_datasets_select_own" on public.user_datasets;
 create policy "user_datasets_select_own"
@@ -164,3 +177,15 @@ create policy "query_mastery_delete_own"
 on public.query_mastery
 for delete
 using (auth.uid() = user_id);
+
+drop policy if exists "query_attempts_select_own" on public.query_attempts;
+create policy "query_attempts_select_own"
+on public.query_attempts
+for select
+using (auth.uid() = user_id);
+
+drop policy if exists "query_attempts_insert_own" on public.query_attempts;
+create policy "query_attempts_insert_own"
+on public.query_attempts
+for insert
+with check (auth.uid() = user_id);

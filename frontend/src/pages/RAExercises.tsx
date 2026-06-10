@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { api, type Database, type Query, type EvaluationResult, type TableInfo } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
@@ -433,7 +434,7 @@ export default function RAExercises() {
   return (
     <div className="space-y-5 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-3 sm:p-4">
         <section className="rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]">
-          <div className="space-y-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-3">
               <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
               <div>
@@ -443,6 +444,13 @@ export default function RAExercises() {
                 </p>
               </div>
             </div>
+            <Link
+              to="/progress"
+              className="app-secondary-btn shrink-0 !rounded-2xl !px-4 !py-2.5 flex items-center gap-2"
+            >
+              <BarChart3 className="h-4 w-4" aria-hidden="true" />
+              My Progress
+            </Link>
           </div>
         </section>
 
