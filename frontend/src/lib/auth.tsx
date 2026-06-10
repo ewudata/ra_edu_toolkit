@@ -2,10 +2,12 @@ import { useState, useEffect, useLayoutEffect, useCallback, useRef, type ReactNo
 import Cookies from 'js-cookie';
 import { api, setAuthToken, setRefreshSessionHandler, setUnauthorizedHandler } from './api';
 import { AuthContext, type AuthContextValue } from './auth-context';
+import { WORKING_DATABASE_STORAGE_KEY } from './workingDatabase';
 
 const AUTH_COOKIE = 'ra_edu_auth';
 const UI_SESSION_STORAGE_KEYS = [
   'ra_sql_reference_state_v1',
+  WORKING_DATABASE_STORAGE_KEY,
 ] as const;
 
 type PersistedAuthState = {

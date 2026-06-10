@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/useAuth';
 import {
   GraduationCap,
@@ -15,6 +15,8 @@ const NAV_ITEMS = [
 
 export default function Layout() {
   const { isAuthenticated, email, logout, login, loading } = useAuth();
+  const { pathname } = useLocation();
+  const containerClass = pathname === '/' ? 'app-container' : 'app-container app-container-wide';
 
   return (
     <div className="app-shell">
@@ -22,7 +24,7 @@ export default function Layout() {
         Skip to main content
       </a>
       <header className="sticky top-0 z-40 border-b border-[#e7e7e7] bg-[#f3f3f3]/92 px-3 py-2 backdrop-blur sm:px-4">
-        <div className="app-container">
+        <div className={containerClass}>
           <div className="rounded-2xl border border-[#efefef] bg-white/92 px-4 py-3 shadow-[0_8px_20px_rgba(24,39,75,0.05)] md:px-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
@@ -85,7 +87,7 @@ export default function Layout() {
       </header>
 
       <main id="main-content" tabIndex={-1} className="pb-12 pt-6">
-        <div className="app-container">
+        <div className={containerClass}>
           <Outlet />
         </div>
       </main>

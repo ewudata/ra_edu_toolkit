@@ -7,6 +7,7 @@ import DataTable from '../components/DataTable';
 import TraceViewer from '../components/TraceViewer';
 import SyntaxHelp from '../components/SyntaxHelp';
 import { sortQueries, difficultyIcon } from '../lib/difficulty';
+import { getWorkingDatabase, setWorkingDatabase } from '../lib/workingDatabase';
 import {
   BookOpen,
   Braces,
@@ -92,7 +93,7 @@ export default function RAExercises() {
   const solutionTextareaId = useId();
   const customExprTextareaId = useId();
   const [databases, setDatabases] = useState<Database[]>([]);
-  const [selectedDb, setSelectedDb] = useState('');
+  const [selectedDb, setSelectedDb] = useState(() => getWorkingDatabase());
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [queries, setQueries] = useState<Query[]>([]);
   const [queriesLoaded, setQueriesLoaded] = useState(false);
@@ -138,6 +139,14 @@ export default function RAExercises() {
     api.healthCheck().then(() => setBackendOk(true)).catch(() => setBackendOk(false));
     api.getDatabases().then(setDatabases).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!selectedDb || databases.length === 0) return;
+    if (!databases.some((db) => db.name === selectedDb)) {
+      setSelectedDb('');
+      setWorkingDatabase('');
+    }
+  }, [databases, selectedDb]);
 
   useEffect(() => {
     if (selectedDb) {
@@ -422,7 +431,7 @@ export default function RAExercises() {
   const expectedComparisonSchema = result?.expected_schema ?? queryDetail?.expected_schema ?? expectedComparisonResult?.schema_eval;
 
   return (
-    <div className="space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6">
+    <div className="space-y-5 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-3 sm:p-4">
         <section className="rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]">
           <div className="space-y-3">
             <div className="space-y-3">
@@ -458,7 +467,12 @@ export default function RAExercises() {
               <select
                 id={databaseSelectId}
                 value={selectedDb}
-                onChange={(e) => { setSelectedDb(e.target.value); setMode(null); }}
+                onChange={(e) => {
+                  const nextDb = e.target.value;
+                  setSelectedDb(nextDb);
+                  setWorkingDatabase(nextDb);
+                  setMode(null);
+                }}
                 className="app-input w-full rounded-2xl bg-white/92 px-4 py-3 text-sm cursor-pointer"
               >
                 <option value="">- Select a database -</option>
@@ -471,7 +485,7 @@ export default function RAExercises() {
         </section>
 
         {selectedDb && selectedDbInfo && (
-          <section className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
               <aside className={`${blockCard} space-y-4 xl:sticky xl:top-32 xl:self-start`}>
                 <div className="flex items-center gap-3">
                   <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">

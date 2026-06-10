@@ -10,19 +10,19 @@ const FEATURES = [
     icon: Database,
     title: 'Database Manager',
     to: '/databases',
-    items: ['CSV and ZIP imports', 'SQL script imports', 'Table previews', 'Dataset management'],
+    description: 'Import datasets, choose a working database, inspect schemas, preview rows, and manage user-added databases.',
   },
   {
     icon: FunctionSquare,
     title: 'RA Exercises',
     to: '/ra-exercises',
-    items: ['Catalog-based practice', 'Operator filters', 'Custom RA evaluation', 'Trace and result comparison'],
+    description: 'Solve catalog RA problems, filter by operators, evaluate expressions, compare results, and get guided help.',
   },
   {
     icon: ArrowLeftRight,
     title: 'RA ↔ SQL Translation',
     to: '/ra-sql-reference',
-    items: ['Catalog translation drills', 'Live custom translation', 'Result previews', 'Schema-aware reference panel'],
+    description: 'Practice RA/SQL translation, use guided or custom modes, check answers semantically, and preview results.',
   },
 ];
 
@@ -67,7 +67,7 @@ export default function Home() {
                 <p className={sectionLabel}>Workspace</p>
                 <h3 className="mt-1 font-display text-2xl text-[#3f4761] group-hover:text-[#5d6491]">{feature.title}</h3>
                 <p className="mt-4 text-sm leading-7 text-[#475467]">
-                  {feature.items[0]}. {feature.items[1]}. {feature.items[2]}.
+                  {feature.description}
                 </p>
               </Link>
             );

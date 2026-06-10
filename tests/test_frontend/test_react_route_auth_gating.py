@@ -60,3 +60,13 @@ def test_main_pages_share_the_ra_exercises_visual_shell_markers():
         source = page.read_text(encoding="utf-8")
         for marker in expected_markers:
             assert marker in source
+
+
+def test_layout_uses_wide_container_for_tool_pages_only():
+    layout_source = Path("frontend/src/components/Layout.tsx").read_text(encoding="utf-8")
+    css_source = Path("frontend/src/index.css").read_text(encoding="utf-8")
+
+    assert "const { pathname } = useLocation();" in layout_source
+    assert "pathname === '/' ? 'app-container' : 'app-container app-container-wide'" in layout_source
+    assert ".app-container-wide" in css_source
+    assert "max-width: 1800px;" in css_source

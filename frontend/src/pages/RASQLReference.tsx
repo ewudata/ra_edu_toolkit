@@ -6,6 +6,7 @@ import DataTable from '../components/DataTable';
 import TablePreview from '../components/TablePreview';
 import { sortQueries, difficultyIcon } from '../lib/difficulty';
 import { translateRaToSql, translateSqlToRa, TranslationError } from '../lib/raSqlTranslation';
+import { getWorkingDatabase, setWorkingDatabase } from '../lib/workingDatabase';
 import {
   BookOpen,
   Check,
@@ -642,15 +643,16 @@ function formatCheckError(error: unknown): string {
 
 export default function RASQLReference() {
   const persistedState = loadPersistedReferenceState();
+  const initialWorkingDatabase = getWorkingDatabase();
   const databaseSelectId = useId();
   const querySelectId = useId();
   const customRaTextareaId = useId();
   const customSqlTextareaId = useId();
   const raInputRef = useRef<HTMLTextAreaElement | null>(null);
   const raCheckRequestIdRef = useRef(0);
-  const previousSelectedDbRef = useRef<string | null>(persistedState?.selectedDb ?? null);
+  const previousSelectedDbRef = useRef<string | null>(initialWorkingDatabase || persistedState?.selectedDb || null);
   const [databases, setDatabases] = useState<Database[]>([]);
-  const [selectedDb, setSelectedDb] = useState(persistedState?.selectedDb ?? '');
+  const [selectedDb, setSelectedDb] = useState(initialWorkingDatabase || persistedState?.selectedDb || '');
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [queries, setQueries] = useState<Query[]>([]);
   const [details, setDetails] = useState<Record<string, Query>>({});
@@ -718,6 +720,14 @@ export default function RASQLReference() {
     api.healthCheck().then(() => setBackendOk(true)).catch(() => setBackendOk(false));
     api.getDatabases().then(setDatabases).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!selectedDb || databases.length === 0) return;
+    if (!databases.some((db) => db.name === selectedDb)) {
+      setSelectedDb('');
+      setWorkingDatabase('');
+    }
+  }, [databases, selectedDb]);
 
   useEffect(() => {
     if (!selectedDb) return;
@@ -1285,7 +1295,7 @@ export default function RASQLReference() {
     return <StatusBadge variant="error">Backend service connection failed</StatusBadge>;
   }
 
-  const shell = 'space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6';
+  const shell = 'space-y-5 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-3 sm:p-4';
   const hero = 'rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]';
   const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
   const blockCardSoft = 'rounded-[20px] border border-[#e4e7f2] bg-[rgba(255,255,255,0.9)] p-5 shadow-[0_8px_22px_rgba(123,128,173,0.06)]';
@@ -1320,7 +1330,7 @@ export default function RASQLReference() {
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-[#3f4761] sm:text-4xl">RA ↔ SQL Translation</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#475467] sm:text-base">
-              Translate between relational algebra and SQL with catalog exercises, live custom translation, and result previews against the selected database.
+              Translate between relational algebra and SQL with catalog exercises or customized queries, and result previews against the selected database.
             </p>
           </div>
         </div>
@@ -1348,7 +1358,9 @@ export default function RASQLReference() {
               id={databaseSelectId}
               value={selectedDb}
               onChange={(e) => {
-                setSelectedDb(e.target.value);
+                const nextDb = e.target.value;
+                setSelectedDb(nextDb);
+                setWorkingDatabase(nextDb);
                 setDetails({});
                 setSchemaMap({});
                 setMode(null);
@@ -1367,7 +1379,7 @@ export default function RASQLReference() {
       </section>
 
       {selectedDb && selectedDbInfo && (
-        <section className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
           <aside className={`${blockCard} space-y-4 xl:sticky xl:top-32 xl:self-start`}>
             <div className="flex items-center gap-3">
               <div className="app-icon-tile-soft flex h-10 w-10 items-center justify-center rounded-[14px]">
