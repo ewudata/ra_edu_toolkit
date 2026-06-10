@@ -8,6 +8,9 @@ import TraceViewer from '../components/TraceViewer';
 import SyntaxHelp from '../components/SyntaxHelp';
 import { sortQueries, difficultyIcon } from '../lib/difficulty';
 import {
+  BookOpen,
+  Braces,
+  Check,
   Database as DatabaseIcon,
   LayoutList,
   Pencil,
@@ -17,6 +20,7 @@ import {
   BarChart3,
   Filter,
   Rows3,
+  X,
 } from 'lucide-react';
 
 const OPERATOR_OPTIONS = [
@@ -109,7 +113,10 @@ export default function RAExercises() {
   const [errorExplanationModel, setErrorExplanationModel] = useState<string | null>(null);
   const [errorExplanationLoading, setErrorExplanationLoading] = useState(false);
   const [executing, setExecuting] = useState(false);
-  const [supportPanel, setSupportPanel] = useState<'hint' | 'trace' | 'solution' | null>(null);
+  const [walkthrough, setWalkthrough] = useState<string | null>(null);
+  const [walkthroughModel, setWalkthroughModel] = useState<string | null>(null);
+  const [walkthroughLoading, setWalkthroughLoading] = useState(false);
+  const [supportPanel, setSupportPanel] = useState<'hint' | 'trace' | 'solution' | 'walkthrough' | 'syntax' | null>(null);
   const [showSolution, setShowSolution] = useState(false);
   const [solutionResult, setSolutionResult] = useState<EvaluationResult | null>(null);
   const [expectedComparisonResult, setExpectedComparisonResult] = useState<EvaluationResult | null>(null);
@@ -159,6 +166,9 @@ export default function RAExercises() {
       setAiHint(null);
       setAiHintModel(null);
       setAiHintError(null);
+      setWalkthrough(null);
+      setWalkthroughModel(null);
+      setWalkthroughLoading(false);
     }
   }, [selectedDb]);
 
@@ -245,6 +255,9 @@ export default function RAExercises() {
     setAiHint(null);
     setAiHintModel(null);
     setAiHintError(null);
+    setWalkthrough(null);
+    setWalkthroughModel(null);
+    setWalkthroughLoading(false);
   }, [selectedQueryId, selectedDb]);
 
   const filteredQueries = (() => {
@@ -361,6 +374,28 @@ export default function RAExercises() {
       const res = await api.evaluateCustomQuery(selectedDb, expr);
       setSolutionResult(res);
     } catch { /* ignore */ }
+  }
+
+  async function handleWalkthrough() {
+    if (supportPanel === 'walkthrough') {
+      setSupportPanel(null);
+      return;
+    }
+    if (walkthrough !== null) {
+      setSupportPanel('walkthrough');
+      return;
+    }
+    setWalkthroughLoading(true);
+    try {
+      const res = await api.generateWalkthrough(selectedDb, selectedQueryId);
+      setWalkthrough(res.walkthrough);
+      setWalkthroughModel(res.model);
+      setSupportPanel('walkthrough');
+    } catch {
+      // silently fail — button stays enabled for retry
+    } finally {
+      setWalkthroughLoading(false);
+    }
   }
 
   function toggleOp(op: string) {
@@ -601,18 +636,32 @@ export default function RAExercises() {
                           Your expression
                         </h3>
                         <label htmlFor={solutionTextareaId} className="text-sm font-medium text-[#3d6f67]">Write the relational algebra expression that answers this prompt:</label>
-                        <textarea
-                          id={solutionTextareaId}
-                          value={solution}
-                          onChange={(e) => {
-                            setSolution(e.target.value);
-                            setResult(null);
-                            setExpectedComparisonResult(null);
-                            setAiHintError(null);
-                            setSupportPanel(null);
-                          }}
-                          className="h-28 w-full resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
-                        />
+                        <div className="flex items-start gap-2">
+                          <textarea
+                            id={solutionTextareaId}
+                            value={solution}
+                            onChange={(e) => {
+                              setSolution(e.target.value);
+                              setResult(null);
+                              setExpectedComparisonResult(null);
+                              setAiHintError(null);
+                              setSupportPanel(null);
+                            }}
+                            className="h-28 min-w-0 flex-1 resize-y rounded-2xl border-2 border-[#d8b485] bg-white px-4 py-3 font-mono text-sm text-[#5c3b1f] transition-colors focus:border-[#d97745] focus:outline-none focus:ring-4 focus:ring-[#f7c8a5]"
+                          />
+                          {result?.is_correct != null ? (
+                            <span
+                              aria-label={result.is_correct ? 'Expression is correct' : 'Expression is incorrect'}
+                              className={`mt-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                                result.is_correct
+                                  ? 'bg-[#e8faf4] text-[#166534]'
+                                  : 'bg-[#fff1f2] text-[#be123c]'
+                              }`}
+                            >
+                              {result.is_correct ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                            </span>
+                          ) : null}
+                        </div>
                         <div className="flex justify-center">
                           <button type="submit" disabled={executing} className={primaryButton}>
                             <Play className="w-4 h-4" />
@@ -637,10 +686,6 @@ export default function RAExercises() {
                         )}
                       </form>
                     </div>
-
-                    <Collapsible title="RA syntax help" quiet>
-                      <SyntaxHelp database={selectedDb} />
-                    </Collapsible>
 
                     {result && (
                       <div className={`${blockCardSoft} space-y-6`}>
@@ -680,7 +725,17 @@ export default function RAExercises() {
                           className={supportPanel === 'hint' ? primaryButton : secondaryButton}
                         >
                           <Lightbulb className="w-4 h-4" />
-                          {aiHintLoading ? 'Generating hint...' : 'Get hint'}
+                          {aiHintLoading ? 'Generating hint...' : 'Hint for my answer'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSupportPanel((panel) => panel === 'syntax' ? null : 'syntax');
+                          }}
+                          className={supportPanel === 'syntax' ? primaryButton : secondaryButton}
+                        >
+                          <Braces className="w-4 h-4" />
+                          {supportPanel === 'syntax' ? 'Hide syntax help' : 'Syntax help'}
                         </button>
                         <button
                           type="button"
@@ -699,8 +754,19 @@ export default function RAExercises() {
                           className={supportPanel === 'solution' ? primaryButton : secondaryButton}
                         >
                           <Eye className="w-4 h-4" />
-                          {supportPanel === 'solution' ? 'Hide canonical solution' : 'Show canonical solution'}
+                          {supportPanel === 'solution' ? 'Hide solution' : 'Show solution'}
                         </button>
+                        {queryDetail.solution?.relational_algebra && (
+                          <button
+                            type="button"
+                            onClick={() => { void handleWalkthrough(); }}
+                            disabled={walkthroughLoading}
+                            className={supportPanel === 'walkthrough' ? primaryButton : secondaryButton}
+                          >
+                            <BookOpen className="w-4 h-4" />
+                            {walkthroughLoading ? 'Generating...' : supportPanel === 'walkthrough' ? 'Hide solution walkthrough' : 'Show solution walkthrough'}
+                          </button>
+                        )}
                       </div>
 
                       {supportPanel === 'trace' && result && (
@@ -718,6 +784,23 @@ export default function RAExercises() {
                             AI hint{aiHintModel ? <span className="text-xs font-medium text-[#667085]">({aiHintModel})</span> : null}
                           </div>
                           <p className="text-sm leading-6 text-[#344054]">{aiHint}</p>
+                        </div>
+                      )}
+
+                      {supportPanel === 'syntax' && (
+                        <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-4">
+                          <SyntaxHelp database={selectedDb} />
+                        </div>
+                      )}
+
+                      {supportPanel === 'walkthrough' && walkthrough && (
+                        <div className="rounded-2xl border border-[#c4b8f0] bg-[#f6f4ff] p-4 space-y-2">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-[#5b4fb8]">
+                            <BookOpen className="h-4 w-4" />
+                            Solution walkthrough
+                            {walkthroughModel && <span className="text-xs font-medium text-[#667085]">({walkthroughModel})</span>}
+                          </div>
+                          <p className="text-sm leading-6 text-[#344054] whitespace-pre-line">{walkthrough}</p>
                         </div>
                       )}
 

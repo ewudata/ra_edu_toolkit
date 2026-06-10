@@ -73,6 +73,11 @@ class ErrorExplanationRequest(BaseModel):
         return value
 
 
+class WalkthroughResponse(BaseModel):
+    walkthrough: str
+    model: str
+
+
 class SqlErrorExplanationRequest(BaseModel):
     sql: str
 
@@ -313,6 +318,50 @@ def generate_hint(
         ) from exc
 
     return HintResponse(hint=response.hint, model=response.model)
+
+
+@router.post("/walkthrough", response_model=WalkthroughResponse)
+def solution_walkthrough(
+    database: str,
+    query_id: str,
+    user: Dict[str, Any] = Depends(require_current_user),
+) -> WalkthroughResponse:
+    try:
+        detail = queries_service.get_query(database, query_id, user_id=user["id"])
+        canonical_ra = detail.solution.relational_algebra if detail.solution else None
+        if not canonical_ra:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="This query does not have a canonical relational algebra solution.",
+            )
+        schema = _schema_context(database, user["id"])
+        response = llm_service.generate_solution_walkthrough(
+            database=database,
+            prompt=detail.prompt,
+            difficulty=detail.difficulty,
+            expected_operators=detail.hints or [],
+            canonical_ra=canonical_ra,
+            canonical_sql=detail.solution.sql if detail.solution else None,
+            schema=schema,
+        )
+    except QueryNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except DatabaseNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except llm_service.LlmConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    except llm_service.LlmProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        ) from exc
+
+    return WalkthroughResponse(walkthrough=response.walkthrough, model=response.model)
 
 
 @database_router.post("/explain-error", response_model=ErrorExplanationResponse)

@@ -33,6 +33,12 @@ class ErrorExplanationResponse:
     model: str
 
 
+@dataclass
+class WalkthroughResponse:
+    walkthrough: str
+    model: str
+
+
 def _llm_base_url() -> str:
     return os.getenv("LLM_BASE_URL", "").rstrip("/")
 
@@ -286,6 +292,62 @@ def explain_ra_error(
         hint=_limit_words(hint, 30),
         model=model,
     )
+
+
+def generate_solution_walkthrough(
+    *,
+    database: str,
+    prompt: str,
+    difficulty: Optional[str],
+    expected_operators: List[str],
+    canonical_ra: str,
+    canonical_sql: Optional[str],
+    schema: List[Dict[str, Any]],
+) -> WalkthroughResponse:
+    base_url, api_key, model = _require_config()
+
+    system_prompt = (
+        "You are a database education tutor explaining a relational algebra solution step by step. "
+        "For each step: name the operator, explain what it does in this specific context, and why it is needed. "
+        "Write 3 to 6 numbered steps. Be instructional — do not reference or correct the student's answer. "
+        "Do not restate the full expression at the start. Do not greet the student. Maximum 130 words."
+    )
+    user_prompt = "\n".join(
+        [
+            f"Database: {database}",
+            "Schema:",
+            _format_schema(schema),
+            f"Query prompt: {prompt}",
+            f"Difficulty: {difficulty or 'unspecified'}",
+            f"Operators used: {', '.join(expected_operators) or 'unspecified'}",
+            f"Canonical relational algebra: {canonical_ra}",
+            f"Canonical SQL (for context): {canonical_sql or '(not available)'}",
+        ]
+    )
+    prompt_log_message = (
+        "Generating solution walkthrough with LLM prompt\n"
+        f"model={model}\n"
+        f"database={database}\n"
+        "system_prompt:\n"
+        f"{system_prompt}\n"
+        "user_prompt:\n"
+        f"{user_prompt}"
+    )
+    logger.info(prompt_log_message)
+    uvicorn_logger.info(prompt_log_message)
+
+    payload = _chat_completion(
+        base_url=base_url,
+        api_key=api_key,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+    walkthrough = _limit_words(
+        _choice_text(payload, empty_message="LLM provider returned an empty walkthrough."),
+        160,
+    )
+    return WalkthroughResponse(walkthrough=walkthrough, model=model)
 
 
 def explain_sql_error(

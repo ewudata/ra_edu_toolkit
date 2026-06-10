@@ -42,6 +42,7 @@ class QueryEvaluationResponse(BaseModel):
     database: str
     query_id: str
     expression: str
+    is_correct: Optional[bool] = None
     schema_eval: List[str]
     rows: List[Dict[str, Any]]
     row_count: int
@@ -110,6 +111,7 @@ def evaluate_query_expression(
         ) from exc
 
     solution_expression = detail.solution.relational_algebra
+    is_correct = None
     if solution_expression:
         solution_result = relalg_service.evaluate_expression(
             solution_expression,
@@ -117,6 +119,7 @@ def evaluate_query_expression(
             user_id=user["id"],
         )
         comparison = grading_service.compare_results(evaluation, solution_result)
+        is_correct = comparison.matches
         if comparison.matches:
             upsert_query_mastery(
                 user_id=user["id"],
@@ -128,6 +131,7 @@ def evaluate_query_expression(
         database=database,
         query_id=query_id,
         expression=payload.expression,
+        is_correct=is_correct,
         schema_eval=evaluation.schema,
         rows=evaluation.rows,
         row_count=len(evaluation.dataframe),

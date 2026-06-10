@@ -668,10 +668,8 @@ export default function RASQLReference() {
   const [customTranslationError, setCustomTranslationError] = useState<string | null>(null);
   const [customTranslationWarning, setCustomTranslationWarning] = useState<string | null>(null);
   const [customRaResult, setCustomRaResult] = useState<EvaluationResult | null>(null);
-  const [customRaLoading, setCustomRaLoading] = useState(false);
   const [customRaError, setCustomRaError] = useState<string | null>(null);
   const [customSqlResult, setCustomSqlResult] = useState<EvaluationResult | null>(null);
-  const [customSqlLoading, setCustomSqlLoading] = useState(false);
   const [customSqlError, setCustomSqlError] = useState<string | null>(null);
   const [sqlClauseAnswers, setSqlClauseAnswers] = useState<Record<string, string>>({});
   const [sqlChecked, setSqlChecked] = useState(false);
@@ -814,7 +812,6 @@ export default function RASQLReference() {
     setCustomTranslationError(null);
     setCustomTranslationWarning(null);
     setCustomRaResult(null);
-    setCustomRaLoading(false);
     setCustomRaTranslating(false);
     setCustomRaError(null);
     setCustomRaErrorExplanation(null);
@@ -822,7 +819,6 @@ export default function RASQLReference() {
     setCustomRaErrorExplanationModel(null);
     setCustomRaErrorExplanationLoading(false);
     setCustomSqlResult(null);
-    setCustomSqlLoading(false);
     setCustomSqlTranslating(false);
     setCustomSqlError(null);
     setCustomSqlErrorExplanation(null);

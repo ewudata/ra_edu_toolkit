@@ -380,11 +380,11 @@
     },
     {
       "id": "q20",
-      "prompt": "List the building, room number and capacity of classrooms with capacity at least 80.",
+      "prompt": "Find classrooms with capacity at least 70.",
       "difficulty": "beginner",
       "solution": {
-        "relational_algebra": "pi{building, room_number, capacity}(sigma{capacity >= 80}(classroom))",
-        "sql": "SELECT building, room_number, capacity FROM classroom WHERE capacity >= 80;"
+        "relational_algebra": "sigma{capacity >= 70}(classroom)",
+        "sql": "SELECT * FROM classroom WHERE capacity >= 70;"
       },
       "expected_result": {
         "schema": [
@@ -394,8 +394,7 @@
         ]
       },
       "hints": [
-        "selection",
-        "projection"
+        "selection"
       ]
     },
     {

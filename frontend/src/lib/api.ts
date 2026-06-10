@@ -146,6 +146,7 @@ export interface EvaluationResult {
   database: string;
   query_id?: string;
   expression: string;
+  is_correct?: boolean | null;
   schema_eval: string[];
   rows: Record<string, unknown>[];
   row_count: number;
@@ -175,6 +176,11 @@ export interface MasteryResponse {
 
 export interface LlmHintResponse {
   hint: string;
+  model: string;
+}
+
+export interface WalkthroughResponse {
+  walkthrough: string;
   model: string;
 }
 
@@ -242,6 +248,9 @@ export const api = {
     request<LlmHintResponse>('POST', `/databases/${database}/queries/${queryId}/llm/hint`, {
       body: { expression: expression?.trim() || null, error: error?.trim() || null, direction: direction ?? null },
     }),
+
+  generateWalkthrough: (database: string, queryId: string) =>
+    request<WalkthroughResponse>('POST', `/databases/${database}/queries/${queryId}/llm/walkthrough`),
 
   explainRaError: (database: string, expression: string) =>
     request<LlmErrorExplanationResponse>('POST', `/databases/${database}/llm/explain-error`, {

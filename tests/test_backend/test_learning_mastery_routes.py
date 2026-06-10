@@ -72,6 +72,7 @@ def test_correct_query_evaluation_records_mastery(monkeypatch):
     )
 
     assert response.status_code == 200
+    assert response.json()["is_correct"] is True
     assert recorded == {
         "user_id": "u1",
         "database_name": "TestDB",
@@ -122,5 +123,6 @@ def test_incorrect_query_evaluation_does_not_record_mastery(monkeypatch):
     )
 
     assert response.status_code == 200
+    assert response.json()["is_correct"] is False
     assert recorded == {"called": False}
     app.dependency_overrides.clear()
