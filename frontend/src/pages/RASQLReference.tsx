@@ -1461,7 +1461,9 @@ export default function RASQLReference() {
                   <p><strong className="text-[#344054]">Selection:</strong> σ maps to WHERE.</p>
                   <p><strong className="text-[#344054]">Projection:</strong> π maps most closely to SELECT DISTINCT.</p>
                   <p><strong className="text-[#344054]">Rename:</strong> ρ maps to aliases and AS.</p>
-                  <p><strong className="text-[#344054]">Set operations:</strong> union, difference, and intersection map to UNION, EXCEPT, and INTERSECT.</p>
+                  <p><strong className="text-[#344054]">Set operations:</strong> ∪, −, and ∩ map to UNION, EXCEPT, and INTERSECT.</p>
+                  <p><strong className="text-[#344054]">Natural join:</strong> ⋈ maps to NATURAL JOIN.</p>
+                  <p><strong className="text-[#344054]">Cartesian product:</strong> × maps to CROSS JOIN.</p>
                 </div>
               </Collapsible>
             </div>

@@ -16,6 +16,15 @@ def test_ra_sql_reference_offers_guided_and_freeform_sql_answer_modes():
     assert "raAnswerMode === 'freeform'" in source
 
 
+def test_ra_sql_reference_translation_tips_cover_ra_symbols_and_joins():
+    source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
+
+    assert "Set operations:</strong> ∪, −, and ∩ map to UNION, EXCEPT, and INTERSECT." in source
+    assert "Natural join:</strong> ⋈ maps to NATURAL JOIN." in source
+    assert "Cartesian product:</strong> × maps to CROSS JOIN." in source
+    assert "Set operations:</strong> union, difference, and intersection" not in source
+
+
 def test_ra_sql_reference_freeform_sql_can_reveal_canonical_sql():
     source = Path("frontend/src/pages/RASQLReference.tsx").read_text(encoding="utf-8")
 

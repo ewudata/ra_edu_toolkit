@@ -19,8 +19,7 @@ export default function DatabaseManager() {
   const [error, setError] = useState<string | null>(null);
   const [schemas, setSchemas] = useState<Record<string, Record<string, TableInfo>>>({});
   const [schemaErrors, setSchemaErrors] = useState<Record<string, string>>({});
-  const [catalogMsg, setCatalogMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [datasetActionMsg, setDatasetActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedDb, setSelectedDb] = useState(() => getWorkingDatabase());
   const [mode, setMode] = useState<WorkspaceMode>('browse');
 
@@ -84,14 +83,14 @@ export default function DatabaseManager() {
   async function handleDelete(db: Database) {
     try {
       await api.deleteDatabase(db.name);
-      setCatalogMsg({ type: 'success', text: db.is_default ? `Hidden shared dataset: ${db.name}` : `Deleted database: ${db.name}` });
+      setDatasetActionMsg({ type: 'success', text: db.is_default ? `Hidden shared dataset: ${db.name}` : `Deleted database: ${db.name}` });
       if (selectedDb === db.name) {
         setSelectedDb('');
         setWorkingDatabase('');
       }
       await loadDatabases();
     } catch (e) {
-      setCatalogMsg({ type: 'error', text: `Delete failed: ${e}` });
+      setDatasetActionMsg({ type: 'error', text: `Delete failed: ${e}` });
     }
   }
 
@@ -109,17 +108,17 @@ export default function DatabaseManager() {
     const name = (form.elements.namedItem('zipName') as HTMLInputElement).value.trim();
     const file = zipFileRef.current?.files?.[0];
     if (!file || !name) return;
-    setImportMsg(null);
+    setDatasetActionMsg(null);
     try {
       const result = await api.importDatabaseFromZip(name, file);
-      setImportMsg({ type: 'success', text: `Successfully imported database: ${result.name}` });
+      setDatasetActionMsg({ type: 'success', text: `Successfully imported database: ${result.name}` });
       form.reset();
       setSelectedDb(result.name);
       setWorkingDatabase(result.name);
       setMode('browse');
       await loadDatabases();
     } catch (e) {
-      setImportMsg({ type: 'error', text: `Import failed: ${formatImportError(e, name)}` });
+      setDatasetActionMsg({ type: 'error', text: `Import failed: ${formatImportError(e, name)}` });
     }
   }
 
@@ -129,17 +128,17 @@ export default function DatabaseManager() {
     const name = (form.elements.namedItem('sqlName') as HTMLInputElement).value.trim();
     const file = sqlFileRef.current?.files?.[0];
     if (!file || !name) return;
-    setImportMsg(null);
+    setDatasetActionMsg(null);
     try {
       const result = await api.importDatabaseFromSql(name, file);
-      setImportMsg({ type: 'success', text: `Successfully imported database: ${result.name}` });
+      setDatasetActionMsg({ type: 'success', text: `Successfully imported database: ${result.name}` });
       form.reset();
       setSelectedDb(result.name);
       setWorkingDatabase(result.name);
       setMode('browse');
       await loadDatabases();
     } catch (e) {
-      setImportMsg({ type: 'error', text: `Import failed: ${formatImportError(e, name)}` });
+      setDatasetActionMsg({ type: 'error', text: `Import failed: ${formatImportError(e, name)}` });
     }
   }
 
@@ -198,6 +197,7 @@ export default function DatabaseManager() {
               value={mode === 'browse' ? selectedDb : ''}
               onChange={(e) => {
                 const nextDb = e.target.value;
+                if (nextDb !== selectedDb) setDatasetActionMsg(null);
                 setSelectedDb(nextDb);
                 setWorkingDatabase(nextDb);
                 if (nextDb) setMode('browse');
@@ -240,6 +240,7 @@ export default function DatabaseManager() {
                   key={db.name}
                   type="button"
                   onClick={() => {
+                    if (db.name !== selectedDb) setDatasetActionMsg(null);
                     setSelectedDb(db.name);
                     setWorkingDatabase(db.name);
                     setMode('browse');
@@ -278,14 +279,9 @@ export default function DatabaseManager() {
         </aside>
 
         <div className="min-w-0 space-y-5">
-          {catalogMsg && (
-            <StatusBadge variant={catalogMsg.type === 'success' ? 'success' : 'error'}>
-              {catalogMsg.text}
-            </StatusBadge>
-          )}
-          {importMsg && (
-            <StatusBadge variant={importMsg.type === 'success' ? 'success' : 'error'}>
-              {importMsg.text}
+          {datasetActionMsg && (
+            <StatusBadge variant={datasetActionMsg.type === 'success' ? 'success' : 'error'}>
+              {datasetActionMsg.text}
             </StatusBadge>
           )}
 

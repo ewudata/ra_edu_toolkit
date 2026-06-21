@@ -28,6 +28,16 @@ def test_database_manager_keeps_import_and_schema_workflows():
     assert "? 'Refresh' : 'Load'} table details" not in source
 
 
+def test_database_manager_uses_single_dataset_action_status():
+    source = Path("frontend/src/pages/DatabaseManager.tsx").read_text(encoding="utf-8")
+
+    assert "datasetActionMsg" in source
+    assert "catalogMsg" not in source
+    assert "importMsg" not in source
+    assert "if (nextDb !== selectedDb) setDatasetActionMsg(null);" in source
+    assert "if (db.name !== selectedDb) setDatasetActionMsg(null);" in source
+
+
 def test_database_manager_does_not_auto_select_or_show_catalog_refresh_action():
     source = Path("frontend/src/pages/DatabaseManager.tsx").read_text(encoding="utf-8")
 
