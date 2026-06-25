@@ -220,3 +220,8 @@ coverage/
 # Local Codex caches
 .codex/**/__pycache__/
 .codex/**/*.pyc
+
+.agents/
+.claude/
+.codex/
+.cursor/
