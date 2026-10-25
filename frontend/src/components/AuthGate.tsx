@@ -29,7 +29,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           className="app-primary-btn"
         >
           <LogIn className="w-4 h-4" />
-          Log in with Google
+          Sign in with Google
         </button>
         {authMessage && (
           <div className="rounded-[18px] border-2 border-[#d9a08f] bg-[#fde7df] p-3 text-sm text-[#86483d]">

@@ -5,7 +5,7 @@ import hashlib
 import json
 import os
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Response
 
 from ..services.auth import require_current_user
 
@@ -26,9 +26,13 @@ def privacy_details() -> dict:
     return details
 
 
-@router.get("/privacy", dependencies=[Depends(require_current_user)])
-def get_privacy():
-    return privacy_details()
+@router.get("/privacy")
+def get_privacy(response: Response, user: dict = Depends(require_current_user)):
+    # The browser needs a stable, verified account identifier for its preference.
+    # Keep it out of the policy fingerprint and out of shared HTTP caches.
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["Vary"] = "Authorization"
+    return {**privacy_details(), "account_id": user["id"]}
 
 
 def require_ai_disclosure(x_ai_disclosure: str | None = Header(default=None)):

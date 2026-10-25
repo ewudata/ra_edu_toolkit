@@ -2,7 +2,8 @@ const BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 let _authToken: string | null = null;
 let _sessionVersion = 0;
-let _aiDisclosure: string | null = null;
+let _aiDisclosure: { accountId: string | null; version: string } | null = null;
+const AI_APPROVAL_STORAGE_PREFIX = 'ra_ai_disclosure_v1:';
 let _confirmAiDisclosure: ((privacy: AiPrivacy) => Promise<boolean>) | null = null;
 let _onUnauthorized: ((message: string) => void) | null = null;
 let _refreshSession: (() => Promise<boolean>) | null = null;
@@ -56,6 +57,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
   formData?: FormData;
   retryOnAuthFailure?: boolean;
   aiDisclosure?: string;
+  cache?: RequestCache;
 }): Promise<T> {
   const requestSession = _sessionVersion;
   let url = `${BASE_URL}${endpoint}`;
@@ -77,7 +79,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
     bodyContent = JSON.stringify(opts.body);
   }
 
-  const res = await fetch(url, { method, headers, body: bodyContent });
+  const res = await fetch(url, { method, headers, body: bodyContent, cache: opts?.cache });
   if (requestSession !== _sessionVersion) throw new ApiError("The session changed. Please try again.");
   if (!res.ok) {
     let detail: unknown = null;
@@ -108,6 +110,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
 }
 
 export interface AiPrivacy {
+  account_id?: string;
   service: string;
   shared_data: string;
   data_policy: string;
@@ -126,18 +129,41 @@ export function setAiDisclosureHandler(handler: ((privacy: AiPrivacy) => Promise
   _confirmAiDisclosure = handler;
 }
 
+function hasAiApproval(privacy: AiPrivacy): boolean {
+  const accountId = privacy.account_id || null;
+  if (_aiDisclosure?.accountId === accountId && _aiDisclosure.version === privacy.version) return true;
+  if (!accountId) return false;
+  try {
+    return window.localStorage.getItem(`${AI_APPROVAL_STORAGE_PREFIX}${accountId}`) === privacy.version;
+  } catch {
+    return false;
+  }
+}
+
+function rememberAiApproval(privacy: AiPrivacy) {
+  const accountId = privacy.account_id || null;
+  _aiDisclosure = { accountId, version: privacy.version };
+  if (accountId) {
+    try {
+      window.localStorage.setItem(`${AI_APPROVAL_STORAGE_PREFIX}${accountId}`, privacy.version);
+    } catch {
+      // Private/restricted browsers can still remember the choice in page memory.
+    }
+  }
+}
+
 async function aiRequest<T>(endpoint: string, body?: unknown): Promise<T> {
   if (!_authToken) throw new ApiError('Sign in to use AI help.', 401);
   const confirmDisclosure = _confirmAiDisclosure;
-  const privacy = await request<AiPrivacy>('GET', '/ai/privacy');
+  const privacy = await request<AiPrivacy>('GET', '/ai/privacy', { cache: 'no-store' });
   if (!confirmDisclosure || confirmDisclosure !== _confirmAiDisclosure) throw new AiHelpCancelledError();
   const session = _sessionVersion;
   if (!privacy.available) throw new ApiError('AI help is unavailable until the operator has reviewed its data-sharing policy.', 503);
-  if (_aiDisclosure !== privacy.version) {
+  if (!hasAiApproval(privacy)) {
     const accepted = await confirmDisclosure(privacy);
     if (!accepted) throw new AiHelpCancelledError();
     if (session !== _sessionVersion) throw new ApiError('The session changed. Please try again.');
-    _aiDisclosure = privacy.version;
+    rememberAiApproval(privacy);
   }
   return request<T>('POST', endpoint, { body, aiDisclosure: privacy.version, retryOnAuthFailure: false });
 }

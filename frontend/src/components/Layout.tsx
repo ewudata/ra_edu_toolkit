@@ -78,7 +78,7 @@ export default function Layout() {
                       className="app-primary-btn shrink-0 !rounded-2xl !px-4 !py-2.5"
                     >
                       <LogIn aria-hidden="true" className="h-4 w-4" />
-                      Log in with Google
+                      Sign in with Google
                     </button>
                   )}
                 </div>

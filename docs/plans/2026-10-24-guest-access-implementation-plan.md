@@ -212,6 +212,13 @@ Deferred: browser-saved guest progress, export/import, anonymous Supabase accoun
 
 ### AI disclosure presentation update (2026-10-25)
 
-Replaced the long browser confirmation with a compact in-app dialog. It identifies the AI service and sharing purpose in one sentence, keeps the complete data/policy text and policy link under an expandable Privacy details section, and offers Not now / Continue to AI. Not now, Escape, navigation, and logout cancel pending disclosure requests without an AI call or an error banner. The same policy is remembered during the signed-in session, including routine token refresh; a changed policy or a new sign-in requires acknowledgement again. Backend disclosure enforcement is unchanged.
+Replaced the long browser confirmation with a compact in-app dialog. It identifies the AI service and sharing purpose in one sentence, keeps the complete data/policy text and policy link under an expandable Privacy details section, and offers Not now / Continue to AI. Not now, Escape, navigation, and logout cancel pending disclosure requests without an AI call or an error banner. The accepted policy version is now remembered in local storage for the verified account on that browser, including reloads, routine token refresh, and later sign-ins. A changed policy, a different account, or cleared browser storage requires acknowledgement again. Backend disclosure enforcement is unchanged.
 
 Verified with frontend build/lint, seven auth/route regression tests, and browser checks covering collapsed/expanded details, keyboard focus, quiet cancellation, mobile layout, session-level acceptance, changed policies, token rotation, and logout/expiry behavior. Member/AI browser responses are synthetic; no external AI requests are made by these checks.
+
+
+### Repeated-reminder fix (2026-10-25)
+
+Reproduced the reminder returning after a full page reload: the original approval cache existed only in JavaScript memory. Added a backend-verified account ID to the authenticated privacy response with private/no-store cache headers, without including identity in the policy fingerprint or AI requests. The browser now remembers only the accepted policy version under that account's key in local storage. No new Supabase records, practice history, emails, or tokens are stored by this preference. Blocked browser storage falls back to the existing page-memory behavior.
+
+Verified the failing reload regression now passes; switching accounts on the same browser asks separately, returning to the original account remembers its approval, and a changed policy still prompts again. Frontend build/lint, 49 targeted Python tests, and browser regression checks pass. The service still requires an explicit help action and a matching current policy version on every AI request.

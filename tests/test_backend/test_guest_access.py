@@ -266,3 +266,19 @@ def test_ai_walkthrough_and_errors_never_log_prompt_content(monkeypatch, caplog)
     assert "SQL_ANSWER_SENTINEL" in calls[1]["user_prompt"]
     assert "RA_ANSWER_SENTINEL" not in calls[2]["user_prompt"]
     assert "SENTINEL" not in caplog.text
+
+
+def test_ai_privacy_uses_verified_account_id_without_changing_policy_version(client, monkeypatch):
+    monkeypatch.setattr(auth, "verify_access_token", lambda token: {"id": token, "email": "not-for-the-disclosure@example.test"})
+    monkeypatch.setenv("LLM_PRIVACY_REVIEWED", "true")
+    monkeypatch.setenv("LLM_SERVICE_NAME", "School model")
+    monkeypatch.setenv("LLM_DATA_POLICY", "Test data policy")
+    response = client.get("/ai/privacy", headers={"Authorization": "Bearer member-one"})
+    assert response.headers["cache-control"] == "private, no-store"
+    assert response.headers["vary"] == "Authorization"
+    first = response.json()
+    second = client.get("/ai/privacy", headers={"Authorization": "Bearer member-two"}).json()
+    assert first["account_id"] == "member-one"
+    assert second["account_id"] == "member-two"
+    assert first["version"] == second["version"]
+    assert "email" not in first

@@ -52,11 +52,11 @@ export default function Home() {
       {!isAuthenticated && <section className={`${blockCard} grid gap-5 md:grid-cols-2`} aria-label="Choose how to practice">
         <div className="space-y-3">
           <h2 className={sectionTitle}>Practice without an account</h2>
-          <p className="text-sm text-[#475467]">Use default datasets. Progress is not saved, and drafts may be lost when you leave or reload a page.</p>
+          <p className="text-sm text-[#475467]">Use default datasets. Progress is not saved, and AI help is not available.</p>
           <Link className="app-primary-btn" to="/databases">Continue without signing in</Link>
         </div>
         <div className="space-y-3">
-          <h2 className={sectionTitle}>Keep your progress</h2>
+          <h2 className={sectionTitle}>Practice with an account</h2>
           <p className="text-sm text-[#475467]">Save progress across devices, upload new datasets, and choose AI help.</p>
           <button className="app-primary-btn" onClick={login}>Sign in and save progress</button>
         </div>

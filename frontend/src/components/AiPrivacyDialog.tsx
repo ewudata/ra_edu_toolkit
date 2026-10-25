@@ -78,7 +78,7 @@ export default function AiPrivacyDialog() {
           <p id={descriptionId} className="text-sm leading-6 text-[#475467]">
             AI help sends exercise details to <strong>{privacy.service}</strong>, along with your answer when needed.
           </p>
-          <p className="text-sm leading-6 text-[#667085]">AI help is optional. You can keep practicing without it.</p>
+          <p className="text-sm leading-6 text-[#667085]">AI help is optional. If you continue, we’ll remember your approval for this account on this browser.</p>
         </div>
         <details className="rounded-2xl border border-[#e4e7f2] bg-[#f8fafc] px-4 py-3 text-sm">
           <summary className="cursor-pointer font-semibold text-[#3d6f67]">Privacy details</summary>

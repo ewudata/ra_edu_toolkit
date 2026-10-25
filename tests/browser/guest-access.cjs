@@ -58,7 +58,7 @@ async function run() {
 
     // Synthetic account data isolates UI/session tests from real Supabase and AI services.
     const member = await browser.newContext();
-    const state = { version: 'policy-one', aiCalls: [], evaluations: 0, prompts: 0, expired: false };
+    const state = { accountId: 'member-one', version: 'policy-one', aiCalls: [], evaluations: 0, prompts: 0, expired: false };
     await member.addCookies([{ name: 'ra_edu_auth', value: encodeURIComponent(JSON.stringify({ token: 'synthetic', email: 'member@example.test', refreshToken: 'refresh' })), url: base }]);
     await member.route('**/api/**', async route => {
       const request = route.request();
@@ -81,7 +81,7 @@ async function run() {
       if (endpoint.endsWith('/mastery')) return reply({ query_ids: [] });
       if (endpoint.endsWith('/queries/q1')) return reply({ id: 'q1', prompt: 'List ids', hints: [], solution: { relational_algebra: 'example', sql: 'SELECT * FROM example' } });
       if (endpoint.endsWith('/evaluate')) { state.evaluations++; return reply({ detail: { message: 'Check syntax' } }, 400); }
-      if (endpoint === '/ai/privacy') return reply({ service: 'Synthetic school model', shared_data: 'Current answer and diagnostics', data_policy: 'Test policy', policy_url: '', available: true, version: state.version });
+      if (endpoint === '/ai/privacy') return reply({ account_id: state.accountId, service: 'Synthetic school model', shared_data: 'Current answer and diagnostics', data_policy: 'Test policy', policy_url: '', available: true, version: state.version });
       if (endpoint.includes('/llm/')) { state.aiCalls.push(request.headers()['x-ai-disclosure']); return reply({ explanation: 'Check your syntax.', hint: 'Use braces.', model: 'synthetic' }); }
       return reply({ detail: 'Unexpected test endpoint' }, 404);
     });
@@ -145,6 +145,40 @@ async function run() {
     assert.equal(await disclosure.count(), 0);
     state.expired = false;
     state.refreshSucceeds = false;
+    async function openMemberError() {
+      await signed.goto(`${base}/ra-exercises`);
+      await signed.getByLabel('Database collection').selectOption('PrivateDataset');
+      await signed.getByRole('button', { name: 'Custom evaluator', exact: true }).click();
+      await signed.locator('textarea').first().fill('pi{');
+      await signed.getByRole('button', { name: 'Evaluate Expression', exact: true }).click();
+      await signed.getByRole('button', { name: 'Ask AI about this error' }).waitFor();
+    }
+    // Reloading the app must remember this account's accepted policy.
+    await openMemberError();
+    await signed.getByRole('button', { name: 'Ask AI about this error' }).click();
+    for (let attempt = 0; attempt < 100 && state.aiCalls.length < 5; attempt++) await signed.waitForTimeout(20);
+    assert.equal(await disclosure.count(), 0, 'Reload should remember the account policy choice');
+    assert.equal(state.aiCalls.length, 5);
+    // A second account on the same browser must make its own choice.
+    state.accountId = 'member-two';
+    await member.addCookies([{ name: 'ra_edu_auth', value: encodeURIComponent(JSON.stringify({ token: 'synthetic-two', email: 'other@example.test', refreshToken: 'refresh-two' })), url: base }]);
+    await openMemberError();
+    await signed.getByRole('button', { name: 'Ask AI about this error' }).click();
+    await disclosure.waitFor();
+    await disclosure.getByRole('button', { name: 'Not now', exact: true }).click();
+    await disclosure.waitFor({ state: 'hidden' });
+    assert.equal(state.aiCalls.length, 5);
+    // Returning to the first account reuses only that account's approval.
+    state.accountId = 'member-one';
+    await member.addCookies([{ name: 'ra_edu_auth', value: encodeURIComponent(JSON.stringify({ token: 'synthetic', email: 'member@example.test', refreshToken: 'refresh' })), url: base }]);
+    await openMemberError();
+    await signed.getByRole('button', { name: 'Ask AI about this error' }).click();
+    for (let attempt = 0; attempt < 100 && state.aiCalls.length < 6; attempt++) await signed.waitForTimeout(20);
+    assert.equal(await disclosure.count(), 0);
+    assert.equal(state.aiCalls.length, 6);
+    const approval = await signed.evaluate(() => localStorage.getItem('ra_ai_disclosure_v1:member-one'));
+    assert.equal(approval, 'policy-two');
+
     await signed.getByRole('button', { name: 'Sign Out', exact: true }).click();
     await signed.getByRole('link', { name: 'Continue without signing in' }).waitFor();
     assert(!(await signed.locator('body').innerText()).includes('PrivateDataset'));
