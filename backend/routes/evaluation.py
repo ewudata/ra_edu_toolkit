@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ..services import (
     grading as grading_service,
@@ -13,7 +13,7 @@ from ..services import (
     relalg as relalg_service,
     sql as sql_service,
 )
-from ..services.auth import require_current_user
+from ..services.auth import optional_current_user
 from ..services.exceptions import (
     DatabaseNotFound,
     EvaluationError,
@@ -30,12 +30,18 @@ router = APIRouter(
 custom_router = APIRouter(prefix="/databases/{database}", tags=["evaluation"])
 
 
+def _evaluate_ra(expression: str, database: str, *, user_id: str | None = None):
+    if user_id is None:
+        return relalg_service.evaluate_guest_expression(expression, database)
+    return relalg_service.evaluate_expression(expression, database, user_id=user_id)
+
+
 class QueryEvaluationRequest(BaseModel):
-    expression: str = Field(..., min_length=1, strip_whitespace=True)
+    expression: str = Field(..., min_length=1, max_length=10000)
 
 
 class SqlEvaluationRequest(BaseModel):
-    sql: str = Field(..., min_length=1, strip_whitespace=True)
+    sql: str = Field(..., min_length=1, max_length=10000)
 
 
 class QueryEvaluationResponse(BaseModel):
@@ -52,10 +58,15 @@ class QueryEvaluationResponse(BaseModel):
     solution_relational_algebra: Optional[str] = None
     solution_sql: Optional[str] = None
 
+    @field_validator("rows", "expected_rows")
+    @classmethod
+    def preview_rows(cls, rows):
+        return rows[:500] if rows is not None else None
+
 
 class TranslationCheckRequest(BaseModel):
     direction: Literal["ra-to-sql", "sql-to-ra"]
-    answer: str = Field(..., min_length=1, strip_whitespace=True)
+    answer: str = Field(..., min_length=1, max_length=10000)
 
 
 class TranslationCheckResponse(BaseModel):
@@ -70,16 +81,21 @@ class TranslationCheckResponse(BaseModel):
     missing_rows: List[Dict[str, Any]]
     extra_rows: List[Dict[str, Any]]
 
+    @field_validator("missing_rows", "extra_rows")
+    @classmethod
+    def preview_rows(cls, rows):
+        return rows[:500]
+
 
 @router.post("/evaluate", response_model=QueryEvaluationResponse)
 def evaluate_query_expression(
     database: str,
     query_id: str,
     payload: QueryEvaluationRequest,
-    user: Dict[str, Any] = Depends(require_current_user),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> QueryEvaluationResponse:
     try:
-        detail = queries_service.get_query(database, query_id, user_id=user["id"])
+        detail = queries_service.get_query(database, query_id, user_id=user["id"] if user else None)
     except DatabaseNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -90,10 +106,10 @@ def evaluate_query_expression(
         ) from exc
 
     try:
-        evaluation = relalg_service.evaluate_expression(
+        evaluation = _evaluate_ra(
             payload.expression,
             database,
-            user_id=user["id"],
+            user_id=user["id"] if user else None,
         )
     except ParseError as exc:
         raise HTTPException(
@@ -113,25 +129,26 @@ def evaluate_query_expression(
     solution_expression = detail.solution.relational_algebra
     is_correct = None
     if solution_expression:
-        solution_result = relalg_service.evaluate_expression(
+        solution_result = _evaluate_ra(
             solution_expression,
             database,
-            user_id=user["id"],
+            user_id=user["id"] if user else None,
         )
         comparison = grading_service.compare_results(evaluation, solution_result)
         is_correct = comparison.matches
-        record_query_attempt(
-            user_id=user["id"],
-            database_name=database,
-            query_id=query_id,
-            is_correct=is_correct,
-        )
-        if is_correct:
-            upsert_query_mastery(
+        if user:
+            record_query_attempt(
                 user_id=user["id"],
                 database_name=database,
                 query_id=query_id,
+                is_correct=is_correct,
             )
+            if is_correct:
+                upsert_query_mastery(
+                    user_id=user["id"],
+                    database_name=database,
+                    query_id=query_id,
+                )
 
     return QueryEvaluationResponse(
         database=database,
@@ -154,10 +171,10 @@ def check_query_translation(
     database: str,
     query_id: str,
     payload: TranslationCheckRequest,
-    user: Dict[str, Any] = Depends(require_current_user),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> TranslationCheckResponse:
     try:
-        detail = queries_service.get_query(database, query_id, user_id=user["id"])
+        detail = queries_service.get_query(database, query_id, user_id=user["id"] if user else None)
     except DatabaseNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -177,12 +194,12 @@ def check_query_translation(
             student_result = sql_service.evaluate_sql(
                 payload.answer,
                 database,
-                user_id=user["id"],
+                user_id=user["id"] if user else None,
             )
             expected_result = sql_service.evaluate_sql(
                 detail.solution.sql,
                 database,
-                user_id=user["id"],
+                user_id=user["id"] if user else None,
             )
         else:
             if not detail.solution.relational_algebra:
@@ -195,15 +212,15 @@ def check_query_translation(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="This query does not have a canonical SQL solution.",
                 )
-            student_result = relalg_service.evaluate_expression(
+            student_result = _evaluate_ra(
                 payload.answer,
                 database,
-                user_id=user["id"],
+                user_id=user["id"] if user else None,
             )
             expected_result = sql_service.evaluate_sql(
                 detail.solution.sql,
                 database,
-                user_id=user["id"],
+                user_id=user["id"] if user else None,
             )
 
         comparison = grading_service.compare_results(
@@ -243,14 +260,14 @@ def check_query_translation(
 def evaluate_custom_query(
     database: str,
     payload: QueryEvaluationRequest,
-    user: Dict[str, Any] = Depends(require_current_user),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> QueryEvaluationResponse:
     """Evaluate a custom relational algebra expression without requiring a query_id"""
     try:
-        evaluation = relalg_service.evaluate_expression(
+        evaluation = _evaluate_ra(
             payload.expression,
             database,
-            user_id=user["id"],
+            user_id=user["id"] if user else None,
         )
     except ParseError as exc:
         raise HTTPException(
@@ -286,14 +303,14 @@ def evaluate_custom_query(
 def evaluate_custom_sql_query(
     database: str,
     payload: SqlEvaluationRequest,
-    user: Dict[str, Any] = Depends(require_current_user),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> QueryEvaluationResponse:
     """Evaluate a custom SQL statement without requiring a query_id"""
     try:
         evaluation = sql_service.evaluate_sql(
             payload.sql,
             database,
-            user_id=user["id"],
+            user_id=user["id"] if user else None,
         )
     except EvaluationError as exc:
         raise HTTPException(

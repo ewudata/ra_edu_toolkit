@@ -5,12 +5,14 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.routes import llm
+from backend.routes.ai_privacy import require_ai_disclosure
 from backend.services.auth import require_current_user
 from backend.services import llm as llm_service
 
 
 def _client_with_user():
     app.dependency_overrides[require_current_user] = lambda: {"id": "u1"}
+    app.dependency_overrides[require_ai_disclosure] = lambda: None
     return TestClient(app)
 
 
@@ -100,9 +102,9 @@ def test_generate_hint_passes_evaluation_context_without_solution(monkeypatch):
     assert captured["student_expression"] == "pi{id}(students)"
     assert captured["evaluation_context"]["matches_expected"] is False
     assert captured["evaluation_context"]["missing_row_count"] == 1
-    assert captured["evaluation_context"]["student_rows_sample"] == [{"id": 1}]
-    assert captured["evaluation_context"]["missing_rows_sample"] == [{"name": "Ada"}]
-    assert captured["evaluation_context"]["extra_rows_sample"] == [{"id": 1}]
+    assert "student_rows_sample" not in captured["evaluation_context"]
+    assert "missing_rows_sample" not in captured["evaluation_context"]
+    assert "extra_rows_sample" not in captured["evaluation_context"]
     assert "pi{name}(students)" not in str(captured)
     app.dependency_overrides.clear()
 
@@ -203,8 +205,8 @@ def test_generate_hint_can_use_translation_check_context(monkeypatch):
     assert captured["evaluation_context"]["canonical_target_expression"] == "SELECT name FROM students"
     assert captured["evaluation_context"]["matches_expected"] is False
     assert captured["evaluation_context"]["schema_equal"] is False
-    assert captured["evaluation_context"]["missing_rows_sample"] == [{"name": "Ada"}]
-    assert captured["evaluation_context"]["extra_rows_sample"] == [{"id": 1}]
+    assert "missing_rows_sample" not in captured["evaluation_context"]
+    assert "extra_rows_sample" not in captured["evaluation_context"]
     app.dependency_overrides.clear()
 
 

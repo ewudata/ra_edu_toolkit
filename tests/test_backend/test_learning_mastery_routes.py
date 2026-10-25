@@ -5,11 +5,20 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.routes import evaluation, queries
-from backend.services.auth import require_current_user
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolate_progress(monkeypatch):
+    monkeypatch.setattr(evaluation, "record_query_attempt", lambda **kwargs: None)
+    yield
+    app.dependency_overrides.clear()
+from backend.services.auth import require_current_user, optional_current_user
 
 
 def _client_with_user():
     app.dependency_overrides[require_current_user] = lambda: {"id": "u1"}
+    app.dependency_overrides[optional_current_user] = lambda: {"id": "u1"}
     return TestClient(app)
 
 

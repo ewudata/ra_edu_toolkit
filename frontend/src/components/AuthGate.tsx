@@ -22,7 +22,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         </div>
         <div>
           <h2 className="font-display text-3xl font-semibold text-[#3f4761]">Sign in to continue</h2>
-          <p className="mt-1 text-sm text-[#475467]">Use Google sign-in to access the database, exercise, and translation tools.</p>
+          <p className="mt-1 text-sm text-[#475467]">Sign in to view saved progress. You can practice with default datasets without signing in.</p>
         </div>
         <button
           onClick={login}

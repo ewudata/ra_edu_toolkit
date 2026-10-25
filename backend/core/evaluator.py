@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 import pandas as pd
 import re
 import builtins
+import os
 from . import ra_ast as AST
 
 
@@ -131,11 +132,7 @@ def _cond_eval(cond: str, env: Dict[str, Any]) -> bool:
                 {"env": env_ci, "is_null": _is_null, "is_not_null": _is_not_null},
             )
         )
-    except Exception as e:
-        print(f"Error evaluating condition: {e}")
-        print(f"Condition: {cond}")
-        print(f"Environment: {env}")
-        print(f"Python code: {py}")
+    except Exception:
         return False
 
 
@@ -258,7 +255,13 @@ def _resolve_rename_source(
     return match
 
 
+def _check_product_size(left: pd.DataFrame, right: pd.DataFrame) -> None:
+    if len(left) * len(right) > int(os.getenv("RA_MAX_INTERMEDIATE_ROWS", "100000")):
+        raise ValueError("This operation exceeds the intermediate row limit. Narrow the query first.")
+
+
 def _product(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
+    _check_product_size(L, R)
     L = L.copy()
     R = R.copy()
     left_aliases = L.attrs.get("aliases", {})
@@ -290,6 +293,7 @@ def _natural_join(L: pd.DataFrame, R: pd.DataFrame) -> pd.DataFrame:
         return _product(L, R)
     left_aliases = L.attrs.get("aliases", {})
     right_aliases = R.attrs.get("aliases", {})
+    _check_product_size(L, R)
     M = L.merge(R, on=common, how="inner", suffixes=("", "_r"))
     if "_prov_x" in M.columns:
         M["_prov"] = M["_prov_x"] + M["_prov_y"]
@@ -357,6 +361,7 @@ def _division(
         result["_prov"] = result["_prov"].apply(lambda v: v if isinstance(v, list) else [])
         return result.reset_index(drop=True)
 
+    _check_product_size(candidates, required)
     expected = candidates.merge(required, how="cross")
     actual = dividend[quotient_attrs + divisor_attrs].drop_duplicates()
     coverage = expected.merge(

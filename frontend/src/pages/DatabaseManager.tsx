@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, useCallback, useRef, type FormEvent } from 'react';
 import { api, type Database, type TableInfo } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import TablePreview from '../components/TablePreview';
@@ -10,6 +11,7 @@ const PROTECTED = new Set(['sales', 'university']);
 type WorkspaceMode = 'browse' | 'import';
 
 export default function DatabaseManager() {
+  const { isAuthenticated, login } = useAuth();
   const zipFileInputId = useId();
   const zipNameInputId = useId();
   const sqlFileInputId = useId();
@@ -160,6 +162,7 @@ export default function DatabaseManager() {
 
   return (
     <div className={shell}>
+      {!isAuthenticated && <p className="text-sm text-[#475467]">Browse shared default datasets. <button className="underline" onClick={login}>Sign in to upload and manage personal datasets.</button></p>}
       <section className={hero}>
         <div className="space-y-3">
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>
@@ -261,7 +264,7 @@ export default function DatabaseManager() {
             </div>
           )}
 
-          <div className="space-y-3 border-t border-[#e5e7eb] pt-4">
+          {isAuthenticated && <div className="space-y-3 border-t border-[#e5e7eb] pt-4">
             <p className={sectionLabel}>Actions</p>
             <button
               type="button"
@@ -275,7 +278,7 @@ export default function DatabaseManager() {
               <FolderPlus className="app-icon-glyph-soft h-4 w-4" />
               Add database
             </button>
-          </div>
+          </div>}
         </aside>
 
         <div className="min-w-0 space-y-5">
@@ -356,7 +359,7 @@ export default function DatabaseManager() {
                       Shared starter dataset: {selectedDbSharedStatus}
                     </p>
                   </div>
-                  {!selectedDbProtected && (
+                  {isAuthenticated && !selectedDbProtected && (
                     <button
                       type="button"
                       onClick={() => handleDelete(selectedDbInfo)}
@@ -377,7 +380,7 @@ export default function DatabaseManager() {
                 Select a database from the rail to inspect its tables, metadata, and management controls.
               </p>
             </section>
-          ) : (
+          ) : isAuthenticated ? (
             <section className={`${blockCard} space-y-4`}>
               <div className="flex items-center gap-3">
                 <div className="app-icon-tile flex h-11 w-11 items-center justify-center rounded-[16px]">
@@ -447,7 +450,7 @@ export default function DatabaseManager() {
                 </div>
               </div>
             </section>
-          )}
+          ) : null}
         </div>
       </section>
     </div>

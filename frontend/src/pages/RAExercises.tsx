@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { api, type Database, type Query, type EvaluationResult, type TableInfo } from '../lib/api';
+import { AiHelpCancelledError, api, type Database, type Query, type EvaluationResult, type TableInfo } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import TablePreview from '../components/TablePreview';
@@ -89,6 +90,7 @@ function queryMatchesOps(query: Query, ops: Set<string>): boolean {
 }
 
 export default function RAExercises() {
+  const { isAuthenticated } = useAuth();
   const databaseSelectId = useId();
   const querySelectId = useId();
   const solutionTextareaId = useId();
@@ -103,7 +105,7 @@ export default function RAExercises() {
 
   const [mode, setMode] = useState<'operators' | 'custom' | null>(null);
   const [selectedOps, setSelectedOps] = useState<Set<string>>(new Set());
-  const [progressFilter, setProgressFilter] = useState<'unmastered' | 'all' | 'mastered'>('unmastered');
+  const [progressFilter, setProgressFilter] = useState<'unmastered' | 'all' | 'mastered'>(isAuthenticated ? 'unmastered' : 'all');
 
   const [selectedQueryId, setSelectedQueryId] = useState('');
   const [queryDetail, setQueryDetail] = useState<Query | null>(null);
@@ -208,7 +210,7 @@ export default function RAExercises() {
   }, [selectedDb]);
 
   useEffect(() => {
-    if (!selectedDb) return;
+    if (!isAuthenticated || !selectedDb) return;
 
     let cancelled = false;
 
@@ -225,7 +227,7 @@ export default function RAExercises() {
     return () => {
       cancelled = true;
     };
-  }, [selectedDb]);
+  }, [selectedDb, isAuthenticated]);
 
   useEffect(() => {
     if (!selectedDb) return;
@@ -302,15 +304,8 @@ export default function RAExercises() {
       }
     } catch (err) {
       setResultError(String(err));
-      setErrorExplanationLoading(true);
-      api.explainRaError(selectedDb, solution.trim())
-        .then((res) => {
-          setErrorExplanation(res.explanation);
-          setErrorExplanationHint(res.hint);
-          setErrorExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => setErrorExplanationLoading(false));
+      setErrorExplanationLoading(false);
+
     } finally {
       setExecuting(false);
     }
@@ -331,21 +326,15 @@ export default function RAExercises() {
       setCustomResult(res);
     } catch (err) {
       setCustomError(String(err));
-      setCustomErrorExplanationLoading(true);
-      api.explainRaError(selectedDb, customExpr.trim())
-        .then((res) => {
-          setCustomErrorExplanation(res.explanation);
-          setCustomErrorExplanationHint(res.hint);
-          setCustomErrorExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => setCustomErrorExplanationLoading(false));
+      setCustomErrorExplanationLoading(false);
+
     } finally {
       setCustomExecuting(false);
     }
   }
 
   async function handleGenerateHint() {
+    if (!isAuthenticated) return;
     if (!selectedQueryId || !queryDetail) return;
     setAiHintLoading(true);
     setAiHintError(null);
@@ -360,6 +349,7 @@ export default function RAExercises() {
       setAiHintModel(res.model);
       setSupportPanel('hint');
     } catch (err) {
+      if (err instanceof AiHelpCancelledError) return;
       setAiHint(null);
       setAiHintModel(null);
       setAiHintError(String(err));
@@ -387,6 +377,7 @@ export default function RAExercises() {
   }
 
   async function handleWalkthrough() {
+    if (!isAuthenticated) return;
     if (supportPanel === 'walkthrough') {
       setSupportPanel(null);
       return;
@@ -396,13 +387,15 @@ export default function RAExercises() {
       return;
     }
     setWalkthroughLoading(true);
+    setAiHintError(null);
     try {
       const res = await api.generateWalkthrough(selectedDb, selectedQueryId);
       setWalkthrough(res.walkthrough);
       setWalkthroughModel(res.model);
       setSupportPanel('walkthrough');
-    } catch {
-      // silently fail — button stays enabled for retry
+    } catch (error) {
+      if (error instanceof AiHelpCancelledError) return;
+      setAiHintError(String(error));
     } finally {
       setWalkthroughLoading(false);
     }
@@ -414,6 +407,28 @@ export default function RAExercises() {
       if (next.has(op)) next.delete(op); else next.add(op);
       return next;
     });
+  }
+
+  async function requestErrorHelp(custom: boolean) {
+    if (!isAuthenticated || !selectedDb) return;
+    setAiHintError(null);
+    const setLoading = custom ? setCustomErrorExplanationLoading : setErrorExplanationLoading;
+    setLoading(true);
+    try {
+      const response = await api.explainRaError(selectedDb, custom ? customExpr.trim() : solution.trim());
+      if (custom) {
+        setCustomErrorExplanation(response.explanation);
+        setCustomErrorExplanationHint(response.hint);
+        setCustomErrorExplanationModel(response.model);
+      } else {
+        setErrorExplanation(response.explanation);
+        setErrorExplanationHint(response.hint);
+        setErrorExplanationModel(response.model);
+      }
+    } catch (error) {
+      if (error instanceof AiHelpCancelledError) return;
+      setAiHintError(String(error));
+    } finally { setLoading(false); }
   }
 
   if (backendOk === false) {
@@ -433,6 +448,8 @@ export default function RAExercises() {
 
   return (
     <div className="space-y-5 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-3 sm:p-4">
+      {aiHintError && <p role="status" className="text-sm text-[#86483d]">{aiHintError}</p>}
+      <p className="text-sm text-[#475467]">{isAuthenticated ? 'AI help is optional and sends the current answer and relevant context to the configured AI service after your agreement.' : 'Guest practice: progress is not saved. Sign in to use AI help.'}</p>
         <section className="rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-3">
@@ -444,13 +461,13 @@ export default function RAExercises() {
                 </p>
               </div>
             </div>
-            <Link
+            {isAuthenticated && <Link
               to="/progress"
               className="app-secondary-btn shrink-0 !rounded-2xl !px-4 !py-2.5 flex items-center gap-2"
             >
               <BarChart3 className="h-4 w-4" aria-hidden="true" />
               My Progress
-            </Link>
+            </Link>}
           </div>
         </section>
 
@@ -570,7 +587,7 @@ export default function RAExercises() {
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-[0.16em] text-[#3d6f67]">Progress</h3>
                       <div className="mt-2 grid gap-2">
-                        {(['unmastered', 'all', 'mastered'] as const).map((f) => (
+                        {(isAuthenticated ? ['unmastered', 'all', 'mastered'] as const : ['all'] as const).map((f) => (
                           <label key={f} className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#d7eee7] bg-white/72 px-2.5 py-2 text-sm font-medium text-[#3d6f67]">
                             <input type="radio" name="progress" checked={progressFilter === f} onChange={() => setProgressFilter(f)} className="accent-[#74c8b8]" />
                             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -693,6 +710,7 @@ export default function RAExercises() {
                         {resultError && (
                           <StatusBadge variant="error">Could not evaluate your expression: {resultError}</StatusBadge>
                         )}
+                        {resultError && <button type="button" className="app-secondary-btn" disabled={!isAuthenticated || errorExplanationLoading} onClick={() => requestErrorHelp(false)}>Ask AI about this error</button>}
                         {(errorExplanationLoading || errorExplanation) && (
                           <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
                             {errorExplanationLoading ? (
@@ -743,7 +761,7 @@ export default function RAExercises() {
                         <button
                           type="button"
                           onClick={handleGenerateHint}
-                          disabled={aiHintLoading}
+                          disabled={!isAuthenticated || aiHintLoading}
                           className={supportPanel === 'hint' ? primaryButton : secondaryButton}
                         >
                           <Lightbulb className="w-4 h-4" />
@@ -782,7 +800,7 @@ export default function RAExercises() {
                           <button
                             type="button"
                             onClick={() => { void handleWalkthrough(); }}
-                            disabled={walkthroughLoading}
+                            disabled={!isAuthenticated || walkthroughLoading}
                             className={supportPanel === 'walkthrough' ? primaryButton : secondaryButton}
                           >
                             <BookOpen className="w-4 h-4" />
@@ -900,6 +918,7 @@ export default function RAExercises() {
               {customError && (
                 <StatusBadge variant="error">Could not evaluate the expression: {customError}</StatusBadge>
               )}
+                        {customError && <button type="button" className="app-secondary-btn" disabled={!isAuthenticated || customErrorExplanationLoading} onClick={() => requestErrorHelp(true)}>Ask AI about this error</button>}
               {(customErrorExplanationLoading || customErrorExplanation) && (
                 <div className="rounded-2xl border border-[#cbeae3] bg-[#f7fcfa] p-3 space-y-1">
                   {customErrorExplanationLoading ? (

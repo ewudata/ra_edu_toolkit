@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from threading import BoundedSemaphore
 from typing import Dict, List
 
 import pandas as pd
@@ -10,6 +11,8 @@ from ..core import evaluator as evaluator_mod
 from ..core import stepper as stepper_mod
 from . import datasets
 from .exceptions import EvaluationError, ParseError
+
+_GUEST_WORKERS = BoundedSemaphore(4)
 
 _EXPECTED_TOKEN_LABELS = {
     "JOIN": "⋈, natural_join, natjoin, or njoin (aliases are case-insensitive)",
@@ -132,6 +135,10 @@ def evaluate_expression(
     """Parse and evaluate a relational algebra expression against a database."""
 
     env = datasets.load_database_env(database, user_id=user_id)
+    return _evaluate_in_env(expression, database, env)
+
+
+def _evaluate_in_env(expression, database, env):
     try:
         ast = stepper_mod.parse(expression)
     except UnexpectedInput as exc:
@@ -155,3 +162,67 @@ def evaluate_expression(
         trace=steps,
         dataframe=df,
     )
+
+
+def _guest_worker(connection, expression, database, env):
+    try:
+        import os
+        import sys
+        if sys.platform.startswith("linux"):
+            import resource
+            memory = int(os.getenv("RA_WORKER_MEMORY_MB", "2048")) * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
+        result = _evaluate_in_env(expression, database, env)
+        if len(result.dataframe) > 50000:
+            raise EvaluationError("Result exceeds the row limit. Narrow the query first.")
+        connection.send(("ok", result))
+    except ParseError as exc:
+        connection.send(("parse", vars(exc)))
+    except Exception:
+        # Do not log student input or expose worker internals.
+        connection.send(("error", "Unable to evaluate within the execution limits. Check the expression or narrow the query."))
+    finally:
+        connection.close()
+
+
+def evaluate_guest_expression(expression: str, database: str) -> EvaluationResult:
+    """Run public RA work in a killable process; never load account data."""
+    import multiprocessing
+    import os
+    env = datasets.load_database_env(database, user_id=None)
+    context = multiprocessing.get_context("spawn")
+    receiver, sender = context.Pipe(duplex=False)
+    process = context.Process(target=_guest_worker, args=(sender, expression, database, env), daemon=True)
+    if not _GUEST_WORKERS.acquire(blocking=False):
+        sender.close()
+        receiver.close()
+        raise EvaluationError("The evaluator is busy. Please try again shortly.")
+    try:
+        process.start()
+    except Exception:
+        sender.close()
+        receiver.close()
+        _GUEST_WORKERS.release()
+        raise
+    sender.close()
+    try:
+        if not receiver.poll(float(os.getenv("RA_EVALUATION_TIMEOUT_SECONDS", "5"))):
+            raise EvaluationError("Evaluation timed out. Narrow the query and try again.")
+        try:
+            kind, payload = receiver.recv()
+        except EOFError:
+            raise EvaluationError("Evaluation exceeded the execution limits.") from None
+        if kind == "parse":
+            raise ParseError(**payload)
+        if kind != "ok":
+            raise EvaluationError(payload)
+        return payload
+    finally:
+        receiver.close()
+        _GUEST_WORKERS.release()
+        if process.is_alive():
+            process.terminate()
+        process.join(timeout=1)
+        if process.is_alive():
+            process.kill()
+            process.join()

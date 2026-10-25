@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import logging
 import json
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import requests
-
-logger = logging.getLogger(__name__)
-uvicorn_logger = logging.getLogger("uvicorn.error")
 
 
 class LlmConfigurationError(RuntimeError):
@@ -110,7 +106,7 @@ def _chat_completion(
         response.raise_for_status()
         return response.json()
     except requests.RequestException as exc:
-        raise LlmProviderError(f"LLM provider request failed: {exc}") from exc
+        raise LlmProviderError("AI service request failed. Please try again later.") from None
     except ValueError as exc:
         raise LlmProviderError("LLM provider returned invalid JSON.") from exc
 
@@ -134,6 +130,19 @@ def _limit_words(text: str, max_words: int) -> str:
     return " ".join(words[:max_words]).rstrip(".,;:") + "..."
 
 
+_DIAGNOSTIC_FIELDS = {
+    "status", "task", "direction", "source_language", "target_language",
+    "source_expression", "canonical_target_expression", "student_schema",
+    "student_row_count", "trace_ops", "matches_expected", "schema_equal",
+    "expected_schema", "expected_row_count", "missing_row_count", "extra_row_count",
+    "type", "line", "column",
+}
+
+
+def _safe_diagnostics(context):
+    return {key: value for key, value in context.items() if key in _DIAGNOSTIC_FIELDS}
+
+
 def generate_ra_hint(
     *,
     database: str,
@@ -145,6 +154,7 @@ def generate_ra_hint(
     evaluation_context: Dict[str, Any],
 ) -> HintResponse:
     base_url, api_key, model = _require_config()
+    evaluation_context = _safe_diagnostics(evaluation_context)
     is_translation_check = evaluation_context.get("task") == "translation_check"
 
     if is_translation_check:
@@ -158,7 +168,7 @@ def generate_ra_hint(
         )
         user_prompt = "\n".join(
             [
-                f"Database: {database}",
+                "Database: learning dataset",
                 f"Task prompt: {prompt}",
                 f"Translation direction: {evaluation_context.get('direction') or 'unspecified'}",
                 f"Source expression the student is translating: {evaluation_context.get('source_expression') or '(unavailable)'}",
@@ -181,7 +191,7 @@ def generate_ra_hint(
         )
         user_prompt = "\n".join(
             [
-                f"Database: {database}",
+                "Database: learning dataset",
                 f"Prompt: {prompt}",
                 f"Difficulty: {difficulty or 'unspecified'}",
                 f"Expected operator families: {', '.join(expected_operators) or 'unspecified'}",
@@ -193,17 +203,6 @@ def generate_ra_hint(
                 "Return only the targeted hint text. Mention the most important concrete mismatch from the student's answer, not a broad checklist.",
             ]
         )
-    prompt_log_message = (
-        "Generating RA hint with LLM prompt\n"
-        f"model={model}\n"
-        f"database={database}\n"
-        "system_prompt:\n"
-        f"{system_prompt}\n"
-        "user_prompt:\n"
-        f"{user_prompt}"
-    )
-    logger.info(prompt_log_message)
-    uvicorn_logger.info(prompt_log_message)
 
     payload = _chat_completion(
         base_url=base_url,
@@ -239,28 +238,17 @@ def explain_ra_error(
     )
     user_prompt = "\n".join(
         [
-            f"Database: {database}",
+            "Database: learning dataset",
             "Schema:",
             _format_schema(schema),
             "Supported relational algebra syntax:",
             grammar_help,
             f"Student expression: {expression}",
-            f"Deterministic error context: {error_context}",
+            f"Deterministic error context: {_safe_diagnostics(error_context)}",
             "",
             "Return JSON only.",
         ]
     )
-    prompt_log_message = (
-        "Explaining RA error with LLM prompt\n"
-        f"model={model}\n"
-        f"database={database}\n"
-        "system_prompt:\n"
-        f"{system_prompt}\n"
-        "user_prompt:\n"
-        f"{user_prompt}"
-    )
-    logger.info(prompt_log_message)
-    uvicorn_logger.info(prompt_log_message)
 
     payload = _chat_completion(
         base_url=base_url,
@@ -314,7 +302,7 @@ def generate_solution_walkthrough(
     )
     user_prompt = "\n".join(
         [
-            f"Database: {database}",
+            "Database: learning dataset",
             "Schema:",
             _format_schema(schema),
             f"Query prompt: {prompt}",
@@ -324,17 +312,6 @@ def generate_solution_walkthrough(
             f"Canonical SQL (for context): {canonical_sql or '(not available)'}",
         ]
     )
-    prompt_log_message = (
-        "Generating solution walkthrough with LLM prompt\n"
-        f"model={model}\n"
-        f"database={database}\n"
-        "system_prompt:\n"
-        f"{system_prompt}\n"
-        "user_prompt:\n"
-        f"{user_prompt}"
-    )
-    logger.info(prompt_log_message)
-    uvicorn_logger.info(prompt_log_message)
 
     payload = _chat_completion(
         base_url=base_url,
@@ -366,26 +343,15 @@ def explain_sql_error(
     )
     user_prompt = "\n".join(
         [
-            f"Database: {database}",
+            "Database: learning dataset",
             "Schema:",
             _format_schema(schema),
             f"Student SQL: {sql}",
-            f"Deterministic error context: {error_context}",
+            f"Deterministic error context: {_safe_diagnostics(error_context)}",
             "",
             "Return JSON only.",
         ]
     )
-    prompt_log_message = (
-        "Explaining SQL error with LLM prompt\n"
-        f"model={model}\n"
-        f"database={database}\n"
-        "system_prompt:\n"
-        f"{system_prompt}\n"
-        "user_prompt:\n"
-        f"{user_prompt}"
-    )
-    logger.info(prompt_log_message)
-    uvicorn_logger.info(prompt_log_message)
 
     payload = _chat_completion(
         base_url=base_url,

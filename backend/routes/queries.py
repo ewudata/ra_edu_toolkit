@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ..services import queries as queries_service
-from ..services.auth import require_current_user
+from ..services.auth import require_current_user, optional_current_user
 from ..services.exceptions import DatabaseNotFound, QueryNotFound
 from ..services.learning_progress import list_attempted_query_ids, list_mastered_query_ids
 from ..services.queries import QueryDetail, QuerySummary
@@ -103,10 +103,10 @@ class OperatorProgressResponse(BaseModel):
 @router.get("/", response_model=List[QuerySummaryResponse])
 def list_queries_for_database(
     database: str,
-    user: Dict[str, Any] = Depends(require_current_user),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> List[QuerySummaryResponse]:
     try:
-        summaries = queries_service.list_queries(database, user_id=user["id"])
+        summaries = queries_service.list_queries(database, user_id=user["id"] if user else None)
     except DatabaseNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -178,10 +178,10 @@ def get_operator_progress(
 def get_query_detail(
     database: str,
     query_id: str,
-    user: Dict[str, Any] = Depends(require_current_user),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> QueryDetailResponse:
     try:
-        detail = queries_service.get_query(database, query_id, user_id=user["id"])
+        detail = queries_service.get_query(database, query_id, user_id=user["id"] if user else None)
     except DatabaseNotFound as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)

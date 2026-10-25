@@ -5,12 +5,13 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.routes import evaluation
-from backend.services.auth import require_current_user
+from backend.services.auth import require_current_user, optional_current_user
 from backend.services.grading import compare_results
 
 
 def _client_with_user():
     app.dependency_overrides[require_current_user] = lambda: {"id": "u1"}
+    app.dependency_overrides[optional_current_user] = lambda: {"id": "u1"}
     return TestClient(app)
 
 

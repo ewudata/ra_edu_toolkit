@@ -24,9 +24,14 @@ function formatAuthError(message: string | null): string | null {
     normalized.includes('bad_jwt') ||
     normalized.includes('invalid jwt')
   ) {
-    return 'Your session expired. Log in again to continue.';
+    return 'Your session expired. You are now a guest and progress is not being saved. Sign in to resume saving.';
   }
   return message;
+}
+
+function clearUiSessionState() {
+  if (typeof window === 'undefined') return;
+  UI_SESSION_STORAGE_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -36,27 +41,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: null,
     loading: true,
   });
+  const [sessionRevision, setSessionRevision] = useState(0);
   const sessionRef = useRef<PersistedAuthState | null>(null);
   const refreshInFlightRef = useRef<Promise<boolean> | null>(null);
 
-  function clearUiSessionState() {
-    if (typeof window === 'undefined') return;
-    UI_SESSION_STORAGE_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
-  }
-
-  function applyAuthenticatedSession(token: string, email: string, refreshToken: string | null = null) {
-    setAuthToken(token);
+  const applyAuthenticatedSession = useCallback(function applyAuthenticatedSession(token: string, email: string, refreshToken: string | null = null, preserveAiDisclosure = false) {
+    setAuthToken(token, preserveAiDisclosure);
     sessionRef.current = { token, email, refreshToken };
     Cookies.set(AUTH_COOKIE, JSON.stringify({ token, email, refreshToken }), { expires: 30, sameSite: 'lax' });
     setState({ token, email, error: null, loading: false });
-  }
+  }, []);
 
-  function clearAuthState(message: string | null = null) {
+  const clearAuthState = useCallback(function clearAuthState(message: string | null = null) {
+    clearUiSessionState();
+    setSessionRevision((revision) => revision + 1);
     Cookies.remove(AUTH_COOKIE);
     setAuthToken(null);
     sessionRef.current = null;
     setState({ token: null, email: null, error: formatAuthError(message), loading: false });
-  }
+  }, []);
 
   useLayoutEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -77,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (authToken) {
       const email = authEmail || 'Google User';
       clearUiSessionState();
+      setSessionRevision((revision) => revision + 1);
       applyAuthenticatedSession(authToken, email, authRefreshToken || null);
 
       const url = new URL(window.location.href);
@@ -101,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     setState({ token: null, email: null, error: null, loading: false });
-  }, []);
+  }, [applyAuthenticatedSession, clearAuthState]);
 
   useEffect(() => {
     setUnauthorizedHandler((message) => {
@@ -114,10 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       refreshInFlightRef.current = api.refreshSession(activeSession.refreshToken)
         .then((payload) => {
+          if (sessionRef.current !== activeSession) return false;
           applyAuthenticatedSession(
             payload.auth_token,
             payload.auth_email || activeSession.email || 'Google User',
             payload.auth_refresh_token || activeSession.refreshToken,
+            true,
           );
           return true;
         })
@@ -132,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUnauthorizedHandler(null);
       setRefreshSessionHandler(null);
     };
-  }, []);
+  }, [applyAuthenticatedSession, clearAuthState]);
 
   const login = useCallback(async () => {
     try {
@@ -147,13 +153,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     clearUiSessionState();
     clearAuthState(null);
-  }, []);
+  }, [clearAuthState]);
 
   const value: AuthContextValue = {
     ...state,
     login,
     logout,
     isAuthenticated: !!state.token,
+    sessionRevision,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

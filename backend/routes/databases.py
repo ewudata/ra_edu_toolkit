@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Optional, Any, Dict, List
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import Query, APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from ..services import datasets
 from ..services import queries as queries_service
-from ..services.auth import require_current_user
+from ..services.auth import require_current_user, optional_current_user
 from ..services.datasets import DatabaseSchema, DatabaseSummary, TableSchema
 
 router = APIRouter(prefix="/databases", tags=["databases"])
@@ -69,19 +69,19 @@ class DatabaseSchemaResponse(BaseModel):
 
 @router.get("/", response_model=List[DatabaseSummaryResponse])
 def list_available_databases(
-    user: Dict[str, Any] = Depends(require_current_user),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> List[DatabaseSummaryResponse]:
     """Expose the catalog of sample databases bundled with the toolkit."""
 
     try:
-        databases = datasets.list_databases(user_id=user["id"])
+        databases = datasets.list_databases(user_id=user["id"] if user else None)
     except FileNotFoundError as exc:  # pragma: no cover - infrastructure issue
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     result = []
     for db in databases:
         try:
-            queries_service.list_queries(db.name, user_id=user["id"])
+            queries_service.list_queries(db.name, user_id=user["id"] if user else None)
             has_catalog = True
         except Exception:
             has_catalog = False
@@ -134,14 +134,14 @@ async def import_database_from_zip(
 )
 def get_database_schema(
     database: str,
-    sample_rows: int = 5,
-    user: Dict[str, Any] = Depends(require_current_user),
+    sample_rows: int = Query(default=5, ge=0, le=100),
+    user: Optional[Dict[str, Any]] = Depends(optional_current_user),
 ) -> DatabaseSchemaResponse:
     """Return column metadata and a row preview for each table in a database."""
 
     try:
         schema = datasets.get_database_schema(
-            database, sample_rows=sample_rows, user_id=user["id"]
+            database, sample_rows=sample_rows, user_id=user["id"] if user else None
         )
     except FileNotFoundError as exc:
         raise HTTPException(

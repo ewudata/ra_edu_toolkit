@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ApiError, api, type Database, type EvaluationResult, type Query, type TableInfo, type TranslationCheckResult } from '../lib/api';
+import { AiHelpCancelledError, ApiError, api, type Database, type EvaluationResult, type Query, type TableInfo, type TranslationCheckResult } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
 import StatusBadge from '../components/StatusBadge';
 import Collapsible from '../components/Collapsible';
 import DataTable from '../components/DataTable';
@@ -642,7 +643,8 @@ function formatCheckError(error: unknown): string {
 }
 
 export default function RASQLReference() {
-  const persistedState = loadPersistedReferenceState();
+  const { isAuthenticated } = useAuth();
+  const persistedState = isAuthenticated ? loadPersistedReferenceState() : null;
   const initialWorkingDatabase = getWorkingDatabase();
   const databaseSelectId = useId();
   const querySelectId = useId();
@@ -754,7 +756,7 @@ export default function RASQLReference() {
   }, [selectedDb]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isAuthenticated || typeof window === 'undefined') return;
     window.sessionStorage.setItem(
       REFERENCE_SESSION_STORAGE_KEY,
       JSON.stringify({
@@ -774,6 +776,7 @@ export default function RASQLReference() {
       } satisfies PersistedReferenceState),
     );
   }, [
+    isAuthenticated,
     selectedDb,
     mode,
     selectedQueryId,
@@ -1019,6 +1022,7 @@ export default function RASQLReference() {
       setTranslationAiHint(response.hint);
       setTranslationAiHintModel(response.model);
     } catch (error) {
+      if (error instanceof AiHelpCancelledError) return;
       setTranslationAiHintError(formatCheckError(error));
     } finally {
       setTranslationAiHintLoading(false);
@@ -1057,15 +1061,8 @@ export default function RASQLReference() {
           ? error.message
           : 'Unable to translate the relational algebra expression.',
       );
-      setCustomTranslationExplanationLoading(true);
-      api.explainRaError(selectedDb, customRa.trim())
-        .then((res) => {
-          setCustomTranslationExplanation(res.explanation);
-          setCustomTranslationExplanationHint(res.hint);
-          setCustomTranslationExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => setCustomTranslationExplanationLoading(false));
+      setCustomTranslationExplanationLoading(false);
+
       setCustomRaTranslating(false);
       return;
     }
@@ -1074,15 +1071,8 @@ export default function RASQLReference() {
       setCustomRaResult(result);
     } catch (error) {
       setCustomRaError(formatCheckError(error));
-      setCustomRaErrorExplanationLoading(true);
-      api.explainRaError(selectedDb, customRa.trim())
-        .then((res) => {
-          setCustomRaErrorExplanation(res.explanation);
-          setCustomRaErrorExplanationHint(res.hint);
-          setCustomRaErrorExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => setCustomRaErrorExplanationLoading(false));
+      setCustomRaErrorExplanationLoading(false);
+
     } finally {
       setCustomRaTranslating(false);
     }
@@ -1120,15 +1110,8 @@ export default function RASQLReference() {
           ? error.message
           : 'Unable to translate the SQL statement.',
       );
-      setCustomTranslationExplanationLoading(true);
-      api.explainSqlError(selectedDb, customSql.trim())
-        .then((res) => {
-          setCustomTranslationExplanation(res.explanation);
-          setCustomTranslationExplanationHint(res.hint);
-          setCustomTranslationExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => setCustomTranslationExplanationLoading(false));
+      setCustomTranslationExplanationLoading(false);
+
       setCustomSqlTranslating(false);
       return;
     }
@@ -1137,15 +1120,8 @@ export default function RASQLReference() {
       setCustomSqlResult(result);
     } catch (error) {
       setCustomSqlError(formatCheckError(error));
-      setCustomSqlErrorExplanationLoading(true);
-      api.explainSqlError(selectedDb, customSql.trim())
-        .then((res) => {
-          setCustomSqlErrorExplanation(res.explanation);
-          setCustomSqlErrorExplanationHint(res.hint);
-          setCustomSqlErrorExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => setCustomSqlErrorExplanationLoading(false));
+      setCustomSqlErrorExplanationLoading(false);
+
     } finally {
       setCustomSqlTranslating(false);
     }
@@ -1183,39 +1159,12 @@ export default function RASQLReference() {
       const result = await api.checkTranslation(selectedDb, selectedQueryId, 'sql-to-ra', raAnswer);
       if (raCheckRequestIdRef.current !== requestId) return;
       setRaCheckResult(result);
-      const freeformRaIntentMismatch = raAnswerMode === 'freeform'
-        && result.is_correct
-        && !fullRaMatchesCatalogIntent(raAnswer, queryDetail?.solution?.relational_algebra);
-      if (!result.is_correct || freeformRaIntentMismatch) {
-        void generateTranslationAiHint(
-          'sql-to-ra',
-          raAnswer,
-          guidedRaHintMessage(
-            raAnswerMode,
-            raAnswer,
-            queryDetail?.solution?.sql,
-            queryDetail?.solution?.relational_algebra,
-            result,
-            freeformRaIntentMismatch,
-          ),
-        );
-      }
     } catch (error) {
       if (raCheckRequestIdRef.current !== requestId) return;
       setRaCheckResult(null);
       setRaCheckError(formatCheckError(error));
-      setRaCheckErrorExplanationLoading(true);
-      api.explainRaError(selectedDb, raAnswer)
-        .then((res) => {
-          if (raCheckRequestIdRef.current !== requestId) return;
-          setRaCheckErrorExplanation(res.explanation);
-          setRaCheckErrorExplanationHint(res.hint);
-          setRaCheckErrorExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (raCheckRequestIdRef.current === requestId) setRaCheckErrorExplanationLoading(false);
-        });
+      setRaCheckErrorExplanationLoading(false);
+
     } finally {
       if (raCheckRequestIdRef.current === requestId) {
         setRaCheckLoading(false);
@@ -1254,40 +1203,66 @@ export default function RASQLReference() {
     try {
       const result = await api.checkTranslation(selectedDb, selectedQueryId, 'ra-to-sql', sqlAnswer);
       setSqlCheckResult(result);
-      const guidedClauseMismatch = sqlAnswerMode === 'guided' && result.is_correct && !guidedSqlClausesMatch;
-      const freeformSqlIntentMismatch = sqlAnswerMode === 'freeform'
-        && result.is_correct
-        && !fullSqlMatchesCatalogIntent(
-          sqlAnswer,
-          queryDetail?.solution?.sql,
-          queryDetail?.solution?.relational_algebra,
-      );
-      if (!result.is_correct || guidedClauseMismatch || freeformSqlIntentMismatch) {
-        void generateTranslationAiHint(
-          'ra-to-sql',
-          sqlAnswer,
-          sqlAnswerMode === 'guided'
-            ? guidedSqlClauseHintMessage(sqlClauseFeedback)
-            : freeformSqlIntentMismatch
-              ? 'The SQL returns the same rows on this dataset, but it does not match the catalog intent exactly. Check comparison operators, selected attributes, joins, aliases, and set operations against the source relational algebra expression.'
-              : 'The submitted SQL query is not equivalent to the source relational algebra expression on the current dataset.',
-        );
-      }
     } catch (error) {
       setSqlCheckResult(null);
       setSqlCheckError(formatCheckError(error));
-      setSqlCheckErrorExplanationLoading(true);
-      api.explainSqlError(selectedDb, sqlAnswer)
-        .then((res) => {
-          setSqlCheckErrorExplanation(res.explanation);
-          setSqlCheckErrorExplanationHint(res.hint);
-          setSqlCheckErrorExplanationModel(res.model);
-        })
-        .catch(() => {})
-        .finally(() => setSqlCheckErrorExplanationLoading(false));
+      setSqlCheckErrorExplanationLoading(false);
+
     } finally {
       setSqlCheckLoading(false);
       setSqlChecked(true);
+    }
+  }
+
+  async function requestAiHelp() {
+    if (!isAuthenticated || !selectedDb) return;
+    setTranslationAiHintError(null);
+    try {
+      if (mode === 'custom') {
+        const sql = customLastEvaluated === 'sql';
+        const response = sql
+          ? await api.explainSqlError(selectedDb, customSql.trim())
+          : await api.explainRaError(selectedDb, customRa.trim());
+        if (customTranslationError) {
+          setCustomTranslationExplanation(response.explanation);
+          setCustomTranslationExplanationHint(response.hint);
+          setCustomTranslationExplanationModel(response.model);
+        } else if (sql) {
+          setCustomSqlErrorExplanation(response.explanation);
+          setCustomSqlErrorExplanationHint(response.hint);
+          setCustomSqlErrorExplanationModel(response.model);
+        } else {
+          setCustomRaErrorExplanation(response.explanation);
+          setCustomRaErrorExplanationHint(response.hint);
+          setCustomRaErrorExplanationModel(response.model);
+        }
+      } else {
+        const answer = practiceDirection === 'sql-to-ra'
+          ? (raAnswerMode === 'guided' ? stripGuidedRaPlaceholderUnderscores(studentRa) : freeformRaAnswer)
+          : (sqlAnswerMode === 'guided' ? buildSqlFromClauseGroups(sqlClauseGroups, sqlClauseAnswers) : freeformSqlAnswer);
+        if (raCheckError || sqlCheckError) {
+          const response = practiceDirection === 'sql-to-ra'
+            ? await api.explainRaError(selectedDb, answer)
+            : await api.explainSqlError(selectedDb, answer);
+          if (practiceDirection === 'sql-to-ra') {
+            setRaCheckErrorExplanation(response.explanation);
+            setRaCheckErrorExplanationHint(response.hint);
+            setRaCheckErrorExplanationModel(response.model);
+          } else {
+            setSqlCheckErrorExplanation(response.explanation);
+            setSqlCheckErrorExplanationHint(response.hint);
+            setSqlCheckErrorExplanationModel(response.model);
+          }
+        } else {
+          const diagnostic = practiceDirection === 'sql-to-ra'
+            ? guidedRaHintMessage(raAnswerMode, answer, queryDetail?.solution?.sql, queryDetail?.solution?.relational_algebra, raCheckResult, false)
+            : guidedSqlClauseHintMessage(sqlClauseFeedback);
+          await generateTranslationAiHint(practiceDirection, answer, diagnostic);
+        }
+      }
+    } catch (error) {
+      if (error instanceof AiHelpCancelledError) return;
+      setTranslationAiHintError(formatCheckError(error));
     }
   }
 
@@ -1324,6 +1299,11 @@ export default function RASQLReference() {
     : freeformRaAnswer.trim();
   return (
     <div className={shell}>
+      <div className="space-y-2 text-sm text-[#475467]">
+        <p>{isAuthenticated ? 'AI help is optional. Review what is shared before your first request.' : 'Guest practice: progress is not saved. Sign in to use AI help.'}</p>
+        <button className="app-secondary-btn" disabled={!isAuthenticated || !selectedDb || translationAiHintLoading || (mode === 'custom' ? !(customRaError || customSqlError || customTranslationError) : !selectedQueryId)} onClick={requestAiHelp}>Ask AI for help</button>
+        {translationAiHintError && <p role="status">{translationAiHintError}</p>}
+      </div>
       <section className={hero}>
         <div className="space-y-3">
           <p className="text-sm font-bold uppercase tracking-[0.28em] text-[#615a96]">Academic Practice Studio</p>

@@ -1,3 +1,4 @@
+import { useAuth } from '../lib/useAuth';
 import { Link } from 'react-router-dom';
 import {
   Database,
@@ -27,6 +28,7 @@ const FEATURES = [
 ];
 
 export default function Home() {
+  const { isAuthenticated, login } = useAuth();
   const shell = 'space-y-6 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-4 sm:p-6';
   const hero = 'rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]';
   const blockCard = 'rounded-[24px] border border-[#dfe2f0] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_12px_28px_rgba(123,128,173,0.08)]';
@@ -46,6 +48,19 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {!isAuthenticated && <section className={`${blockCard} grid gap-5 md:grid-cols-2`} aria-label="Choose how to practice">
+        <div className="space-y-3">
+          <h2 className={sectionTitle}>Practice without an account</h2>
+          <p className="text-sm text-[#475467]">Use default datasets. Progress is not saved, and drafts may be lost when you leave or reload a page.</p>
+          <Link className="app-primary-btn" to="/databases">Continue without signing in</Link>
+        </div>
+        <div className="space-y-3">
+          <h2 className={sectionTitle}>Keep your progress</h2>
+          <p className="text-sm text-[#475467]">Save progress across devices, upload new datasets, and choose AI help.</p>
+          <button className="app-primary-btn" onClick={login}>Sign in and save progress</button>
+        </div>
+      </section>}
 
       <section className={blockCard}>
         <p className={sectionLabel}>Workspaces</p>

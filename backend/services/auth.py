@@ -44,3 +44,21 @@ def current_user(authorization: Optional[str] = Header(default=None)) -> Dict[st
 
 def require_current_user(user: Dict[str, Any] = Depends(current_user)) -> Dict[str, Any]:
     return user
+
+
+def optional_current_user(
+    authorization: Optional[str] = Header(default=None),
+    database: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Only an absent header opts into guest access; bad credentials still fail."""
+    if authorization is None:
+        if database is not None:
+            from . import datasets
+            try:
+                name = datasets._normalise_database_name(database)
+                if name not in datasets._default_rows_by_name():
+                    raise ValueError()
+            except (ValueError, FileNotFoundError):
+                raise HTTPException(status_code=404, detail="Database not found.") from None
+        return None
+    return current_user(authorization)

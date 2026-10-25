@@ -1,5 +1,6 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/useAuth';
+import AiPrivacyDialog from './AiPrivacyDialog';
 import {
   GraduationCap,
   LogOut,
@@ -14,7 +15,8 @@ const NAV_ITEMS = [
 ];
 
 export default function Layout() {
-  const { isAuthenticated, email, logout, login, loading } = useAuth();
+  const { isAuthenticated, email, logout, login, loading, error } = useAuth();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
   const containerClass = pathname === '/' ? 'app-container' : 'app-container app-container-wide';
 
@@ -55,7 +57,7 @@ export default function Layout() {
                   <div className="min-w-0 text-right">
                     {loading ? (
                       <p className="text-xs text-[#475467]">Checking sign-in status...</p>
-                    ) : null}
+                    ) : !isAuthenticated ? <p className="text-xs text-[#475467]">Guest · progress not saved</p> : null}
                   </div>
                   {loading ? (
                     <div className="h-10 w-10 rounded-[18px] bg-[#f7f7f7] shadow-[0_10px_18px_rgba(24,39,75,0.08)]" />
@@ -63,7 +65,7 @@ export default function Layout() {
                     <div className="flex flex-row flex-wrap items-center justify-end gap-2">
                       <p className="max-w-[220px] truncate text-xs font-semibold text-[#4b5563]">{email}</p>
                       <button
-                        onClick={logout}
+                        onClick={() => { logout(); navigate('/'); }}
                         className="app-primary-btn shrink-0 !rounded-2xl !px-4 !py-2.5"
                       >
                         <LogOut aria-hidden="true" className="h-4 w-4" />
@@ -86,8 +88,10 @@ export default function Layout() {
         </div>
       </header>
 
+      <AiPrivacyDialog key={pathname} />
       <main id="main-content" tabIndex={-1} className="pb-12 pt-6">
         <div className={containerClass}>
+          {error && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm">{error}</p>}
           <Outlet />
         </div>
       </main>

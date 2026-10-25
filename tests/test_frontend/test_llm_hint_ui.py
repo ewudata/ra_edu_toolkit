@@ -16,13 +16,15 @@ def test_ra_exercises_has_ai_hint_controls():
     source = Path("frontend/src/pages/RAExercises.tsx").read_text(encoding="utf-8")
 
     assert "handleGenerateHint" in source
-    assert "Get hint" in source
+    assert "Hint for my answer" in source
     assert "Get AI hint" not in source
     assert "Could not generate an AI hint" in source
     assert "AI hint" in source
     assert "AI error explanation" not in source
     assert "Generating a student-friendly explanation" not in source
-    assert "api.explainRaError(selectedDb" not in source
+    assert "async function requestErrorHelp()" in source
+    assert "Ask AI about this error" in source
+    assert "if (!isAuthenticated || !selectedDb) return;" in source
 
 
 def test_ra_exercises_places_prompt_syntax_help_in_left_column():
@@ -170,7 +172,7 @@ def test_ra_exercises_help_center_orders_hint_button_first():
     canonical_button_start = source.index("handleViewSolution", help_center_start)
 
     assert hint_button_start < toggle_start < canonical_button_start
-    assert "Get hint" in source[hint_button_start:toggle_start]
+    assert "Hint for my answer" in source[hint_button_start:toggle_start]
     assert "Show evaluation trace" in source[toggle_start:]
     assert "Hide evaluation trace" in source[toggle_start:]
     assert "disabled={!result}" in source[toggle_start:]

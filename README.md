@@ -77,6 +77,44 @@ Key variables:
 
 For production, use `.env.production` as a starting point and set `DEBUG=False` and `RELOAD=False`.
 
+### Guest access and saved accounts
+
+Home offers **Continue without signing in** and **Sign in and save progress**.
+
+| Feature | Guest | Signed in |
+| --- | --- | --- |
+| Shared default datasets, schemas, exercises, and answer checking | Yes | Yes |
+| Personal dataset imports and management | No | Yes |
+| Saved attempts, mastery, and progress dashboard | No | Yes |
+| AI hints, walkthroughs, and error explanations | No | Optional, explicitly requested |
+
+Guests do not create Supabase accounts. Their attempts and mastery are not saved, and answer drafts are held only in page memory; leaving or refreshing a practice page may discard them. A dataset selection may remain in browser session storage. Guest work is not imported into an account after sign-in. Bundled default practice works without Supabase credentials; remote defaults require the existing server configuration.
+
+Answers still reach the backend for checking. Application code does not log answer bodies or full AI prompts, but deployment proxies and model services have their own logging settings. Operational connection metadata may still exist. Signed-in email and saved practice records remain accessible to authorized system administrators. Logout and unrecoverable session expiry clear account workspace state.
+
+### AI privacy configuration
+
+Every AI endpoint requires authentication and the current data-sharing disclosure version. AI calls occur only after an explicit help action; checking an answer or encountering an error does not call AI automatically. Before first use in a session, a compact in-app dialog identifies the service and shared content, with the full policy under “Privacy details.” Students choose “Not now” or “Continue to AI”; Not now and Escape dismiss quietly without an AI request. Acceptance is remembered for that signed-in session, including normal token refresh. Declining preserves normal answer checking, static help, and saved progress. A material service/policy/model change requires renewed acknowledgement.
+
+AI requests contain only the relevant exercise/schema, current answer when needed, and selected diagnostic summaries. Account identifiers, practice history, and raw sample/missing/extra result rows are excluded. Free-text answers, exercise content, and user-imported names/schemas may themselves contain identifying information; this is not a guarantee of anonymity. Walkthroughs use canonical exercise solutions without the student's answer.
+
+AI is **unavailable by default until the deployment operator completes the privacy configuration**, in addition to configuring `LLM_ENABLED`, `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`:
+
+- `LLM_SERVICE_NAME`: the actual service/operator students will send requests to.
+- `LLM_DATA_POLICY`: a plain-language description of verified retention, training use, and operator access.
+- `LLM_PRIVACY_URL`: optional supporting policy URL.
+- `LLM_PRIVACY_REVIEWED=true`: set only after checking the deployed service and its logging/privacy settings.
+
+These values are operator declarations, not an automated verification of the provider. Do not claim zero retention or no training without evidence. Update them when the service or policy changes. Removing application prompt logging does not remove older logs or disable independent provider/proxy logging; handle existing logs under the deployment's retention policy. Never put API keys or internal credentials in disclosure text.
+
+### Public evaluation limits
+
+Guest evaluation defaults to 60 requests per minute per connection address and 600 globally per host, using a private SQLite counter shared by workers on that host. Only a minute-scoped hash is stored; expired counters are removed on the next request. Configure `RA_RATE_LIMIT_DB` for a shared writable local path when needed. Multiple containers/hosts need a shared edge/gateway limiter; separate local SQLite files do not coordinate them. Only trust forwarded addresses from a configured proxy; otherwise visitors behind the same proxy share its connection limit.
+
+Evaluation bodies are limited to 64 KiB, expressions/SQL to 10,000 characters, SQL results to 50,000 rows / approximately 8 MiB of cell text, and API row previews to 500 rows. Correctness compares complete results before preview truncation. Public RA runs in a separate process that is terminated after `RA_EVALUATION_TIMEOUT_SECONDS` (default 5 seconds); SQL uses an execution deadline and a read-only authorizer that rejects attachments, writes, and extension loading. `RA_MAX_INTERMEDIATE_ROWS` bounds Cartesian/join allocations (default 100,000); Linux RA workers also use `RA_WORKER_MEMORY_MB` (default 2048). Normal course exercises should be checked against any changed limits before release.
+
+No Supabase schema migration or public bucket/RLS grants are needed for guest access. Deploy the backend before the guest-enabled frontend, verify the deployment's limits and AI policy, and retain private user buckets.
+
 ### Supabase Setup
 
 For Google login, user dataset metadata, and query mastery tracking:
@@ -318,6 +356,14 @@ black backend/ frontend/ scripts/
 isort backend/ frontend/ scripts/
 flake8 backend/ frontend/ scripts/
 ```
+
+Browser regression checks (start the backend on port 8000 and Vite on port 5173 first):
+
+```bash
+node tests/browser/guest-access.cjs
+```
+
+The script uses the repository's installed Playwright runtime when available. Otherwise set `PLAYWRIGHT_MODULE` to an installed `playwright` package directory and install its Chromium browser. Set `RALT_TEST_URL` to test another local frontend URL. Guest checks use the real backend; member, expiry, and AI-sharing checks use synthetic API responses and never contact Supabase or an AI provider.
 
 Frontend-specific checks:
 

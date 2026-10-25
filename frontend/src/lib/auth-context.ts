@@ -11,6 +11,7 @@ export interface AuthContextValue extends AuthState {
   login: () => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  sessionRevision: number;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

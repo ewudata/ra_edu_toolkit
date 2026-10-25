@@ -1,11 +1,17 @@
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 let _authToken: string | null = null;
+let _sessionVersion = 0;
+let _aiDisclosure: string | null = null;
+let _confirmAiDisclosure: ((privacy: AiPrivacy) => Promise<boolean>) | null = null;
 let _onUnauthorized: ((message: string) => void) | null = null;
 let _refreshSession: (() => Promise<boolean>) | null = null;
 
-export function setAuthToken(token: string | null) {
+export function setAuthToken(token: string | null, preserveAiDisclosure = false) {
+  const keepDisclosure = preserveAiDisclosure && !!_authToken && !!token;
   _authToken = token?.trim() || null;
+  _sessionVersion += 1;
+  if (!keepDisclosure) _aiDisclosure = null;
 }
 
 export function setUnauthorizedHandler(handler: ((message: string) => void) | null) {
@@ -49,7 +55,9 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
   body?: unknown;
   formData?: FormData;
   retryOnAuthFailure?: boolean;
+  aiDisclosure?: string;
 }): Promise<T> {
+  const requestSession = _sessionVersion;
   let url = `${BASE_URL}${endpoint}`;
   if (opts?.params) {
     const qs = new URLSearchParams();
@@ -59,6 +67,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
 
   const headers: Record<string, string> = {};
   if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  if (opts?.aiDisclosure) headers['X-AI-Disclosure'] = opts.aiDisclosure;
 
   let bodyContent: BodyInit | undefined;
   if (opts?.formData) {
@@ -69,6 +78,7 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
   }
 
   const res = await fetch(url, { method, headers, body: bodyContent });
+  if (requestSession !== _sessionVersion) throw new ApiError("The session changed. Please try again.");
   if (!res.ok) {
     let detail: unknown = null;
     let message = `${res.status} ${res.statusText}`;
@@ -93,7 +103,43 @@ async function request<T = unknown>(method: string, endpoint: string, opts?: {
   }
   if (res.status === 204) return {} as T;
   const text = await res.text();
+  if (requestSession !== _sessionVersion) throw new ApiError("The session changed. Please try again.");
   return text ? JSON.parse(text) : ({} as T);
+}
+
+export interface AiPrivacy {
+  service: string;
+  shared_data: string;
+  data_policy: string;
+  policy_url: string;
+  available: boolean;
+  version: string;
+}
+
+export class AiHelpCancelledError extends Error {
+  constructor() {
+    super('AI help cancelled.');
+  }
+}
+
+export function setAiDisclosureHandler(handler: ((privacy: AiPrivacy) => Promise<boolean>) | null) {
+  _confirmAiDisclosure = handler;
+}
+
+async function aiRequest<T>(endpoint: string, body?: unknown): Promise<T> {
+  if (!_authToken) throw new ApiError('Sign in to use AI help.', 401);
+  const confirmDisclosure = _confirmAiDisclosure;
+  const privacy = await request<AiPrivacy>('GET', '/ai/privacy');
+  if (!confirmDisclosure || confirmDisclosure !== _confirmAiDisclosure) throw new AiHelpCancelledError();
+  const session = _sessionVersion;
+  if (!privacy.available) throw new ApiError('AI help is unavailable until the operator has reviewed its data-sharing policy.', 503);
+  if (_aiDisclosure !== privacy.version) {
+    const accepted = await confirmDisclosure(privacy);
+    if (!accepted) throw new AiHelpCancelledError();
+    if (session !== _sessionVersion) throw new ApiError('The session changed. Please try again.');
+    _aiDisclosure = privacy.version;
+  }
+  return request<T>('POST', endpoint, { body, aiDisclosure: privacy.version, retryOnAuthFailure: false });
 }
 
 export interface Database {
@@ -260,25 +306,19 @@ export const api = {
     database: string,
     queryId: string,
     expression?: string,
-    error?: string,
+    _error?: string,
     direction?: 'ra-to-sql' | 'sql-to-ra',
   ) =>
-    request<LlmHintResponse>('POST', `/databases/${database}/queries/${queryId}/llm/hint`, {
-      body: { expression: expression?.trim() || null, error: error?.trim() || null, direction: direction ?? null },
-    }),
+    aiRequest<LlmHintResponse>(`/databases/${database}/queries/${queryId}/llm/hint`, { expression: expression?.trim() || null, direction: direction ?? null }),
 
   generateWalkthrough: (database: string, queryId: string) =>
-    request<WalkthroughResponse>('POST', `/databases/${database}/queries/${queryId}/llm/walkthrough`),
+    aiRequest<WalkthroughResponse>(`/databases/${database}/queries/${queryId}/llm/walkthrough`),
 
   explainRaError: (database: string, expression: string) =>
-    request<LlmErrorExplanationResponse>('POST', `/databases/${database}/llm/explain-error`, {
-      body: { expression },
-    }),
+    aiRequest<LlmErrorExplanationResponse>(`/databases/${database}/llm/explain-error`, { expression }),
 
   explainSqlError: (database: string, sql: string) =>
-    request<LlmErrorExplanationResponse>('POST', `/databases/${database}/llm/explain-sql-error`, {
-      body: { sql },
-    }),
+    aiRequest<LlmErrorExplanationResponse>(`/databases/${database}/llm/explain-sql-error`, { sql }),
 
   evaluateCustomQuery: (database: string, expression: string) =>
     request<EvaluationResult>('POST', `/databases/${database}/evaluate`, { body: { expression } }),

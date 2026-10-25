@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from ..services import (
     datasets as datasets_service,
@@ -14,6 +14,7 @@ from ..services import (
     sql as sql_service,
 )
 from ..services.auth import require_current_user
+from .ai_privacy import require_ai_disclosure
 from ..services.exceptions import (
     DatabaseNotFound,
     EvaluationError,
@@ -21,8 +22,8 @@ from ..services.exceptions import (
     QueryNotFound,
 )
 
-router = APIRouter(prefix="/databases/{database}/queries/{query_id}/llm", tags=["llm"])
-database_router = APIRouter(prefix="/databases/{database}/llm", tags=["llm"])
+router = APIRouter(prefix="/databases/{database}/queries/{query_id}/llm", tags=["llm"], dependencies=[Depends(require_current_user), Depends(require_ai_disclosure)])
+database_router = APIRouter(prefix="/databases/{database}/llm", tags=["llm"], dependencies=[Depends(require_current_user), Depends(require_ai_disclosure)])
 
 RA_GRAMMAR_HELP = "\n".join(
     [
@@ -44,8 +45,8 @@ def _sample_rows(rows: List[Dict[str, Any]], limit: int = 3) -> List[Dict[str, A
 
 
 class HintRequest(BaseModel):
-    expression: Optional[str] = None
-    error: Optional[str] = None
+    expression: Optional[str] = Field(default=None, max_length=10000)
+    error: Optional[str] = Field(default=None, max_length=1000)
     direction: Optional[Literal["ra-to-sql", "sql-to-ra"]] = None
 
     @field_validator("expression", "error", mode="before")
@@ -63,7 +64,7 @@ class HintResponse(BaseModel):
 
 
 class ErrorExplanationRequest(BaseModel):
-    expression: str
+    expression: str = Field(max_length=10000)
 
     @field_validator("expression", mode="before")
     @classmethod
@@ -79,7 +80,7 @@ class WalkthroughResponse(BaseModel):
 
 
 class SqlErrorExplanationRequest(BaseModel):
-    sql: str
+    sql: str = Field(max_length=10000)
 
     @field_validator("sql", mode="before")
     @classmethod
@@ -119,7 +120,6 @@ def _evaluation_context(
 ) -> Dict[str, Any]:
     context: Dict[str, Any] = {
         "status": "not_attempted",
-        "request_error": request_error,
     }
     if not expression:
         return context
@@ -137,22 +137,18 @@ def _evaluation_context(
             "line": exc.line,
             "column": exc.column,
             "context": exc.context,
-            "request_error": request_error,
         }
     except EvaluationError as exc:
         return {
             "status": "evaluation_error",
             "message": str(exc),
-            "request_error": request_error,
         }
 
     context = {
         "status": "evaluated",
         "student_schema": student_result.schema,
         "student_row_count": len(student_result.dataframe),
-        "student_rows_sample": _sample_rows(student_result.rows),
         "trace_ops": [str(step.get("op", "")) for step in student_result.trace],
-        "request_error": request_error,
     }
 
     if solution_expression:
@@ -170,8 +166,6 @@ def _evaluation_context(
                 "expected_row_count": len(solution_result.dataframe),
                 "missing_row_count": len(comparison.missing_rows),
                 "extra_row_count": len(comparison.extra_rows),
-                "missing_rows_sample": _sample_rows(comparison.missing_rows),
-                "extra_rows_sample": _sample_rows(comparison.extra_rows),
             }
         )
 
@@ -192,7 +186,6 @@ def _translation_context(
         "status": "not_attempted",
         "task": "translation_check",
         "direction": direction,
-        "request_error": request_error,
         "source_language": "relational_algebra" if direction == "ra-to-sql" else "sql",
         "target_language": "sql" if direction == "ra-to-sql" else "relational_algebra",
         "source_expression": solution_ra if direction == "ra-to-sql" else solution_sql,
@@ -254,8 +247,6 @@ def _translation_context(
         "expected_row_count": len(expected_result.dataframe),
         "missing_row_count": len(comparison.missing_rows),
         "extra_row_count": len(comparison.extra_rows),
-        "missing_rows_sample": _sample_rows(comparison.missing_rows),
-        "extra_rows_sample": _sample_rows(comparison.extra_rows),
     }
 
 

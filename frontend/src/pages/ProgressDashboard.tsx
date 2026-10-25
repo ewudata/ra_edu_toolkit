@@ -97,27 +97,35 @@ export default function ProgressDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     api.getDatabases().then((dbs) => {
+      if (!active) return;
       setDatabases(dbs);
       const catalogDbs = new Set(dbs.filter((d) => d.has_catalog).map((d) => d.name));
-      if (selectedDb && !catalogDbs.has(selectedDb)) {
-        setSelectedDb('');
-      }
+      setSelectedDb((selected) => selected && !catalogDbs.has(selected) ? '' : selected);
     }).catch(() => {});
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    if (!selectedDb) {
+    let active = true;
+    // Start after the effect subscribes; ignore results from a previous database/session.
+    void Promise.resolve().then(async () => {
+      if (!active) return;
       setProgress(null);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    api
-      .getOperatorProgress(selectedDb)
-      .then(setProgress)
-      .catch((e: Error) => setError(e.message ?? 'Failed to load progress'))
-      .finally(() => setLoading(false));
+      setError(null);
+      setLoading(!!selectedDb);
+      if (!selectedDb) return;
+      try {
+        const result = await api.getOperatorProgress(selectedDb);
+        if (active) setProgress(result);
+      } catch (error) {
+        if (active) setError(error instanceof Error ? error.message : 'Failed to load progress');
+      } finally {
+        if (active) setLoading(false);
+      }
+    });
+    return () => { active = false; };
   }, [selectedDb]);
 
   const handleDbChange = (db: string) => {
