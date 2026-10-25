@@ -695,6 +695,7 @@ export default function RASQLReference() {
   const [translationAiHint, setTranslationAiHint] = useState<string | null>(null);
   const [translationAiHintModel, setTranslationAiHintModel] = useState<string | null>(null);
   const [translationAiHintLoading, setTranslationAiHintLoading] = useState(false);
+  const [requestingAiHelp, setRequestingAiHelp] = useState(false);
   const [translationAiHintError, setTranslationAiHintError] = useState<string | null>(null);
   const [customRaErrorExplanation, setCustomRaErrorExplanation] = useState<string | null>(null);
   const [customRaErrorExplanationHint, setCustomRaErrorExplanationHint] = useState<string | null>(null);
@@ -1006,7 +1007,7 @@ export default function RASQLReference() {
     answer: string,
     fallbackMessage: string,
   ) {
-    if (!selectedDb || !selectedQueryId) return;
+    if (!isAuthenticated || !selectedDb || !selectedQueryId) return;
     setTranslationAiHintLoading(true);
     setTranslationAiHint(null);
     setTranslationAiHintModel(null);
@@ -1215,7 +1216,8 @@ export default function RASQLReference() {
   }
 
   async function requestAiHelp() {
-    if (!isAuthenticated || !selectedDb) return;
+    if (!isAuthenticated || !selectedDb || requestingAiHelp) return;
+    setRequestingAiHelp(true);
     setTranslationAiHintError(null);
     try {
       if (mode === 'custom') {
@@ -1263,6 +1265,8 @@ export default function RASQLReference() {
     } catch (error) {
       if (error instanceof AiHelpCancelledError) return;
       setTranslationAiHintError(formatCheckError(error));
+    } finally {
+      setRequestingAiHelp(false);
     }
   }
 
@@ -1294,15 +1298,25 @@ export default function RASQLReference() {
   );
   const sqlAnswerAccepted = sqlMatchesSolution && (sqlAnswerMode === 'guided' ? guidedSqlClausesMatch : fullSqlCatalogIntentMatches);
   const raAnswerAccepted = raMatchesSolution && (raAnswerMode === 'guided' || fullRaCatalogIntentMatches);
+  const canRequestTranslationHint = practiceDirection === 'sql-to-ra'
+    ? !!raCheckError || (!!raCheckResult && !raAnswerAccepted)
+    : !!sqlCheckError || (!!sqlCheckResult && !sqlAnswerAccepted);
+  const catalogAiAction = isAuthenticated ? (
+    <button type="button" onClick={() => { void requestAiHelp(); }} className={secondaryButton}
+      disabled={!canRequestTranslationHint || requestingAiHelp || sqlCheckLoading || raCheckLoading}>
+      <Lightbulb aria-hidden="true" className="h-4 w-4" />
+      {requestingAiHelp ? 'Getting AI help...' : 'Get AI translation hint'}
+    </button>
+  ) : null;
+  const showingAiTranslationHint = isAuthenticated && (translationAiHintLoading || !!translationAiHint);
   const currentRaAnswerText = raAnswerMode === 'guided'
     ? stripGuidedRaPlaceholderUnderscores(studentRa).trim()
     : freeformRaAnswer.trim();
   return (
     <div className={shell}>
       <div className="space-y-2 text-sm text-[#475467]">
-        <p>{isAuthenticated ? 'AI help is optional. Review what is shared before your first request.' : 'Guest practice: progress is not saved. Sign in to use AI help.'}</p>
-        <button className="app-secondary-btn" disabled={!isAuthenticated || !selectedDb || translationAiHintLoading || (mode === 'custom' ? !(customRaError || customSqlError || customTranslationError) : !selectedQueryId)} onClick={requestAiHelp}>Ask AI for help</button>
-        {translationAiHintError && <p role="status">{translationAiHintError}</p>}
+        {isAuthenticated && mode === 'custom' && <button className="app-secondary-btn" disabled={!selectedDb || requestingAiHelp || !(customRaError || customSqlError || customTranslationError)} onClick={requestAiHelp}>{requestingAiHelp ? 'Getting AI help...' : 'Ask AI for help'}</button>}
+        {isAuthenticated && translationAiHintError && <p role="status">{translationAiHintError}</p>}
       </div>
       <section className={hero}>
         <div className="space-y-3">
@@ -1762,6 +1776,7 @@ export default function RASQLReference() {
                             <button type="button" onClick={() => setRevealSqlAnswers((value) => !value)} className={secondaryButton}>
                               {revealSqlAnswers ? 'Hide Canonical SQL' : 'Show Canonical SQL'}
                             </button>
+                            {catalogAiAction}
                           </div>
                         </>
                       ) : (
@@ -1869,6 +1884,7 @@ export default function RASQLReference() {
                             <button type="button" onClick={() => setRevealRaAnswer((value) => !value)} className={secondaryButton}>
                               {revealRaAnswer ? 'Hide Canonical RA' : 'Show Canonical RA'}
                             </button>
+                            {catalogAiAction}
                           </div>
                         </>
                       )}
@@ -1922,11 +1938,11 @@ export default function RASQLReference() {
                           <div className="rounded-[22px] border-2 border-[#cbeae3] bg-[#f7fcfa] p-4">
                             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#3d6f67]">
                               <Lightbulb className="h-4 w-4" />
-                              AI translation hint{translationAiHintModel ? <span className="text-xs font-medium text-[#667085]">({translationAiHintModel})</span> : null}
+                              {showingAiTranslationHint ? 'AI translation hint' : 'Translation feedback'}{showingAiTranslationHint && translationAiHintModel ? <span className="text-xs font-medium text-[#667085]">({translationAiHintModel})</span> : null}
                             </div>
-                            {translationAiHintLoading ? (
+                            {isAuthenticated && translationAiHintLoading ? (
                               <p className="text-sm italic leading-6 text-[#667085]">Generating a targeted hint from your answer...</p>
-                            ) : translationAiHint ? (
+                            ) : isAuthenticated && translationAiHint ? (
                               <p className="text-sm leading-6 text-[#344054]">{translationAiHint}</p>
                             ) : (
                               <p className="text-sm leading-6 text-[#344054]">
@@ -1935,7 +1951,7 @@ export default function RASQLReference() {
                                   : 'Your SQL is not equivalent on the current dataset. Compare the selected columns, join conditions, filters, and set operation structure against the source relational algebra expression.'}
                               </p>
                             )}
-                            {translationAiHintError ? (
+                            {isAuthenticated && translationAiHintError ? (
                               <p className="mt-2 text-xs leading-5 text-[#8b6a50]">AI hint unavailable: {translationAiHintError}</p>
                             ) : null}
                           </div>
@@ -1951,11 +1967,11 @@ export default function RASQLReference() {
                           <div className="rounded-[22px] border-2 border-[#cbeae3] bg-[#f7fcfa] p-4">
                             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#3d6f67]">
                               <Lightbulb className="h-4 w-4" />
-                              AI translation hint{translationAiHintModel ? <span className="text-xs font-medium text-[#667085]">({translationAiHintModel})</span> : null}
+                              {showingAiTranslationHint ? 'AI translation hint' : 'Translation feedback'}{showingAiTranslationHint && translationAiHintModel ? <span className="text-xs font-medium text-[#667085]">({translationAiHintModel})</span> : null}
                             </div>
-                            {translationAiHintLoading ? (
+                            {isAuthenticated && translationAiHintLoading ? (
                               <p className="text-sm italic leading-6 text-[#667085]">Generating a targeted hint from your answer...</p>
-                            ) : translationAiHint ? (
+                            ) : isAuthenticated && translationAiHint ? (
                               <p className="text-sm leading-6 text-[#344054]">{translationAiHint}</p>
                             ) : (
                               <p className="text-sm leading-6 text-[#344054]">
@@ -1964,7 +1980,7 @@ export default function RASQLReference() {
                                   : 'Your relational algebra expression is not equivalent on the current dataset. Check whether your projections, selections, joins, renames, and set operations preserve the same rows and attributes as the source SQL statement.'}
                               </p>
                             )}
-                            {translationAiHintError ? (
+                            {isAuthenticated && translationAiHintError ? (
                               <p className="mt-2 text-xs leading-5 text-[#8b6a50]">AI hint unavailable: {translationAiHintError}</p>
                             ) : null}
                           </div>

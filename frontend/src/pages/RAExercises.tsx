@@ -449,7 +449,7 @@ export default function RAExercises() {
   return (
     <div className="space-y-5 rounded-[28px] bg-[linear-gradient(180deg,rgba(246,245,253,0.72)_0%,rgba(244,246,252,0.84)_52%,rgba(247,250,249,0.9)_100%)] p-3 sm:p-4">
       {aiHintError && <p role="status" className="text-sm text-[#86483d]">{aiHintError}</p>}
-      <p className="text-sm text-[#475467]">{isAuthenticated ? 'AI help is optional and sends the current answer and relevant context to the configured AI service after your agreement.' : 'Guest practice: progress is not saved. Sign in to use AI help.'}</p>
+      {isAuthenticated && <p className="text-sm text-[#475467]">AI help is optional and sends the current answer and relevant context to the configured AI service after your agreement.</p>}
         <section className="rounded-[26px] border border-[#dde1f0] bg-[linear-gradient(135deg,#f5f4ff_0%,#eef2ff_52%,#eef7f4_100%)] p-6 text-[#3f4761] shadow-[0_14px_34px_rgba(123,128,173,0.1)]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-3">

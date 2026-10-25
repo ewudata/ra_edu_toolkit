@@ -39,6 +39,28 @@ async function run() {
     assert(!requests.some(request => /\/llm\/|\/mastery|\/operator-progress|\/auth\//.test(request.url())));
     assert(!requests.some(request => request.headers().authorization));
     await page.goto(`${base}/ra-sql-reference`);
+    await page.getByRole('button', { name: 'Catalog practice', exact: true }).click();
+    await page.getByLabel('Choose a prompt from the catalog').selectOption('q01');
+    await page.getByRole('button', { name: 'Write full SQL', exact: true }).click();
+    await page.getByLabel('Full SQL answer', { exact: true }).fill('SELECT 1 AS incorrect_column');
+    const sqlTranslation = page.waitForResponse(response => response.url().endsWith('/q01/check-translation'));
+    await page.getByRole('button', { name: 'Check SQL', exact: true }).click();
+    assert.equal((await sqlTranslation).status(), 200);
+    await page.getByText(/Your SQL is not equivalent on the current dataset/).waitFor();
+    assert.equal(await page.getByText('Translation feedback', { exact: true }).count(), 1);
+    assert.equal(await page.getByText('AI translation hint', { exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'SQL → RA', exact: true }).click();
+    await page.getByRole('button', { name: 'Write full RA', exact: true }).click();
+    await page.getByLabel('Full relational algebra answer', { exact: true }).fill('student');
+    const raTranslation = page.waitForResponse(response => response.url().endsWith('/q01/check-translation'));
+    await page.getByRole('button', { name: 'Check RA', exact: true }).click();
+    assert.equal((await raTranslation).status(), 200);
+    await page.getByText(/Your relational algebra expression is not equivalent on the current dataset/).waitFor();
+    assert.equal(await page.getByText('Translation feedback', { exact: true }).count(), 1);
+    assert.equal(await page.getByText('AI translation hint', { exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Ask AI for help', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Get AI translation hint', exact: true }).count(), 0);
+    assert(!requests.some(request => /\/llm\/|\/ai\/privacy/.test(request.url())));
     await page.getByRole('button', { name: 'Custom translator', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Custom translator', exact: true }).click();
     await page.locator('textarea').first().fill('GUEST_DRAFT_SENTINEL');
@@ -80,6 +102,7 @@ async function run() {
       if (endpoint.endsWith('/queries/')) return reply([{ id: 'q1', prompt: 'List ids', hints: ['project'] }]);
       if (endpoint.endsWith('/mastery')) return reply({ query_ids: [] });
       if (endpoint.endsWith('/queries/q1')) return reply({ id: 'q1', prompt: 'List ids', hints: [], solution: { relational_algebra: 'example', sql: 'SELECT * FROM example' } });
+      if (endpoint.endsWith('/check-translation')) return reply({ database: 'PrivateDataset', query_id: 'q1', direction: request.postDataJSON().direction, answer: request.postDataJSON().answer, is_correct: false, schema_equal: false, student_schema: ['wrong'], expected_schema: ['id'], missing_rows: [], extra_rows: [] });
       if (endpoint.endsWith('/evaluate')) { state.evaluations++; return reply({ detail: { message: 'Check syntax' } }, 400); }
       if (endpoint === '/ai/privacy') return reply({ account_id: state.accountId, service: 'Synthetic school model', shared_data: 'Current answer and diagnostics', data_policy: 'Test policy', policy_url: '', available: true, version: state.version });
       if (endpoint.includes('/llm/')) { state.aiCalls.push(request.headers()['x-ai-disclosure']); return reply({ explanation: 'Check your syntax.', hint: 'Use braces.', model: 'synthetic' }); }
@@ -217,6 +240,31 @@ async function run() {
     await signed.waitForTimeout(200);
     assert.equal((await member.cookies()).filter(cookie => cookie.name === 'ra_edu_auth').length, 0);
     assert.equal(await signed.getByRole('button', { name: 'Sign Out', exact: true }).count(), 0);
+    // Signed-in translation hints are next to the checked answer, not off-screen at the page top.
+    state.expired = false;
+    state.holdRefresh = false;
+    await member.addCookies([{ name: 'ra_edu_auth', value: encodeURIComponent(JSON.stringify({ token: 'synthetic', email: 'member@example.test', refreshToken: 'refresh' })), url: base }]);
+    await signed.goto(`${base}/ra-sql-reference`);
+    await signed.getByLabel('Database collection').selectOption('PrivateDataset');
+    await signed.getByRole('button', { name: 'Catalog practice', exact: true }).click();
+    await signed.getByLabel('Choose a prompt from the catalog').selectOption('q1');
+    for (const direction of ['SQL', 'RA']) {
+      await signed.getByRole('button', { name: direction === 'RA' ? 'SQL → RA' : 'RA → SQL', exact: true }).click();
+      await signed.getByRole('button', { name: `Write full ${direction}`, exact: true }).click();
+      await signed.getByLabel(direction === 'RA' ? 'Full relational algebra answer' : 'Full SQL answer', { exact: true }).fill(direction === 'RA' ? 'example' : 'SELECT wrong FROM example');
+      const aiCallsBefore = state.aiCalls.length;
+      await signed.getByRole('button', { name: `Check ${direction}`, exact: true }).click();
+      await signed.getByText('Translation feedback', { exact: true }).waitFor();
+      assert.equal(state.aiCalls.length, aiCallsBefore, 'Checking must not call AI automatically');
+      const answerActions = signed.getByRole('button', { name: `Check ${direction}`, exact: true }).locator('..');
+      const aiAction = answerActions.getByRole('button', { name: 'Get AI translation hint', exact: true });
+      assert.equal(await aiAction.count(), 1, 'AI hint action must be beside Check and Canonical controls');
+      await aiAction.click();
+      await signed.getByText('Use braces.', { exact: true }).waitFor();
+      await signed.getByText(/^AI translation hint/).waitFor();
+      assert.equal(state.aiCalls.length, aiCallsBefore + 1);
+      assert(await signed.getByText('Use braces.', { exact: true }).isVisible());
+    }
     await member.close();
     console.log('PASS: member AI requires explicit action and disclosure; decline sends nothing; policy changes ask again; logout clears private state; expiry never replays as guest; late refresh cannot restore a logged-out account');
   } finally { await browser.close(); }
